@@ -4,32 +4,32 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Easy to Use',
+    title: 'Learn Security, Free & Open',
     Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        Every topic here — fundamentals, tools, write-ups — is free to read and
+        open source. Browse the <code>docs</code> and start wherever you are.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
+    title: 'Built by the Community',
     Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        Found a bug, wrote a CTF write-up, or want to explain a concept better?
+        Fork the repo and open a pull request — this site grows with every contributor.
       </>
     ),
   },
   {
-    title: 'Powered by React',
+    title: 'Share What You Know',
     Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        No gatekeeping. Whether you&apos;re just starting out or deep into
+        research, your notes and guides can help the next person learn faster.
       </>
     ),
   },
