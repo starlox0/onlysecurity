@@ -10,8 +10,8 @@ import {themes as prismThemes} from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'OnlySecurity: Only for Secuity Folks',
-  tagline: 'For those who says Security is a Myth',
+  title: 'OnlySecurity',
+  tagline: 'An open-source hub for learning security — and sharing what you know',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -80,12 +80,13 @@ const config = {
       // Replace with your project's social card
       image: 'img/docusaurus-social-card.jpg',
       colorMode: {
+        defaultMode: 'dark',
         respectPrefersColorScheme: true,
       },
       navbar: {
-        title: 'My Site',
+        title: 'OnlySecurity',
         logo: {
-          alt: 'My Site Logo',
+          alt: 'OnlySecurity Logo',
           src: 'img/logo.svg',
         },
         items: [
