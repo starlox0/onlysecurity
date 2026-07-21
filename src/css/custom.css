@@ -1,30 +1,67 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * OnlySecurity theme
+ * A dark, terminal/advisory-inspired palette — built around the
+ * vocabulary security folks already live in: git diffs, CVE-style
+ * advisories, and severity labels.
  */
 
-/* You can override the default Infima variables here. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* brand ramp, tuned so light mode still reads as "OnlySecurity" */
+  --ifm-color-primary: #1f8b4c;
+  --ifm-color-primary-dark: #1c7d44;
+  --ifm-color-primary-darker: #1a7640;
+  --ifm-color-primary-darkest: #156134;
+  --ifm-color-primary-light: #229950;
+  --ifm-color-primary-lighter: #24a054;
+  --ifm-color-primary-lightest: #2ab362;
+  --ifm-code-font-size: 90%;
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  --docusaurus-highlighted-code-line-bg: rgba(63, 185, 80, 0.12);
+
+  /* OnlySecurity design tokens (light) */
+  --os-bg: #f5f7f6;
+  --os-surface: #ffffff;
+  --os-surface-2: #eef1f0;
+  --os-border: #d7dde0;
+  --os-text: #10151a;
+  --os-text-muted: #4d5860;
+  --os-accent-green: #1f8b4c;
+  --os-accent-red: #cf3f3f;
+  --os-accent-amber: #b3790e;
+  --os-accent-blue: #1c6fd6;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #3fb950;
+  --ifm-color-primary-dark: #34a845;
+  --ifm-color-primary-darker: #2f9d3f;
+  --ifm-color-primary-darkest: #268134;
+  --ifm-color-primary-light: #4dc35d;
+  --ifm-color-primary-lighter: #58c866;
+  --ifm-color-primary-lightest: #78d382;
+  --docusaurus-highlighted-code-line-bg: rgba(63, 185, 80, 0.16);
+
+  /* OnlySecurity design tokens (dark) */
+  --os-bg: #0b0f14;
+  --os-surface: #121821;
+  --os-surface-2: #1a222d;
+  --os-border: #232b36;
+  --os-text: #e6edf3;
+  --os-text-muted: #8b95a1;
+  --os-accent-green: #3fb950;
+  --os-accent-red: #f85149;
+  --os-accent-amber: #d29922;
+  --os-accent-blue: #58a6ff;
+
+  --ifm-background-color: var(--os-bg);
+  --ifm-navbar-background-color: var(--os-surface);
+  --ifm-footer-background-color: var(--os-surface);
+  --ifm-card-background-color: var(--os-surface);
+}
+
+[data-theme='dark'] .navbar {
+  border-bottom: 1px solid var(--os-border);
 }
