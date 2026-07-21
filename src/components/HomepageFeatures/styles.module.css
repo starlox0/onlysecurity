@@ -1,11 +1,71 @@
 .features {
-  display: flex;
-  align-items: center;
-  padding: 2rem 0;
-  width: 100%;
+  padding: 3.5rem 0 4.5rem;
+  background: var(--os-bg);
 }
 
-.featureSvg {
-  height: 200px;
-  width: 200px;
+.logHeader {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  color: var(--os-text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.commitCard {
+  background: var(--os-surface);
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.commitCard:hover {
+  border-color: var(--os-accent-green);
+  transform: translateY(-2px);
+}
+
+.commitMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.hash {
+  font-size: 0.78rem;
+  color: var(--os-text-muted);
+}
+
+.tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.tagBlue {
+  color: var(--os-accent-blue);
+  background: rgba(88, 166, 255, 0.12);
+}
+.tagAmber {
+  color: var(--os-accent-amber);
+  background: rgba(210, 153, 34, 0.12);
+}
+.tagGreen {
+  color: var(--os-accent-green);
+  background: rgba(63, 185, 80, 0.12);
+}
+
+.commitTitle {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  color: var(--os-text);
+}
+
+.commitDesc {
+  font-size: 0.92rem;
+  color: var(--os-text-muted);
+  margin: 0;
 }
