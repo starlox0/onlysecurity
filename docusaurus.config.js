@@ -84,71 +84,80 @@ const config = {
         respectPrefersColorScheme: true,
       },
       navbar: {
-        title: 'OnlySecurity',
-        logo: {
-          alt: 'OnlySecurity Logo',
-          src: 'img/profile.png',
-        },
-        items: [
-          {
-            type: 'docSidebar',
-            sidebarId: 'tutorialSidebar',
-            position: 'left',
-            label: 'Tutorial',
-          },
-          {to: '/blog', label: 'Blog', position: 'left'},
-          {
-            href: 'https://github.com/facebook/docusaurus',
-            label: 'GitHub',
-            position: 'right',
-          },
-        ],
-      },
+  title: '',                     // hide text, use logo only
+  logo: {
+    alt: 'OnlySecurity',
+    src: 'img/profile.png',
+    srcDark: 'img/profile-dark.png', // optional
+    width: 32,
+    height: 32,
+  },
+  items: [
+    {
+      type: 'docSidebar',
+      sidebarId: 'tutorialSidebar',
+      position: 'left',
+      label: 'Docs',
+    },
+    { to: '/blog', label: 'Blog', position: 'left' },
+    {
+      type: 'dropdown',
+      label: 'Resources',
+      position: 'left',
+      items: [
+        { label: 'Tools', to: '/docs/tools' },
+        { label: 'Write-ups', to: '/blog/tags/writeup' },
+        { label: 'Labs', to: '/labs' },
+      ],
+    },
+    {
+      href: 'https://github.com/starlox0/onlysecurity',
+      label: 'GitHub',
+      position: 'right',
+      className: 'github-link',
+    },
+    {
+      type: 'search',
+      position: 'right',
+    },
+  ],
+},
       footer: {
-        style: 'dark',
-        links: [
-          {
-            title: 'Docs',
-            items: [
-              {
-                label: 'Tutorial',
-                to: '/docs/intro',
-              },
-            ],
-          },
-          {
-            title: 'Community',
-            items: [
-              {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'X',
-                href: 'https://x.com/docusaurus',
-              },
-            ],
-          },
-          {
-            title: 'More',
-            items: [
-              {
-                label: 'Blog',
-                to: '/blog',
-              },
-              {
-                label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
-              },
-            ],
-          },
-        ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
-      },
+  style: 'dark',
+  logo: {
+    alt: 'OnlySecurity',
+    src: 'img/profile.png',
+    href: '/',
+    width: 60,
+    height: 60,
+  },
+  links: [
+    {
+      title: 'Learn',
+      items: [
+        { label: 'Tutorial', to: '/docs/intro' },
+        { label: 'All Docs', to: '/docs' },
+      ],
+    },
+    {
+      title: 'Community',
+      items: [
+        { label: 'GitHub', href: 'https://github.com/starlox0/onlysecurity' },
+        { label: 'Discord', href: 'https://discord.gg/yourinvite' },
+        { label: 'X / Twitter', href: 'https://x.com/yourhandle' },
+      ],
+    },
+    {
+      title: 'More',
+      items: [
+        { label: 'Blog', to: '/blog' },
+        { label: 'Contribute', to: '/docs/contribute' },
+        { label: 'Report a Vulnerability', to: '/report' },
+      ],
+    },
+  ],
+  copyright: `© ${new Date().getFullYear()} OnlySecurity • Open Source • Built with ❤️ and Docusaurus`,
+},
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
