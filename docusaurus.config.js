@@ -87,7 +87,7 @@ const config = {
         title: 'OnlySecurity',
         logo: {
           alt: 'OnlySecurity Logo',
-          src: 'img/logo.svg',
+          src: 'img/profile.png',
         },
         items: [
           {
