@@ -214,3 +214,71 @@
   border-color: var(--os-accent-green);
   transform: scale(1.05);
 }
+
+/**
+ * Navbar glitch effect — a brief RGB-split / static flicker every few
+ * seconds, like a CRT losing signal for an instant. Kept short and
+ * infrequent so the nav stays fully readable and clickable.
+ */
+
+.navbar {
+  position: relative;
+  overflow: hidden;
+  animation: os-navbar-glitch 8s infinite;
+}
+
+.navbar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0;
+  animation: os-navbar-scan 8s infinite;
+}
+
+@keyframes os-navbar-glitch {
+  0%, 96%, 100% {
+    transform: translate(0, 0);
+    filter: none;
+    text-shadow: none;
+  }
+  96.2% {
+    transform: translate(-2px, 0);
+    filter: hue-rotate(20deg) saturate(1.6);
+    text-shadow: 2px 0 var(--os-accent-red), -2px 0 var(--os-accent-blue);
+  }
+  96.4% {
+    transform: translate(2px, 0);
+    filter: hue-rotate(-20deg) saturate(1.6);
+    text-shadow: -2px 0 var(--os-accent-red), 2px 0 var(--os-accent-blue);
+  }
+  96.6% {
+    transform: translate(-1px, 0);
+    filter: none;
+    text-shadow: 1px 0 var(--os-accent-red), -1px 0 var(--os-accent-blue);
+  }
+  96.9% {
+    transform: translate(0, 0);
+    filter: none;
+    text-shadow: none;
+  }
+}
+
+@keyframes os-navbar-scan {
+  0%, 96%, 100% { opacity: 0; }
+  96.3%, 96.7% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar,
+  .navbar::after {
+    animation: none;
+  }
+}
