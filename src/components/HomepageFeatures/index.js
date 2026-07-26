@@ -31,15 +31,17 @@ const FeatureList = [
 
 function Feature({hash, tag, tagClass, title, description}) {
   return (
-    <div className={clsx('col col--4', styles.commitCard)}>
-      <div className={styles.commitMeta}>
-        <span className={styles.hash}>{hash}</span>
-        <span className={clsx(styles.tag, styles[tagClass])}>{tag}</span>
+    <div className="col col--4">
+      <div className={styles.commitCard}>
+        <div className={styles.commitMeta}>
+          <span className={styles.hash}>{hash}</span>
+          <span className={clsx(styles.tag, styles[tagClass])}>{tag}</span>
+        </div>
+        <Heading as="h3" className={styles.commitTitle}>
+          {title}
+        </Heading>
+        <p className={styles.commitDesc}>{description}</p>
       </div>
-      <Heading as="h3" className={styles.commitTitle}>
-        {title}
-      </Heading>
-      <p className={styles.commitDesc}>{description}</p>
     </div>
   );
 }
@@ -49,7 +51,7 @@ export default function HomepageFeatures() {
     <section className={styles.features}>
       <div className="container">
         <p className={styles.logHeader}>$ git log --oneline -3</p>
-        <div className="row">
+        <div className={clsx('row', styles.featureRow)}>
           {FeatureList.map((props, idx) => (
             <Feature key={idx} {...props} />
           ))}
