@@ -202,3 +202,15 @@
     animation: none;
   }
 }
+
+.navbar__logo img {
+  border-radius: 50%;
+  border: 1px solid var(--os-border);
+  padding: 3px;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.navbar__logo img:hover {
+  border-color: var(--os-accent-green);
+  transform: scale(1.05);
+}
