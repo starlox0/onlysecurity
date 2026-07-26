@@ -70,7 +70,7 @@ const config = {
     },
 
     navbar: {
-      title: "",
+      title: "OnlySecurity",
 
       logo: {
         alt: "OnlySecurity",
