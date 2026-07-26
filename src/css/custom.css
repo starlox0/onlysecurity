@@ -286,3 +286,58 @@
     animation: none;
   }
 }
+
+/**
+ * Site-wide ambient background — a faint grid (like graph paper / a
+ * circuit board) plus two soft, slow-drifting glow blobs in the brand
+ * colors. Painted as a fixed overlay above content with low opacity and
+ * pointer-events disabled, so it never blocks clicks or hurts legibility.
+ */
+
+:root {
+  --os-grid-line: rgba(0, 0, 0, 0.035);
+  --os-overlay-blend: multiply;
+  --os-glow-opacity: 0.12;
+}
+
+[data-theme='dark'] {
+  --os-grid-line: rgba(255, 255, 255, 0.035);
+  --os-overlay-blend: overlay;
+  --os-glow-opacity: 0.18;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--os-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--os-grid-line) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mix-blend-mode: var(--os-overlay-blend);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: -20vh -20vw;
+  pointer-events: none;
+  opacity: var(--os-glow-opacity);
+  mix-blend-mode: var(--os-overlay-blend);
+  background:
+    radial-gradient(420px circle at 12% 15%, var(--os-accent-green), transparent 60%),
+    radial-gradient(420px circle at 88% 82%, var(--os-accent-blue), transparent 60%);
+  animation: os-bg-drift 26s ease-in-out infinite;
+}
+
+@keyframes os-bg-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(3vw, 2vh); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    animation: none;
+  }
+}
