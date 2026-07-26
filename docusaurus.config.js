@@ -60,7 +60,9 @@ const config = {
   ],
 
   themeConfig: {
-    image: "img/social-card.png",
+    // social-card.png was never added to static/img — using the file that
+    // actually exists so this doesn't 404.
+    image: "img/docusaurus-social-card.jpg",
 
     colorMode: {
       defaultMode: "dark",
@@ -73,7 +75,10 @@ const config = {
       logo: {
         alt: "OnlySecurity",
         src: "img/profile.png",
-        srcDark: "img/profile-dark.png",
+        // srcDark removed — img/profile-dark.png doesn't exist in
+        // static/img, so this was rendering as a broken image in dark mode
+        // (the site's default mode). Add that file back and restore
+        // srcDark whenever it exists.
         width: 34,
         height: 34,
       },
@@ -92,25 +97,14 @@ const config = {
           position: "left",
         },
 
-        {
-          type: "dropdown",
-          label: "Resources",
-          position: "left",
-          items: [
-            {
-              label: "Tools",
-              to: "/docs/tools",
-            },
-            {
-              label: "Write-ups",
-              to: "/blog/tags/writeup",
-            },
-            {
-              label: "Labs",
-              to: "/labs",
-            },
-          ],
-        },
+        // The "Resources" dropdown pointed at /docs/tools, /blog/tags/writeup,
+        // and /labs — none of which exist yet, which is what was throwing the
+        // build (onBrokenLinks: "throw" fails the build on any dead link).
+        // Removed for now rather than left broken. Re-add once each
+        // destination page actually exists:
+        //   - Tools:     create docs/tools.md, then re-add { label: "Tools", to: "/docs/tools" }
+        //   - Write-ups: tag a blog post with `tags: [writeup]`, then re-add { label: "Write-ups", to: "/blog/tags/writeup" }
+        //   - Labs:      create src/pages/labs.js (or docs/labs.md), then re-add { label: "Labs", to: "/labs" }
 
         {
           href: "https://github.com/starlox0/onlysecurity",
@@ -145,8 +139,11 @@ const config = {
               to: "/docs/intro",
             },
             {
+              // There's no page at exactly "/docs" (only /docs/intro and
+              // deeper), so this pointed nowhere real. Repointed at an
+              // existing page rather than removed.
               label: "Documentation",
-              to: "/docs",
+              to: "/docs/intro",
             },
           ],
         },
@@ -177,14 +174,17 @@ const config = {
               label: "Blog",
               to: "/blog",
             },
-            {
-              label: "Contribute",
-              to: "/docs/contribute",
-            },
-            {
-              label: "Report a Vulnerability",
-              to: "/report",
-            },
+            // "Contribute" -> /docs/contribute and "Report a Vulnerability"
+            // -> /report don't exist yet, so both are commented out rather
+            // than left broken. Re-add once those pages exist:
+            // {
+            //   label: "Contribute",
+            //   to: "/docs/contribute",
+            // },
+            // {
+            //   label: "Report a Vulnerability",
+            //   to: "/report",
+            // },
           ],
         },
       ],
