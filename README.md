@@ -1,6 +1,6 @@
 # OnlySecurity
 
-**OnlySecurity** is a cybersecurity-focused knowledge base and blog maintained by **Subhankar Paul**. It contains write-ups, security research, vulnerability analysis, bug bounty tips, penetration testing methodologies, and educational resources for cybersecurity enthusiasts and professionals.
+**OnlySecurity** is a cybersecurity-focused knowledge base and blog maintained by **Starlox**. It contains write-ups, security research, vulnerability analysis, bug bounty tips, penetration testing methodologies, and educational resources for cybersecurity enthusiasts and professionals.
 
 🌐 **Live Website:** https://starlox0.github.io/onlysecurity/
 
