@@ -1,32 +1,59 @@
 # OnlySecurity
 
-**OnlySecurity** is a cybersecurity-focused knowledge base and blog maintained by **Starlox**. It contains write-ups, security research, vulnerability analysis, bug bounty tips, penetration testing methodologies, and educational resources for cybersecurity enthusiasts and professionals.
+**OnlySecurity** is a cybersecurity-focused knowledge base and blog maintained by **Starlox**, featuring write-ups, security research, vulnerability analysis, bug bounty tips, and penetration testing methodologies for security enthusiasts and professionals.
 
-🌐 **Live Website:** https://starlox0.github.io/onlysecurity/
+🌐 **Live Site:** [starlox0.github.io/onlysecurity](https://starlox0.github.io/onlysecurity/)
+
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fstarlox0.github.io%2Fonlysecurity%2F)](https://starlox0.github.io/onlysecurity/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#license)
+[![Made with Docusaurus](https://img.shields.io/badge/Made%20with-Docusaurus-3ECC5F?logo=docusaurus)](https://docusaurus.io/)
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Local Development](#local-development)
+- [Build & Preview](#build--preview)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [Author](#author)
+- [License](#license)
 
 ---
 
 ## Features
 
--  Cybersecurity blogs and research articles
--  Penetration testing methodologies
--  Bug bounty tips and write-ups
--  Vulnerability analysis and remediation
--  Web, API, Mobile, and Network Security resources
--  Built with Docusaurus for fast performance and easy maintenance
-
----
+- Cybersecurity blogs and in-depth research articles
+- Penetration testing methodologies and walkthroughs
+- Bug bounty tips, notes, and write-ups
+- Vulnerability analysis and remediation guidance
+- Resources spanning Web, API, Mobile, and Network Security
+- Built on Docusaurus for fast performance and easy content maintenance
 
 ## Tech Stack
 
-- **Docusaurus**
-- **React**
-- **Markdown (MDX)**
-- **GitHub Pages**
+| Layer         | Technology              |
+| ------------- | ------------------------ |
+| Framework     | Docusaurus               |
+| UI            | React                    |
+| Content       | Markdown / MDX           |
+| Hosting       | GitHub Pages             |
 
 ---
 
-## Installation
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (LTS recommended)
+- npm (bundled with Node.js) or another package manager of your choice
+
+### Installation
 
 Clone the repository and install dependencies:
 
@@ -46,17 +73,11 @@ Start the development server:
 npm run start
 ```
 
-The website will be available at:
-
-```
-http://localhost:3000
-```
-
-Changes are automatically reloaded during development.
+The site will be available at `http://localhost:3000`. Most changes are reflected live without needing to restart the server.
 
 ---
 
-## Build
+## Build & Preview
 
 Generate a production build:
 
@@ -64,9 +85,7 @@ Generate a production build:
 npm run build
 ```
 
-The generated static files will be placed inside the `build/` directory.
-
-To preview the production build locally:
+Static files are output to the `build/` directory. To preview the production build locally:
 
 ```bash
 npm run serve
@@ -76,46 +95,44 @@ npm run serve
 
 ## Deployment
 
-### GitHub Pages
+The site deploys to GitHub Pages via the `gh-pages` branch.
 
-Deploy using SSH:
+**Using SSH:**
 
 ```bash
 USE_SSH=true npm run deploy
 ```
 
-Deploy using HTTPS:
+**Using HTTPS:**
 
 ```bash
 GIT_USER=<your-github-username> npm run deploy
 ```
 
-The deployment publishes the website to the `gh-pages` branch.
-
 ---
 
 ## Contributing
 
-Contributions are welcome!
-
-If you'd like to improve an article, fix an issue, or contribute new cybersecurity content, feel free to:
+Contributions are welcome. To propose a change or add new content:
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/my-writeup`)
 3. Commit your changes
-4. Open a Pull Request
+4. Open a pull request
+
+Please keep write-ups factual, properly sourced, and free of any content that could facilitate real-world harm.
 
 ---
 
 ## Author
 
-**Subhankar Paul**
+**Subhankar Paul** ([@starlox0](https://github.com/starlox0))
 
-- Website: https://starlox0.github.io/onlysecurity/
-- GitHub: https://github.com/starlox0
+- Website: [starlox0.github.io/onlysecurity](https://starlox0.github.io/onlysecurity/)
+- Blog: [starlox.medium.com](https://starlox.medium.com/)
 
 ---
 
 ## License
 
-This project is licensed under the MIT License unless stated otherwise.
+This project is licensed under the [MIT License](LICENSE) unless stated otherwise.
