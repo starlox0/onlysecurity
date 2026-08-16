@@ -1,0 +1,8 @@
+{
+  "label": "OWASP",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Walkthroughs of the OWASP Top 10 and related projects (ASVS, Testing Guide, ZAP) — what each risk actually looks like in practice."
+  }
+}
