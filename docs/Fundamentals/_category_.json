@@ -1,0 +1,8 @@
+{
+  "label": "Fundamentals",
+  "position": 1,
+  "link": {
+    "type": "generated-index",
+    "description": "Core concepts every security engineer needs before going deeper: the CIA triad, threat modeling, common terminology, and how the rest of these docs fit together."
+  }
+}
