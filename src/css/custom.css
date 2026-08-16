@@ -347,3 +347,95 @@ body::after {
   font-weight: 700;
   letter-spacing: -0.01em;
 }
+
+/**
+ * Inline status badges for use inside docs (MDX). Mirrors the tag pills
+ * used on the homepage's "commit card" features so the vocabulary stays
+ * consistent between the landing page and the docs themselves.
+ *
+ * Usage in .mdx:
+ *   <span className="os-tag os-tag-green">START HERE</span>
+ */
+
+.os-tag {
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  margin: 0 0.35rem 0.35rem 0;
+  line-height: 1.4;
+}
+
+.os-tag-blue {
+  color: var(--os-accent-blue);
+  background: rgba(88, 166, 255, 0.12);
+}
+.os-tag-amber {
+  color: var(--os-accent-amber);
+  background: rgba(210, 153, 34, 0.12);
+}
+.os-tag-green {
+  color: var(--os-accent-green);
+  background: rgba(63, 185, 80, 0.12);
+}
+.os-tag-red {
+  color: var(--os-accent-red);
+  background: rgba(248, 81, 73, 0.12);
+}
+
+/**
+ * Doc pages — give the plain default doc layout a bit of the same
+ * advisory/terminal character as the homepage: a monospace kicker over
+ * H1s, and an accent rule under the title.
+ */
+
+.markdown > h1:first-child {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--os-border);
+  margin-bottom: 1.5rem;
+}
+
+.markdown h2 {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1.3rem;
+}
+
+.theme-doc-markdown table thead tr {
+  background: var(--os-surface-2);
+}
+
+.theme-doc-markdown table th,
+.theme-doc-markdown table td {
+  border: 1px solid var(--os-border);
+}
+
+/**
+ * Category "generated index" pages (the automatic landing pages for
+ * docs/Web-Security, docs/OWASP, etc.) render Docusaurus's default
+ * <DocCardList/> cards. Restyle them to match the homepage's commit-card
+ * look instead of the stock Infima card style.
+ */
+
+.theme-doc-sidebar-container ~ main .card,
+article .card {
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--os-accent-green);
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(63, 185, 80, 0.25),
+    0 12px 24px -12px rgba(0, 0, 0, 0.45);
+  text-decoration: none;
+}
+
+.card__title {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1rem;
+}
