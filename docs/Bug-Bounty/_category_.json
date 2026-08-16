@@ -1,0 +1,8 @@
+{
+  "label": "Bug Bounty",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Recon methodology, report-writing, program etiquette, and lessons from real hunts — for people trying to land their first (or fiftieth) valid submission."
+  }
+}
