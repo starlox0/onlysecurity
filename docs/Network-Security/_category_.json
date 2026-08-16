@@ -1,0 +1,8 @@
+{
+  "label": "Network Security",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Protocols, segmentation, and the offensive/defensive tooling used to secure (and break into) networks."
+  }
+}
