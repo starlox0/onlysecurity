@@ -1,0 +1,8 @@
+{
+  "label": "Web Security",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Attacking and defending web applications — auth flaws, injection, client-side bugs, and the tooling to find them."
+  }
+}
