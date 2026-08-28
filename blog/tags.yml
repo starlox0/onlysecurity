@@ -1,19 +1,29 @@
-facebook:
-  label: Facebook
-  permalink: /facebook
-  description: Facebook tag description
+writeup:
+  label: Write-up
+  permalink: /writeup
+  description: CTF and real-world vulnerability write-ups submitted by the community.
 
-hello:
-  label: Hello
-  permalink: /hello
-  description: Hello tag description
+web:
+  label: Web Security
+  permalink: /web
+  description: Posts about attacking and defending web applications.
 
-docusaurus:
-  label: Docusaurus
-  permalink: /docusaurus
-  description: Docusaurus tag description
+network:
+  label: Network Security
+  permalink: /network
+  description: Posts about network protocols, segmentation, and tooling.
 
-hola:
-  label: Hola
-  permalink: /hola
-  description: Hola tag description
+tools:
+  label: Tools
+  permalink: /tools
+  description: Guides and notes on offensive and defensive security tooling.
+
+bug-bounty:
+  label: Bug Bounty
+  permalink: /bug-bounty
+  description: Recon methodology, report-writing, and lessons from bounty programs.
+
+announcement:
+  label: Announcement
+  permalink: /announcement
+  description: News and updates about the OnlySecurity project.
