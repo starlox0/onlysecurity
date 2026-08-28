@@ -50,6 +50,12 @@ const entries = [
     path: 'https://github.com/starlox0/onlysecurity/blob/main/CONTRIBUTING.md',
     type: 'link',
   },
+    {
+    title: 'Practice Terminal',
+    description: 'A simulated Linux shell — practice real commands in your browser.',
+    path: '/practice',
+    type: 'doc',
+  },
 ];
 
 export default entries;
