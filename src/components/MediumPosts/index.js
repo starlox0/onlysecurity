@@ -12,7 +12,7 @@ export default function MediumPosts() {
     <div className={styles.wrapper}>
       <div className={styles.grid}>
         {visiblePosts.map((post) => (
-          
+          <a
             key={post.url}
             href={post.url}
             target="_blank"
@@ -37,7 +37,7 @@ export default function MediumPosts() {
               View more posts
             </button>
           ) : null}
-          
+          <a
             className={styles.viewAllButton}
             href="https://starlox.medium.com/"
             target="_blank"
