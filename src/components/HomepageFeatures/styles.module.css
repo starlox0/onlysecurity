@@ -1,0 +1,66 @@
+.features {
+  padding: 3rem 0 4rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+  text-decoration: none;
+  color: var(--os-text);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--os-accent-green);
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(63, 185, 80, 0.25),
+    0 12px 24px -12px rgba(0, 0, 0, 0.45);
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.tag {
+  align-self: flex-start;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--os-accent-green);
+  border: 1px solid var(--os-border);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 0.6rem;
+  color: var(--os-text);
+}
+
+.cardDescription {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--os-text-muted);
+  margin: 0 0 1.1rem;
+  flex: 1;
+}
+
+.cardLink {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--os-accent-red);
+}
