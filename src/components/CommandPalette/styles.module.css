@@ -1,0 +1,167 @@
+/* --- Floating trigger --- */
+.trigger {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+  color: var(--os-text-muted);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.trigger:hover {
+  border-color: var(--os-accent-green);
+  color: var(--os-accent-green);
+}
+
+.triggerIcon {
+  font-size: 0.9rem;
+}
+
+@media screen and (max-width: 600px) {
+  .trigger {
+    display: none; /* Cmd/Ctrl+K isn't a mobile gesture; avoid clutter */
+  }
+}
+
+/* --- Overlay & panel --- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(1, 4, 9, 0.72);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 1rem 1rem;
+}
+
+.panel {
+  width: 100%;
+  max-width: 560px;
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  background: var(--os-surface);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--os-border);
+}
+
+.prompt {
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--os-accent-green);
+  font-weight: 700;
+}
+
+.input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--os-text);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.95rem;
+}
+
+.input:focus {
+  outline: none;
+}
+
+.escHint {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  color: var(--os-text-muted);
+  border: 1px solid var(--os-border);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+}
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--os-text-muted);
+  font-size: 0.9rem;
+}
+
+.result,
+.resultActive {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.65rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.resultActive {
+  background: var(--os-surface-2);
+}
+
+.resultType {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--os-accent-green);
+  padding-top: 0.15rem;
+}
+
+.resultType[data-type='link'] {
+  color: var(--os-accent-blue);
+}
+
+.resultBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.resultTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--os-text);
+}
+
+.resultDescription {
+  font-size: 0.8rem;
+  color: var(--os-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}
