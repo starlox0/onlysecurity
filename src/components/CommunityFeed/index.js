@@ -270,7 +270,7 @@ export default function CommunityFeed() {
         <>
           <div className={styles.grid}>
             {state.posts.slice(0, visibleCount).map((post) => (
-              
+              <a
                 key={post.link}
                 href={post.link}
                 target="_blank"
