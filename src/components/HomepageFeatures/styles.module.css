@@ -1,209 +1,226 @@
-.features {
-  padding: 0 0 5rem;
+.path {
+  padding: 5rem 0;
+  border-top: 1px solid var(--os-border);
 }
 
-/* Terminal chrome — deliberately identical to the hero terminal so this
-   reads as the same window continuing, not a new component. */
-.terminal {
-  max-width: 780px;
-  margin: 0 auto;
-  border: 1px solid var(--os-border);
-  border-radius: 10px;
-  background: var(--os-surface);
-  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
+.sectionHead {
+  max-width: 620px;
+  margin: 0 auto 3rem;
+  text-align: center;
 }
 
-.terminalBar {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.7rem 1rem;
-  background: var(--os-surface-2);
-  border-bottom: 1px solid var(--os-border);
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+.eyebrow {
   display: inline-block;
-}
-.dot[data-color='red'] { background: var(--os-accent-red); }
-.dot[data-color='amber'] { background: var(--os-accent-amber); }
-.dot[data-color='green'] { background: var(--os-accent-green); }
-
-.terminalPath {
-  margin-left: 0.75rem;
   font-family: var(--ifm-font-family-monospace);
-  font-size: 0.8rem;
-  color: var(--os-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--os-accent-green);
+  margin-bottom: 0.75rem;
 }
 
-.terminalBody {
-  padding: 1.5rem 1.75rem 1.75rem;
-  font-family: var(--ifm-font-family-monospace);
+.sectionTitle {
+  font-size: clamp(1.6rem, 2.5vw, 2.1rem);
+  font-weight: 700;
+  margin: 0 0 0.6rem;
+  color: var(--os-text);
 }
 
-.commandLine {
-  font-size: 0.85rem;
+.sectionSubtitle {
   color: var(--os-text-muted);
+  font-size: 0.98rem;
   margin: 0;
 }
 
-.commandLine + .listing {
-  margin-top: 1rem;
+/* --- The chain --- */
+.chain {
+  list-style: none;
+  margin: 0 0 2.5rem;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
 }
 
-.listing + .commandLine {
-  margin-top: 1rem;
-  border-top: 1px dashed var(--os-border);
-  padding-top: 1rem;
+.step {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
 }
 
-.prompt {
-  color: var(--os-accent-green);
-}
-
-.finalCursor {
-  display: inline-block;
-  width: 7px;
-  height: 1rem;
-  margin-left: 0.3rem;
-  background: var(--os-accent-green);
-  vertical-align: -2px;
-  animation: os-blink 1.1s steps(1) infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .finalCursor {
-    animation: none;
-  }
-}
-
-@keyframes os-blink {
-  50% { opacity: 0; }
-}
-
-/* Directory listing */
-.listing {
+.stepCard {
   display: flex;
   flex-direction: column;
-}
-
-.row {
-  display: grid;
-  grid-template-columns: auto auto auto auto auto 1fr;
-  column-gap: 0.65rem;
-  align-items: baseline;
-  padding: 0.5rem 0.6rem;
-  margin: 0 -0.6rem;
-  border-radius: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 1.25rem 1.1rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
   text-decoration: none;
   color: var(--os-text);
-  font-size: 0.82rem;
-  line-height: 1.9;
-  white-space: nowrap;
-  transition: background 0.15s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.row:hover,
-.row:focus-visible {
+.stepCard:hover,
+.stepCard:focus-visible {
+  border-color: var(--os-accent-green);
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(63, 185, 80, 0.25),
+    0 14px 26px -16px rgba(0, 0, 0, 0.5);
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.stepCard:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: 2px;
+}
+
+.stepNumber {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--os-accent-green);
+  margin-bottom: 0.6rem;
+}
+
+.stepTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  color: var(--os-text);
+}
+
+.stepBlurb {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--os-text-muted);
+}
+
+.connector {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--os-border) 0,
+    var(--os-border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  align-self: center;
+}
+
+/* --- Branch (Blog & Write-ups) --- */
+.branch {
+  display: flex;
+  align-items: stretch;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.branchLine {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  position: relative;
+}
+
+.branchLine::before {
+  content: '';
+  position: absolute;
+  top: -1.5rem;
+  left: 50%;
+  width: 1px;
+  height: calc(100% + 1.5rem);
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--os-border) 0,
+    var(--os-border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.branchCard {
+  flex: 1;
+  padding: 1.1rem 1.1rem;
+  border: 1px dashed var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+  text-decoration: none;
+  color: var(--os-text);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.branchCard:hover,
+.branchCard:focus-visible {
+  border-color: var(--os-accent-amber);
   background: var(--os-surface-2);
   text-decoration: none;
   color: var(--os-text);
 }
 
-.row:focus-visible {
+.branchCard:focus-visible {
   outline: 2px solid var(--os-accent-blue);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
-.perms,
-.owner,
-.group,
-.size {
-  color: var(--os-text-muted);
-}
-
-.tag {
-  color: var(--os-accent-amber);
-  font-weight: 600;
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
-}
-
-/* Real terminals colour directories bold blue — kept literally true here. */
-.name {
-  color: var(--os-accent-blue);
-  font-weight: 700;
-}
-
-.arrow {
+.branchLabel {
   display: inline-block;
-  margin-left: 0.4rem;
-  color: var(--os-accent-green);
-  opacity: 0;
-  transform: translateX(-4px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.row:hover .arrow,
-.row:focus-visible .arrow {
-  opacity: 1;
-  transform: translateX(0);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--os-accent-amber);
+  margin-bottom: 0.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .arrow {
+  .stepCard,
+  .branchCard {
     transition: none;
   }
 }
 
-.comment {
-  grid-column: 1 / -1;
-  color: var(--os-text-muted);
-  font-size: 0.78rem;
-  white-space: normal;
-  padding-left: calc(10ch + 0.65rem * 4);
-  margin-top: -0.3rem;
+/* Below ~996px the chain can't stay horizontal without becoming
+   unreadable, so it becomes a vertical sequence with a vertical
+   connector instead — same information, same order, no cropping. */
+@media screen and (max-width: 996px) {
+  .chain {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .step {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .connector {
+    width: 1px;
+    height: 1.5rem;
+    align-self: center;
+    background: repeating-linear-gradient(
+      to bottom,
+      var(--os-border) 0,
+      var(--os-border) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  }
+
+  .branch {
+    max-width: 100%;
+  }
 }
 
-/* Below ~700px real ls -la output would wrap unreadably, so we drop the
-   permission/owner/group/size columns and keep only what a plain `ls`
-   would show — name and the one-line description. */
-@media screen and (max-width: 700px) {
-  .terminalBody {
-    padding: 1.25rem 1.1rem 1.5rem;
-  }
-
-  .row {
-    grid-template-columns: 1fr auto;
-    column-gap: 0.5rem;
-    white-space: normal;
-  }
-
-  .perms,
-  .owner,
-  .group,
-  .size {
-    display: none;
-  }
-
-  .tag {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
-  }
-
-  .name {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .comment {
-    grid-column: 1 / -1;
-    padding-left: 0;
-    margin-top: 0.1rem;
+@media screen and (max-width: 600px) {
+  .path {
+    padding: 3.5rem 0;
   }
 }
