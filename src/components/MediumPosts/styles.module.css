@@ -1,1 +1,107 @@
+.wrapper {
+  padding: 0.5rem 0 2rem;
+}
 
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--os-surface);
+  text-decoration: none;
+  color: var(--os-text);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--os-accent-green);
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(63, 185, 80, 0.25),
+    0 12px 24px -12px rgba(0, 0, 0, 0.45);
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.imageWrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--os-surface-2);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.body {
+  padding: 1.1rem 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.title {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0 0 0.6rem;
+  color: var(--os-text);
+}
+
+.excerpt {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--os-text-muted);
+  margin: 0 0 1rem;
+  flex: 1;
+}
+
+.readLink {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--os-accent-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.viewAllButton {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--os-text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.viewAllButton:hover {
+  border-color: var(--os-accent-green);
+  color: var(--os-accent-green);
+  text-decoration: none;
+}
