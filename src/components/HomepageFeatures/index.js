@@ -2,91 +2,74 @@ import React from 'react';
 import Link from '@docusaurus/Link';
 import styles from './styles.module.css';
 
-const entries = [
+const steps = [
   {
-    name: 'fundamentals',
-    tag: 'START HERE',
-    size: '4.2K',
-    description: 'The CIA triad, threat modeling, and how to read a CVE.',
+    n: '01',
+    title: 'Fundamentals',
+    blurb: 'CIA triad, threat modeling, reading a CVE.',
     to: '/docs/intro',
   },
   {
-    name: 'web-security',
-    tag: 'METHODOLOGY',
-    size: '6.8K',
-    description: 'Trust boundaries, a testing methodology, and the tools you\u2019ll reach for constantly.',
+    n: '02',
+    title: 'Web Security',
+    blurb: 'Trust boundaries and a real testing methodology.',
     to: '/docs/category/web-security',
   },
   {
-    name: 'owasp',
-    tag: 'REFERENCE',
-    size: '5.4K',
-    description: 'The Top 10, explained with real attack scenarios instead of definitions.',
+    n: '03',
+    title: 'OWASP Top 10',
+    blurb: 'The standard risk categories, with real scenarios.',
     to: '/docs/category/owasp',
   },
   {
-    name: 'network-security',
-    tag: 'RECON',
-    size: '5.9K',
-    description: 'OSI layers, segmentation, and the protocols behind every internal engagement.',
+    n: '04',
+    title: 'Network Security',
+    blurb: 'Layers, segmentation, and core recon tools.',
     to: '/docs/category/network-security',
   },
   {
-    name: 'bug-bounty',
-    tag: 'GETTING STARTED',
-    size: '4.6K',
-    description: 'Program scope, a recon workflow, and how to write a report that gets triaged fast.',
+    n: '05',
+    title: 'Bug Bounty',
+    blurb: 'Scope, recon workflow, reports that get triaged.',
     to: '/docs/category/bug-bounty',
-  },
-  {
-    name: 'blog',
-    tag: 'READ',
-    size: '3.1K',
-    description: 'Real CTF and bug bounty write-ups \u2014 from the team and the community.',
-    to: '/blog',
   },
 ];
 
-function Entry({name, tag, size, description, to}) {
+export default function LearningPath() {
   return (
-    <Link to={to} className={styles.row}>
-      <span className={styles.perms}>drwxr-xr-x</span>
-      <span className={styles.owner}>os</span>
-      <span className={styles.group}>docs</span>
-      <span className={styles.size}>{size}</span>
-      <span className={styles.tag}>{tag}</span>
-      <span className={styles.name}>
-        {name}/<span className={styles.arrow}>→</span>
-      </span>
-      <span className={styles.comment}># {description}</span>
-    </Link>
-  );
-}
-
-export default function HomepageFeatures() {
-  return (
-    <section className={styles.features}>
+    <section className={styles.path}>
       <div className="container">
-        <div className={styles.terminal}>
-          <div className={styles.terminalBar}>
-            <span className={styles.dot} data-color="red" />
-            <span className={styles.dot} data-color="amber" />
-            <span className={styles.dot} data-color="green" />
-            <span className={styles.terminalPath}>root@onlysecurity:~$</span>
-          </div>
-          <div className={styles.terminalBody}>
-            <p className={styles.commandLine}>
-              <span className={styles.prompt}>$</span> ls -la /docs --sort=priority
-            </p>
-            <div className={styles.listing} role="list">
-              {entries.map((entry) => (
-                <Entry key={entry.name} {...entry} />
-              ))}
-            </div>
-            <p className={styles.commandLine}>
-              <span className={styles.prompt}>$</span> cd <span className={styles.finalCursor} aria-hidden="true" />
-            </p>
-          </div>
+        <div className={styles.sectionHead}>
+          <span className={styles.eyebrow}>The path</span>
+          <h2 className={styles.sectionTitle}>Six modules. One clear order.</h2>
+          <p className={styles.sectionSubtitle}>
+            Follow it top to bottom if you're new. Already know the basics?
+            Skip straight to what you need.
+          </p>
+        </div>
+
+        <ol className={styles.chain}>
+          {steps.map((step, i) => (
+            <li key={step.n} className={styles.step}>
+              <Link to={step.to} className={styles.stepCard}>
+                <span className={styles.stepNumber}>{step.n}</span>
+                <span className={styles.stepTitle}>{step.title}</span>
+                <span className={styles.stepBlurb}>{step.blurb}</span>
+              </Link>
+              {i < steps.length - 1 && <span className={styles.connector} aria-hidden="true" />}
+            </li>
+          ))}
+        </ol>
+
+        <div className={styles.branch}>
+          <span className={styles.branchLine} aria-hidden="true" />
+          <Link to="/blog" className={styles.branchCard}>
+            <span className={styles.branchLabel}>Ongoing</span>
+            <span className={styles.stepTitle}>Blog &amp; Write-ups</span>
+            <span className={styles.stepBlurb}>
+              Not a step — read alongside everything above, updated as new work ships.
+            </span>
+          </Link>
         </div>
       </div>
     </section>
