@@ -140,7 +140,7 @@ export default function CommunityFeed() {
         </p>
         <div className={styles.tagLinks}>
           {SOURCE_TAGS.map((tag) => (
-            
+            <a
               key={tag}
               href={`https://medium.com/tag/${tag}`}
               target="_blank"
@@ -157,7 +157,7 @@ export default function CommunityFeed() {
   return (
     <div className={styles.grid}>
       {state.posts.map((post) => (
-        
+        <a
           key={post.link}
           href={post.link}
           target="_blank"
