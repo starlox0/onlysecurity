@@ -2,52 +2,63 @@ import React from 'react';
 import Link from '@docusaurus/Link';
 import styles from './styles.module.css';
 
-const FeatureList = [
+const entries = [
   {
-    title: 'Fundamentals',
+    name: 'fundamentals',
     tag: 'START HERE',
-    description: 'The CIA triad, threat modeling, and how to read a CVE — the concepts everything else builds on.',
+    size: '4.2K',
+    description: 'The CIA triad, threat modeling, and how to read a CVE.',
     to: '/docs/intro',
   },
   {
-    title: 'Web Security',
+    name: 'web-security',
     tag: 'METHODOLOGY',
-    description: 'Trust boundaries, a practical testing methodology, and the tools you\u2019ll reach for constantly.',
+    size: '6.8K',
+    description: 'Trust boundaries, a testing methodology, and the tools you\u2019ll reach for constantly.',
     to: '/docs/category/web-security',
   },
   {
-    title: 'OWASP Top 10',
+    name: 'owasp',
     tag: 'REFERENCE',
-    description: 'The industry-standard risk categories, explained with real attack scenarios instead of just definitions.',
+    size: '5.4K',
+    description: 'The Top 10, explained with real attack scenarios instead of definitions.',
     to: '/docs/category/owasp',
   },
   {
-    title: 'Network Security',
+    name: 'network-security',
     tag: 'RECON',
-    description: 'OSI layers, segmentation, and the protocols (DNS, SMB, ARP) that show up in every internal engagement.',
+    size: '5.9K',
+    description: 'OSI layers, segmentation, and the protocols behind every internal engagement.',
     to: '/docs/category/network-security',
   },
   {
-    title: 'Bug Bounty',
+    name: 'bug-bounty',
     tag: 'GETTING STARTED',
-    description: 'Program scope, a practical recon workflow, and how to write a report that actually gets triaged fast.',
+    size: '4.6K',
+    description: 'Program scope, a recon workflow, and how to write a report that gets triaged fast.',
     to: '/docs/category/bug-bounty',
   },
   {
-    title: 'Blog & Write-ups',
+    name: 'blog',
     tag: 'READ',
-    description: 'Real CTF and bug bounty write-ups \u2014 from the OnlySecurity team and the community.',
+    size: '3.1K',
+    description: 'Real CTF and bug bounty write-ups \u2014 from the team and the community.',
     to: '/blog',
   },
 ];
 
-function Feature({title, tag, description, to}) {
+function Entry({name, tag, size, description, to}) {
   return (
-    <Link to={to} className={styles.card}>
+    <Link to={to} className={styles.row}>
+      <span className={styles.perms}>drwxr-xr-x</span>
+      <span className={styles.owner}>os</span>
+      <span className={styles.group}>docs</span>
+      <span className={styles.size}>{size}</span>
       <span className={styles.tag}>{tag}</span>
-      <h3 className={styles.cardTitle}>{title}</h3>
-      <p className={styles.cardDescription}>{description}</p>
-      <span className={styles.cardLink}>Explore →</span>
+      <span className={styles.name}>
+        {name}/<span className={styles.arrow}>→</span>
+      </span>
+      <span className={styles.comment}># {description}</span>
     </Link>
   );
 }
@@ -56,10 +67,26 @@ export default function HomepageFeatures() {
   return (
     <section className={styles.features}>
       <div className="container">
-        <div className={styles.grid}>
-          {FeatureList.map((props) => (
-            <Feature key={props.title} {...props} />
-          ))}
+        <div className={styles.terminal}>
+          <div className={styles.terminalBar}>
+            <span className={styles.dot} data-color="red" />
+            <span className={styles.dot} data-color="amber" />
+            <span className={styles.dot} data-color="green" />
+            <span className={styles.terminalPath}>root@onlysecurity:~$</span>
+          </div>
+          <div className={styles.terminalBody}>
+            <p className={styles.commandLine}>
+              <span className={styles.prompt}>$</span> ls -la /docs --sort=priority
+            </p>
+            <div className={styles.listing} role="list">
+              {entries.map((entry) => (
+                <Entry key={entry.name} {...entry} />
+              ))}
+            </div>
+            <p className={styles.commandLine}>
+              <span className={styles.prompt}>$</span> cd <span className={styles.finalCursor} aria-hidden="true" />
+            </p>
+          </div>
         </div>
       </div>
     </section>
