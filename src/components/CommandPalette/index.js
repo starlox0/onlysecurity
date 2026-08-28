@@ -41,10 +41,27 @@ export default function CommandPalette() {
     [history, close],
   );
 
-  // Global shortcut: Cmd/Ctrl+K to open, Escape to close.
+  // Global shortcuts: "/" is the reliable primary trigger — Ctrl/Cmd+K is
+  // a reserved browser shortcut (focus the address bar) in Chrome, Brave,
+  // and Edge, so pages can't prevent it there. We still listen for it as a
+  // bonus for browsers/platforms where it does reach the page.
   useEffect(() => {
+    function isTypingTarget(el) {
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+    }
+
     function handleKeyDown(e) {
       const isMod = e.metaKey || e.ctrlKey;
+
+      if (!isOpen && e.key === '/' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        lastFocusedRef.current = document.activeElement;
+        setIsOpen(true);
+        return;
+      }
+
       if (isMod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsOpen((prev) => {
@@ -96,9 +113,9 @@ export default function CommandPalette() {
         type="button"
         className={styles.trigger}
         onClick={open}
-        aria-label="Open command palette (Cmd+K)">
-        <span className={styles.triggerIcon}>⌘</span>
-        <span className={styles.triggerText}>K</span>
+        aria-label="Open command palette (press /)">
+        <span className={styles.triggerIcon}>/</span>
+        <span className={styles.triggerText}>search</span>
       </button>
 
       {isOpen && (
@@ -152,4 +169,3 @@ export default function CommandPalette() {
     </>
   );
 }
-
