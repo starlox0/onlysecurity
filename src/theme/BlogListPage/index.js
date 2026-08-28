@@ -7,12 +7,12 @@ import {
   ThemeClassNames,
 } from '@docusaurus/theme-common';
 import BlogLayout from '@theme/BlogLayout';
-import BlogListPaginator from '@theme/BlogListPaginator';
 import SearchMetadata from '@theme/SearchMetadata';
-import BlogPostItems from '@theme/BlogPostItems';
 import BlogListPageStructuredData from '@theme/BlogListPage/StructuredData';
 import BlogTabs from '@site/src/components/BlogTabs';
 import MediumPosts from '@site/src/components/MediumPosts';
+import CommunityFeed from '@site/src/components/CommunityFeed';
+
 function BlogListPageMetadata(props) {
   const {metadata} = props;
   const {
@@ -28,27 +28,17 @@ function BlogListPageMetadata(props) {
     </>
   );
 }
-function BlogListPageContent(props) {
-  const {metadata, items, sidebar} = props;
+
+function BlogListPageContent() {
   const [activeTab, setActiveTab] = useState('mine');
-
-  if (activeTab === 'mine') {
-    return (
-      <BlogLayout>
-        <BlogTabs activeTab={activeTab} onChange={setActiveTab} />
-        <MediumPosts />
-      </BlogLayout>
-    );
-  }
-
   return (
-    <BlogLayout sidebar={sidebar}>
+    <BlogLayout>
       <BlogTabs activeTab={activeTab} onChange={setActiveTab} />
-      <BlogPostItems items={items} />
-      <BlogListPaginator metadata={metadata} />
+      {activeTab === 'mine' ? <MediumPosts /> : <CommunityFeed />}
     </BlogLayout>
   );
 }
+
 export default function BlogListPage(props) {
   return (
     <HtmlClassNameProvider
@@ -58,7 +48,7 @@ export default function BlogListPage(props) {
       )}>
       <BlogListPageMetadata {...props} />
       <BlogListPageStructuredData {...props} />
-      <BlogListPageContent {...props} />
+      <BlogListPageContent />
     </HtmlClassNameProvider>
   );
 }
