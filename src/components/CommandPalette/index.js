@@ -1,11 +1,15 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useHistory} from '@docusaurus/router';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import entries from './data';
 import {fuzzySearch} from './fuzzy';
 import styles from './styles.module.css';
 
 export default function CommandPalette() {
   const history = useHistory();
+  const {
+    siteConfig: {baseUrl},
+  } = useDocusaurusContext();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -34,11 +38,14 @@ export default function CommandPalette() {
       if (item.type === 'link') {
         window.open(item.path, '_blank', 'noopener,noreferrer');
       } else {
-        history.push(item.path);
+        // history.push, unlike <Link>, doesn't prepend the site's baseUrl
+        // automatically — we have to do it ourselves.
+        const prefixedPath = baseUrl.replace(/\/$/, '') + item.path;
+        history.push(prefixedPath);
       }
       close();
     },
-    [history, close],
+    [history, close, baseUrl],
   );
 
   // Global shortcuts: "/" is the reliable primary trigger — Ctrl/Cmd+K is
