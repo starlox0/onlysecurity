@@ -1,66 +1,209 @@
 .features {
-  padding: 3rem 0 4rem;
+  padding: 0 0 5rem;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.5rem;
+/* Terminal chrome — deliberately identical to the hero terminal so this
+   reads as the same window continuing, not a new component. */
+.terminal {
+  max-width: 780px;
+  margin: 0 auto;
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  background: var(--os-surface);
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
 }
 
-.card {
+.terminalBar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.7rem 1rem;
+  background: var(--os-surface-2);
+  border-bottom: 1px solid var(--os-border);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot[data-color='red'] { background: var(--os-accent-red); }
+.dot[data-color='amber'] { background: var(--os-accent-amber); }
+.dot[data-color='green'] { background: var(--os-accent-green); }
+
+.terminalPath {
+  margin-left: 0.75rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  color: var(--os-text-muted);
+}
+
+.terminalBody {
+  padding: 1.5rem 1.75rem 1.75rem;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.commandLine {
+  font-size: 0.85rem;
+  color: var(--os-text-muted);
+  margin: 0;
+}
+
+.commandLine + .listing {
+  margin-top: 1rem;
+}
+
+.listing + .commandLine {
+  margin-top: 1rem;
+  border-top: 1px dashed var(--os-border);
+  padding-top: 1rem;
+}
+
+.prompt {
+  color: var(--os-accent-green);
+}
+
+.finalCursor {
+  display: inline-block;
+  width: 7px;
+  height: 1rem;
+  margin-left: 0.3rem;
+  background: var(--os-accent-green);
+  vertical-align: -2px;
+  animation: os-blink 1.1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finalCursor {
+    animation: none;
+  }
+}
+
+@keyframes os-blink {
+  50% { opacity: 0; }
+}
+
+/* Directory listing */
+.listing {
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
-  border: 1px solid var(--os-border);
-  border-radius: 8px;
-  background: var(--os-surface);
-  text-decoration: none;
-  color: var(--os-text);
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.card:hover {
-  border-color: var(--os-accent-green);
-  transform: translateY(-3px);
-  box-shadow:
-    0 0 0 1px rgba(63, 185, 80, 0.25),
-    0 12px 24px -12px rgba(0, 0, 0, 0.45);
+.row {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto 1fr;
+  column-gap: 0.65rem;
+  align-items: baseline;
+  padding: 0.5rem 0.6rem;
+  margin: 0 -0.6rem;
+  border-radius: 6px;
   text-decoration: none;
   color: var(--os-text);
+  font-size: 0.82rem;
+  line-height: 1.9;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.row:hover,
+.row:focus-visible {
+  background: var(--os-surface-2);
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: -2px;
+}
+
+.perms,
+.owner,
+.group,
+.size {
+  color: var(--os-text-muted);
 }
 
 .tag {
-  align-self: flex-start;
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--os-accent-green);
-  border: 1px solid var(--os-border);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  margin-bottom: 0.9rem;
-}
-
-.cardTitle {
-  font-size: 1.15rem;
-  font-weight: 700;
-  margin: 0 0 0.6rem;
-  color: var(--os-text);
-}
-
-.cardDescription {
-  font-size: 0.9rem;
-  line-height: 1.55;
-  color: var(--os-text-muted);
-  margin: 0 0 1.1rem;
-  flex: 1;
-}
-
-.cardLink {
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 0.8rem;
+  color: var(--os-accent-amber);
   font-weight: 600;
-  color: var(--os-accent-red);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+/* Real terminals colour directories bold blue — kept literally true here. */
+.name {
+  color: var(--os-accent-blue);
+  font-weight: 700;
+}
+
+.arrow {
+  display: inline-block;
+  margin-left: 0.4rem;
+  color: var(--os-accent-green);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.row:hover .arrow,
+.row:focus-visible .arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow {
+    transition: none;
+  }
+}
+
+.comment {
+  grid-column: 1 / -1;
+  color: var(--os-text-muted);
+  font-size: 0.78rem;
+  white-space: normal;
+  padding-left: calc(10ch + 0.65rem * 4);
+  margin-top: -0.3rem;
+}
+
+/* Below ~700px real ls -la output would wrap unreadably, so we drop the
+   permission/owner/group/size columns and keep only what a plain `ls`
+   would show — name and the one-line description. */
+@media screen and (max-width: 700px) {
+  .terminalBody {
+    padding: 1.25rem 1.1rem 1.5rem;
+  }
+
+  .row {
+    grid-template-columns: 1fr auto;
+    column-gap: 0.5rem;
+    white-space: normal;
+  }
+
+  .perms,
+  .owner,
+  .group,
+  .size {
+    display: none;
+  }
+
+  .tag {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .comment {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    margin-top: 0.1rem;
+  }
 }
