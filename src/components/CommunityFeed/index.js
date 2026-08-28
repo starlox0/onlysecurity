@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import styles from './styles.module.css';
 
 // --- Configuration -------------------------------------------------------
@@ -10,13 +10,34 @@ import styles from './styles.module.css';
 const RSS2JSON_API_KEY = 'mnyhvyd3fr8eddefeq8wv4avbtzqqpmf3os2ujzq';
 
 // Medium tag feeds are public and unauthenticated: https://medium.com/feed/tag/<tag>
-// Add or remove tags here to change what shows up.
-const SOURCE_TAGS = ['bug-bounty', 'penetration-testing', 'cybersecurity', 'infosec'];
+const DEFAULT_TAGS = ['bug-bounty', 'penetration-testing', 'cybersecurity', 'infosec'];
+const MAX_TAGS = 8; // cap simultaneous requests — each tag is one network call
 
-const ITEMS_PER_TAG = 8;
-const MAX_ITEMS = 9;
-const CACHE_KEY = 'os-community-feed-v1';
+const ITEMS_PER_TAG = 15; // pull a deep pool upfront so "See more" needs no extra calls
+const INITIAL_VISIBLE = 9;
+const LOAD_MORE_STEP = 9;
+
+const TAGS_STORAGE_KEY = 'os-community-tags-v1';
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+function loadSavedTags() {
+  try {
+    const raw = localStorage.getItem(TAGS_STORAGE_KEY);
+    if (!raw) return DEFAULT_TAGS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TAGS;
+  } catch {
+    return DEFAULT_TAGS;
+  }
+}
+
+function sanitizeTag(input) {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
 
 function stripHtml(html) {
   if (typeof window === 'undefined') return '';
@@ -50,29 +71,41 @@ async function fetchTag(tag) {
 }
 
 export default function CommunityFeed() {
+  const [tags, setTags] = useState(DEFAULT_TAGS);
+  const [tagInput, setTagInput] = useState('');
+  const [tagError, setTagError] = useState('');
   const [state, setState] = useState({status: 'loading', posts: []});
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
+  // Load any saved custom tags once, on mount, in the browser only.
   useEffect(() => {
-    let cancelled = false;
+    setTags(loadSavedTags());
+  }, []);
 
-    async function load() {
-      // Serve from a short-lived cache first so repeat visits (and repeat
-      // tab-switches within one visit) don't burn extra API calls.
-      try {
-        const cached = sessionStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const {timestamp, posts} = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_TTL_MS && posts.length > 0) {
-            setState({status: 'ready', posts});
-            return;
+  const cacheKey = useMemo(() => `os-community-feed-v2:${[...tags].sort().join(',')}`, [tags]);
+
+  const load = useCallback(
+    async (forceFresh = false) => {
+      setState({status: 'loading', posts: []});
+      setVisibleCount(INITIAL_VISIBLE);
+
+      if (!forceFresh) {
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const {timestamp, posts} = JSON.parse(cached);
+            if (Date.now() - timestamp < CACHE_TTL_MS && posts.length > 0) {
+              setState({status: 'ready', posts});
+              return;
+            }
           }
+        } catch {
+          // sessionStorage unavailable or corrupt cache — fall through to a fresh fetch.
         }
-      } catch {
-        // sessionStorage unavailable or corrupt cache — fall through to a fresh fetch.
       }
 
       try {
-        const results = await Promise.allSettled(SOURCE_TAGS.map(fetchTag));
+        const results = await Promise.allSettled(tags.map(fetchTag));
         const merged = results
           .filter((r) => r.status === 'fulfilled')
           .flatMap((r) => r.value);
@@ -87,7 +120,6 @@ export default function CommunityFeed() {
             return true;
           })
           .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate))
-          .slice(0, MAX_ITEMS)
           .map((item) => ({
             title: item.title,
             link: item.link,
@@ -97,88 +129,183 @@ export default function CommunityFeed() {
             excerpt: excerpt(item.description || item.content || ''),
           }));
 
-        if (cancelled) return;
         setState({status: 'ready', posts});
         try {
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({timestamp: Date.now(), posts}));
+          sessionStorage.setItem(cacheKey, JSON.stringify({timestamp: Date.now(), posts}));
         } catch {
           // ignore quota errors
         }
       } catch (err) {
-        if (!cancelled) setState({status: 'error', posts: []});
+        setState({status: 'error', posts: []});
       }
-    }
+    },
+    [tags, cacheKey],
+  );
 
+  useEffect(() => {
     load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tags]);
 
-  if (state.status === 'loading') {
-    return (
-      <div className={styles.grid}>
-        {Array.from({length: 6}).map((_, i) => (
-          <div key={i} className={styles.skeletonCard} aria-hidden="true">
-            <div className={styles.skeletonImage} />
-            <div className={styles.skeletonLine} />
-            <div className={styles.skeletonLineShort} />
-          </div>
-        ))}
-      </div>
-    );
+  function handleAddTag(e) {
+    e.preventDefault();
+    const clean = sanitizeTag(tagInput);
+    if (!clean) {
+      setTagError('Enter a tag using letters, numbers, and hyphens.');
+      return;
+    }
+    if (tags.includes(clean)) {
+      setTagError('Already following that tag.');
+      return;
+    }
+    if (tags.length >= MAX_TAGS) {
+      setTagError(`You can follow up to ${MAX_TAGS} tags at once.`);
+      return;
+    }
+    const next = [...tags, clean];
+    setTags(next);
+    try {
+      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage errors (private browsing, quota, etc.)
+    }
+    setTagInput('');
+    setTagError('');
   }
 
-  if (state.status === 'error') {
-    return (
-      <div className={styles.emptyState}>
-        <p className={styles.emptyStateTitle}>Couldn't load the live feed right now.</p>
-        <p className={styles.emptyStateBody}>
-          This pulls live from public Medium tags via a third-party proxy, which
-          occasionally rate-limits or times out. Try refreshing, or browse the
-          tags directly in the meantime.
-        </p>
-        <div className={styles.tagLinks}>
-          {SOURCE_TAGS.map((tag) => (
-            <a
-              key={tag}
-              href={`https://medium.com/tag/${tag}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.tagLink}>
-              #{tag}
-            </a>
-          ))}
-        </div>
-      </div>
-    );
+  function handleRemoveTag(tag) {
+    if (tags.length === 1) {
+      setTagError('Keep at least one tag.');
+      return;
+    }
+    const next = tags.filter((t) => t !== tag);
+    setTags(next);
+    try {
+      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage errors
+    }
   }
+
+  function handleResetTags() {
+    setTags(DEFAULT_TAGS);
+    try {
+      localStorage.removeItem(TAGS_STORAGE_KEY);
+    } catch {
+      // ignore storage errors
+    }
+    setTagError('');
+  }
+
+  const isCustomized =
+    tags.length !== DEFAULT_TAGS.length || tags.some((t) => !DEFAULT_TAGS.includes(t));
 
   return (
-    <div className={styles.grid}>
-      {state.posts.map((post) => (
-        <a
-          key={post.link}
-          href={post.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.card}>
-          <div className={styles.imageWrap}>
-            {post.image ? (
-              <img src={post.image} alt="" loading="lazy" className={styles.image} />
-            ) : (
-              <div className={styles.imagePlaceholder} />
-            )}
-          </div>
-          <div className={styles.body}>
-            <h3 className={styles.title}>{post.title}</h3>
-            <p className={styles.excerpt}>{post.excerpt}</p>
-            <span className={styles.meta}>
-              {post.author ? `${post.author} · ` : ''}Read on Medium →
+    <div>
+      <form className={styles.tagBar} onSubmit={handleAddTag}>
+        <div className={styles.tagChips}>
+          {tags.map((tag) => (
+            <span key={tag} className={styles.tagChip}>
+              #{tag}
+              <button
+                type="button"
+                className={styles.tagChipRemove}
+                onClick={() => handleRemoveTag(tag)}
+                aria-label={`Stop following ${tag}`}>
+                ×
+              </button>
             </span>
+          ))}
+        </div>
+        <div className={styles.tagInputRow}>
+          <input
+            type="text"
+            value={tagInput}
+            onChange={(e) => {
+              setTagInput(e.target.value);
+              setTagError('');
+            }}
+            placeholder="add a tag, e.g. cloud-security"
+            className={styles.tagInput}
+            aria-label="Add a Medium tag to follow"
+          />
+          <button type="submit" className={styles.tagAddButton}>
+            Add
+          </button>
+          {isCustomized && (
+            <button type="button" className={styles.tagResetButton} onClick={handleResetTags}>
+              Reset
+            </button>
+          )}
+        </div>
+        {tagError && <p className={styles.tagError}>{tagError}</p>}
+      </form>
+
+      {state.status === 'loading' && (
+        <div className={styles.grid}>
+          {Array.from({length: 6}).map((_, i) => (
+            <div key={i} className={styles.skeletonCard} aria-hidden="true">
+              <div className={styles.skeletonImage} />
+              <div className={styles.skeletonLine} />
+              <div className={styles.skeletonLineShort} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {state.status === 'error' && (
+        <div className={styles.emptyState}>
+          <p className={styles.emptyStateTitle}>Couldn't load the live feed right now.</p>
+          <p className={styles.emptyStateBody}>
+            This pulls live from public Medium tags via a third-party proxy, which
+            occasionally rate-limits or times out.
+          </p>
+          <button type="button" className={styles.retryButton} onClick={() => load(true)}>
+            Try again
+          </button>
+        </div>
+      )}
+
+      {state.status === 'ready' && (
+        <>
+          <div className={styles.grid}>
+            {state.posts.slice(0, visibleCount).map((post) => (
+              
+                key={post.link}
+                href={post.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.card}>
+                <div className={styles.imageWrap}>
+                  {post.image ? (
+                    <img src={post.image} alt="" loading="lazy" className={styles.image} />
+                  ) : (
+                    <div className={styles.imagePlaceholder} />
+                  )}
+                </div>
+                <div className={styles.body}>
+                  <h3 className={styles.title}>{post.title}</h3>
+                  <p className={styles.excerpt}>{post.excerpt}</p>
+                  <span className={styles.meta}>
+                    {post.author ? `${post.author} · ` : ''}Read on Medium →
+                  </span>
+                </div>
+              </a>
+            ))}
           </div>
-        </a>
-      ))}
+
+          {visibleCount < state.posts.length && (
+            <div className={styles.loadMoreRow}>
+              <button
+                type="button"
+                className={styles.loadMoreButton}
+                onClick={() => setVisibleCount((c) => c + LOAD_MORE_STEP)}>
+                See more ({state.posts.length - visibleCount} more)
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
