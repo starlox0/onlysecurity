@@ -9,7 +9,7 @@ starlox0:
 
 community:
   name: OnlySecurity Community
-  title: Contributed write-up
+  title: Contributed Security write-up
   url: https://github.com/starlox0/onlysecurity/graphs/contributors
   image_url: https://github.com/onlysecurity.png
   page: false
