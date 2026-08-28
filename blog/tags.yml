@@ -1,7 +1,7 @@
 writeup:
   label: Write-up
   permalink: /writeup
-  description: CTF and real-world vulnerability write-ups submitted by the community.
+  description: CTF and real-world vulnerability write-up submitted by the community.
 
 web:
   label: Web Security
