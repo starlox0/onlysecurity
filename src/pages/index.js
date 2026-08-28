@@ -95,7 +95,7 @@ function BlogPreview() {
         </div>
         <div className={styles.blogGrid}>
           {posts.map((post) => (
-            
+            <a
               key={post.url}
               href={post.url}
               target="_blank"
