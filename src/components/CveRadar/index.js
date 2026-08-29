@@ -28,7 +28,7 @@ function CveCard({cve}) {
   return (
     <div className={styles.card}>
       <div className={styles.cardHead}>
-        
+        <a
           href={`https://nvd.nist.gov/vuln/detail/${cve.id}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -44,7 +44,7 @@ function CveCard({cve}) {
       {githubRefs.length > 0 && (
         <div className={styles.githubRefs}>
           {githubRefs.map((ref) => (
-            
+            <a
               key={ref.url}
               href={ref.url}
               target="_blank"
@@ -138,7 +138,7 @@ export default function CveRadar() {
             This pulls live from the National Vulnerability Database, which can rate-limit or
             time out under load. Try again in a moment, or search directly on NVD.
           </p>
-          
+          <a
             className={styles.emptyStateLink}
             href={
               mode === 'search' && query
