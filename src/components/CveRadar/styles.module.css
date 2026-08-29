@@ -273,3 +273,122 @@
     min-width: 0;
   }
 }
+
+
+/* --- GitHub exploits section --- */
+.exploitsSection {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px dashed var(--os-border);
+}
+
+.exploitsHeading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--os-text);
+  margin: 0 0 1rem;
+}
+
+.exploitsNote {
+  font-size: 0.88rem;
+  color: var(--os-text-muted);
+  margin: 0;
+}
+
+.exploitsNote a {
+  color: var(--os-accent-green);
+}
+
+.exploitsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.exploitRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+  text-decoration: none;
+  color: var(--os-text);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.exploitRow:hover,
+.exploitRow:focus-visible {
+  border-color: var(--os-accent-amber);
+  background: var(--os-surface-2);
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.exploitRow:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: -2px;
+}
+
+.exploitStars {
+  flex-shrink: 0;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--os-accent-amber);
+  min-width: 3.2rem;
+}
+
+.exploitBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.exploitName {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--os-accent-blue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exploitDescription {
+  font-size: 0.82rem;
+  color: var(--os-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exploitLang {
+  flex-shrink: 0;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  color: var(--os-text-muted);
+  border: 1px solid var(--os-border);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  align-self: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exploitRow {
+    transition: none;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .exploitRow {
+    flex-wrap: wrap;
+  }
+
+  .exploitDescription {
+    white-space: normal;
+  }
+}
