@@ -1,6 +1,11 @@
 const NVD_API_KEY = 'AB40B533-98CB-4074-88E3-5D5F88089102';
 const BASE_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
-const PROXY_URL = 'https://api.allorigins.win/raw?url=';
+
+const PROXIES = [
+  (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+const PROXY_TIMEOUT_MS = 8000;
 
 const CVE_ID_PATTERN = /^CVE-\d{4}-\d{4,}$/i;
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -33,20 +38,37 @@ function writeCache(key, data) {
   }
 }
 
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, {signal: controller.signal});
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function nvdFetch(params) {
   const key = cacheKeyFor(params);
   const cached = readCache(key);
   if (cached) return cached;
 
   const targetUrl = `${BASE_URL}?${params.toString()}`;
-  const proxiedUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
-  const res = await fetch(proxiedUrl);
-  if (!res.ok) {
-    throw new Error(`CVE feed responded ${res.status}`);
+  let lastError = new Error('No proxy configured');
+
+  for (const buildProxyUrl of PROXIES) {
+    try {
+      const res = await fetchWithTimeout(buildProxyUrl(targetUrl), PROXY_TIMEOUT_MS);
+      if (!res.ok) throw new Error(`proxy responded ${res.status}`);
+      const data = await res.json();
+      writeCache(key, data);
+      return data;
+    } catch (err) {
+      lastError = err;
+      // try the next proxy in the list
+    }
   }
-  const data = await res.json();
-  writeCache(key, data);
-  return data;
+  throw lastError;
 }
 
 export async function fetchRecentCves({days = 14, limit = 15} = {}) {
