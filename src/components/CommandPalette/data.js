@@ -56,6 +56,12 @@ const entries = [
     path: '/practice',
     type: 'doc',
   },
+    {
+    title: 'CVE Radar',
+    description: 'Live vulnerability feed — search by CVE ID, product, or GitHub username.',
+    path: '/cve-radar',
+    type: 'doc',
+  },
 ];
 
 export default entries;
