@@ -1,11 +1,21 @@
-const NVD_API_KEY = 'AB40B533-98CB-4074-88E3-5D5F88089102';
+// Primary path: a small Cloudflare Worker (owned, not a shared public
+// service) that forwards requests to NVD with the real API key attached
+// and returns them with open CORS headers — tried first since it's far
+// more reliable than public proxies.
+const WORKER_URL = 'https://onlysecurity-cve-proxy.randomt3ster.workers.dev';
+
 const BASE_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 
-const PROXIES = [
+// Fallback path if the Worker is ever unreachable: a couple of free
+// public CORS proxies. These are individually flaky (rate limits,
+// occasional outages/522s), so we try more than one, each with a short
+// timeout. corsproxy.io is deliberately excluded — its free tier is now
+// restricted to localhost/development only.
+const FALLBACK_PROXIES = [
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
-const PROXY_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_MS = 8000;
 
 const CVE_ID_PATTERN = /^CVE-\d{4}-\d{4,}$/i;
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -54,11 +64,24 @@ async function nvdFetch(params) {
   if (cached) return cached;
 
   const targetUrl = `${BASE_URL}?${params.toString()}`;
-  let lastError = new Error('No proxy configured');
+  let lastError = new Error('No source configured');
 
-  for (const buildProxyUrl of PROXIES) {
+  if (WORKER_URL) {
     try {
-      const res = await fetchWithTimeout(buildProxyUrl(targetUrl), PROXY_TIMEOUT_MS);
+      const res = await fetchWithTimeout(`${WORKER_URL}?${params.toString()}`, REQUEST_TIMEOUT_MS);
+      if (!res.ok) throw new Error(`worker responded ${res.status}`);
+      const data = await res.json();
+      writeCache(key, data);
+      return data;
+    } catch (err) {
+      lastError = err;
+      // fall through to public proxies below
+    }
+  }
+
+  for (const buildProxyUrl of FALLBACK_PROXIES) {
+    try {
+      const res = await fetchWithTimeout(buildProxyUrl(targetUrl), REQUEST_TIMEOUT_MS);
       if (!res.ok) throw new Error(`proxy responded ${res.status}`);
       const data = await res.json();
       writeCache(key, data);
