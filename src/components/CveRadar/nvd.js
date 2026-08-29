@@ -1,0 +1,74 @@
+const NVD_API_KEY = 'AB40B533-98CB-4074-88E3-5D5F88089102';
+const BASE_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
+
+const CVE_ID_PATTERN = /^CVE-\d{4}-\d{4,}$/i;
+
+export function isCveId(input) {
+  return CVE_ID_PATTERN.test(input.trim());
+}
+
+async function nvdFetch(params) {
+  const url = `${BASE_URL}?${params.toString()}`;
+  const headers = NVD_API_KEY ? {apiKey: NVD_API_KEY} : {};
+  const res = await fetch(url, {headers});
+  if (!res.ok) {
+    throw new Error(`NVD API responded ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchRecentCves({days = 14, limit = 15} = {}) {
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
+  const params = new URLSearchParams({
+    pubStartDate: start.toISOString(),
+    pubEndDate: end.toISOString(),
+    resultsPerPage: String(Math.min(limit, 20)),
+  });
+  const data = await nvdFetch(params);
+  return (data.vulnerabilities || [])
+    .map((v) => v.cve)
+    .sort((a, b) => new Date(b.published) - new Date(a.published));
+}
+
+export async function fetchByCveId(id) {
+  const params = new URLSearchParams({cveId: id.trim().toUpperCase()});
+  const data = await nvdFetch(params);
+  return (data.vulnerabilities || []).map((v) => v.cve);
+}
+
+export async function fetchByKeyword(keyword, {limit = 12} = {}) {
+  const params = new URLSearchParams({
+    keywordSearch: keyword.trim(),
+    resultsPerPage: String(Math.min(limit, 20)),
+  });
+  const data = await nvdFetch(params);
+  return (data.vulnerabilities || [])
+    .map((v) => v.cve)
+    .sort((a, b) => new Date(b.published) - new Date(a.published));
+}
+
+// Pulls the best available CVSS score/severity, preferring newer metric
+// versions, since not every CVE has been scored under all of them.
+export function getSeverity(cve) {
+  const metrics = cve.metrics || {};
+  const entry =
+    metrics.cvssMetricV31?.[0] || metrics.cvssMetricV30?.[0] || metrics.cvssMetricV2?.[0];
+  if (!entry) return {score: null, severity: 'UNSCORED'};
+  return {
+    score: entry.cvssData?.baseScore ?? null,
+    severity: entry.baseSeverity || entry.cvssData?.baseSeverity || 'UNSCORED',
+  };
+}
+
+export function getDescription(cve) {
+  const desc = (cve.descriptions || []).find((d) => d.lang === 'en');
+  return desc ? desc.value : 'No description available.';
+}
+
+// Any reference pointing at github.com — often a PoC, advisory, or the
+// researcher's own repo/profile, which is frequently how credit is given
+// in place of (or alongside) a real name.
+export function getGithubRefs(cve) {
+  return (cve.references || []).filter((r) => /github\.com/i.test(r.url)).slice(0, 3);
+}
