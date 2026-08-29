@@ -11,6 +11,7 @@ import {
   SEVERITIES,
   recentYears,
 } from './nvd';
+import {fetchGithubExploits} from './github';
 import styles from './styles.module.css';
 
 function SeverityBadge({severity, score}) {
@@ -31,7 +32,7 @@ function CveCard({cve}) {
   return (
     <div className={styles.card}>
       <div className={styles.cardHead}>
-        <a
+        
           href={`https://nvd.nist.gov/vuln/detail/${cve.id}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -47,13 +48,75 @@ function CveCard({cve}) {
       {githubRefs.length > 0 && (
         <div className={styles.githubRefs}>
           {githubRefs.map((ref) => (
-            <a
+            
               key={ref.url}
               href={ref.url}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.githubRef}>
               ↗ github.com{new URL(ref.url).pathname}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GithubExploits({exploits}) {
+  if (exploits.status === 'idle') return null;
+
+  return (
+    <div className={styles.exploitsSection}>
+      <h3 className={styles.exploitsHeading}>
+        Public exploits/PoCs on GitHub{exploits.cveId ? ` for ${exploits.cveId}` : ''}
+      </h3>
+
+      {exploits.status === 'loading' && (
+        <p className={styles.exploitsNote}>Searching GitHub…</p>
+      )}
+
+      {exploits.status === 'error' && (
+        <p className={styles.exploitsNote}>
+          Couldn't search GitHub right now.{' '}
+          
+            href={`https://github.com/search?q=${encodeURIComponent(exploits.cveId)}&type=repositories`}
+            target="_blank"
+            rel="noopener noreferrer">
+            Search on GitHub →
+          </a>
+        </p>
+      )}
+
+      {exploits.status === 'ready' && exploits.repos.length === 0 && (
+        <p className={styles.exploitsNote}>
+          No public GitHub repos mention this CVE yet — check back later, or{' '}
+          
+            href={`https://github.com/search?q=${encodeURIComponent(exploits.cveId)}&type=repositories`}
+            target="_blank"
+            rel="noopener noreferrer">
+            search manually →
+          </a>
+        </p>
+      )}
+
+      {exploits.status === 'ready' && exploits.repos.length > 0 && (
+        <div className={styles.exploitsList}>
+          {exploits.repos.map((repo) => (
+            
+              key={repo.url}
+              href={repo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.exploitRow}>
+              <span className={styles.exploitStars}>★ {repo.stars}</span>
+              <span className={styles.exploitBody}>
+                <span className={styles.exploitName}>{repo.name}</span>
+                {repo.description && (
+                  <span className={styles.exploitDescription}>{repo.description}</span>
+                )}
+              </span>
+              {repo.language && <span className={styles.exploitLang}>{repo.language}</span>}
             </a>
           ))}
         </div>
@@ -71,6 +134,7 @@ export default function CveRadar() {
   const [cweId, setCweId] = useState('ANY');
   const [mode, setMode] = useState('radar'); // 'radar' | 'search'
   const [state, setState] = useState({status: 'loading', results: []});
+  const [exploits, setExploits] = useState({status: 'idle', repos: [], cveId: null});
 
   async function loadRadar() {
     setState({status: 'loading', results: []});
@@ -96,14 +160,28 @@ export default function CveRadar() {
 
     setMode('search');
     setState({status: 'loading', results: []});
+    setExploits({status: 'idle', repos: [], cveId: null});
+
+    const exactCveId = trimmed && isCveId(trimmed) ? trimmed.trim().toUpperCase() : null;
+
     try {
-      // An exact CVE ID lookup ignores the other filters — a single record
-      // has one fixed severity/type/year, filtering it further makes no sense.
-      const results =
-        trimmed && isCveId(trimmed)
-          ? await fetchByCveId(trimmed)
-          : await fetchFiltered({keyword: trimmed, year, severity, cweId});
+      const results = exactCveId
+        ? await fetchByCveId(exactCveId)
+        : await fetchFiltered({keyword: trimmed, year, severity, cweId});
       setState({status: 'ready', results});
+
+      // Only for an exact single-CVE lookup — searching GitHub per result
+      // in a broad multi-CVE list would multiply API calls fast and isn't
+      // what was asked for.
+      if (exactCveId && results.length > 0) {
+        setExploits({status: 'loading', repos: [], cveId: exactCveId});
+        try {
+          const repos = await fetchGithubExploits(exactCveId);
+          setExploits({status: 'ready', repos, cveId: exactCveId});
+        } catch {
+          setExploits({status: 'error', repos: [], cveId: exactCveId});
+        }
+      }
     } catch {
       setState({status: 'error', results: []});
     }
@@ -115,6 +193,7 @@ export default function CveRadar() {
     setYear('RECENT');
     setSeverity('ANY');
     setCweId('ANY');
+    setExploits({status: 'idle', repos: [], cveId: null});
     loadRadar();
   }
 
@@ -217,7 +296,7 @@ export default function CveRadar() {
             This pulls live from the National Vulnerability Database, which can rate-limit or
             time out under load. Try again in a moment, or search directly on NVD.
           </p>
-          <a
+          
             className={styles.emptyStateLink}
             href={
               mode === 'search' && query
@@ -248,6 +327,8 @@ export default function CveRadar() {
           ))}
         </div>
       )}
+
+      <GithubExploits exploits={exploits} />
     </div>
   );
 }
