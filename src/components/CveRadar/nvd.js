@@ -24,6 +24,98 @@ export function isCveId(input) {
   return CVE_ID_PATTERN.test(input.trim());
 }
 
+// A curated subset of CWE categories worth offering in a dropdown — full
+// CWE has 900+ entries, most of which nobody's searching for by name.
+export const VULN_TYPES = [
+  {label: 'SQL Injection', cweId: 'CWE-89'},
+  {label: 'Cross-Site Scripting (XSS)', cweId: 'CWE-79'},
+  {label: 'Cross-Site Request Forgery (CSRF)', cweId: 'CWE-352'},
+  {label: 'Path Traversal', cweId: 'CWE-22'},
+  {label: 'Server-Side Request Forgery (SSRF)', cweId: 'CWE-918'},
+  {label: 'OS Command Injection', cweId: 'CWE-78'},
+  {label: 'Code Injection', cweId: 'CWE-94'},
+  {label: 'Buffer Overflow', cweId: 'CWE-120'},
+  {label: 'Use After Free', cweId: 'CWE-416'},
+  {label: 'Insecure Deserialization', cweId: 'CWE-502'},
+  {label: 'XML External Entities (XXE)', cweId: 'CWE-611'},
+  {label: 'Improper Authentication', cweId: 'CWE-287'},
+  {label: 'Broken Access Control', cweId: 'CWE-284'},
+  {label: 'Privilege Escalation', cweId: 'CWE-269'},
+  {label: 'Information Exposure', cweId: 'CWE-200'},
+  {label: 'Denial of Service', cweId: 'CWE-400'},
+  {label: 'Race Condition', cweId: 'CWE-362'},
+  {label: 'Hardcoded Credentials', cweId: 'CWE-798'},
+  {label: 'Improper Input Validation', cweId: 'CWE-20'},
+  {label: 'Missing Authorization', cweId: 'CWE-862'},
+];
+
+export const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+
+// Recent years worth offering — CVEs from further back are rarely what
+// someone's browsing a "radar" for.
+export function recentYears(count = 12) {
+  const current = new Date().getUTCFullYear();
+  return Array.from({length: count}, (_, i) => current - i);
+}
+
+// Splits a calendar year into consecutive windows no longer than 100 days
+// (a safety margin under NVD's hard 120-day cap on any date-range query),
+// so a full year can be fetched as a handful of sequential requests and
+// merged, instead of one request NVD would reject outright.
+function yearDateChunks(year) {
+  const MAX_CHUNK_DAYS = 100;
+  const yearStart = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
+  const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
+  const chunks = [];
+  let chunkStart = yearStart;
+  while (chunkStart <= yearEnd) {
+    const proposedEnd = new Date(chunkStart.getTime() + MAX_CHUNK_DAYS * 24 * 60 * 60 * 1000);
+    const chunkEnd = proposedEnd > yearEnd ? yearEnd : proposedEnd;
+    chunks.push([chunkStart, chunkEnd]);
+    chunkStart = new Date(chunkEnd.getTime() + 1);
+  }
+  return chunks;
+}
+
+// Combined search: optional free-text keyword, optional CWE vulnerability
+// type, optional CVSS v3 severity, and either the recent-14-days window
+// (default) or a full specific year (transparently chunked under the
+// hood). Any subset of these can be empty/unset.
+export async function fetchFiltered({keyword, year, severity, cweId, limit = 24} = {}) {
+  const baseFilters = {};
+  if (keyword && keyword.trim()) baseFilters.keywordSearch = keyword.trim();
+  if (severity && severity !== 'ANY') baseFilters.cvssV3Severity = severity;
+  if (cweId && cweId !== 'ANY') baseFilters.cweId = cweId;
+
+  const windows =
+    year && year !== 'RECENT'
+      ? yearDateChunks(Number(year))
+      : [[new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), new Date()]];
+
+  const all = [];
+  for (const [start, end] of windows) {
+    const params = new URLSearchParams({
+      ...baseFilters,
+      pubStartDate: start.toISOString(),
+      pubEndDate: end.toISOString(),
+      resultsPerPage: '20',
+    });
+    // eslint-disable-next-line no-await-in-loop -- intentionally sequential to stay rate-limit-friendly
+    const data = await nvdFetch(params);
+    all.push(...(data.vulnerabilities || []).map((v) => v.cve));
+  }
+
+  const seen = new Set();
+  return all
+    .filter((cve) => {
+      if (seen.has(cve.id)) return false;
+      seen.add(cve.id);
+      return true;
+    })
+    .sort((a, b) => new Date(b.published) - new Date(a.published))
+    .slice(0, limit);
+}
+
 function cacheKeyFor(params) {
   return `os-cve-radar-v1:${params.toString()}`;
 }
