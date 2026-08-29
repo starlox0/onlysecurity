@@ -200,3 +200,76 @@
   font-weight: 600;
   color: var(--os-accent-green);
 }
+
+
+/* --- Filter row --- */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px dashed var(--os-border);
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.filterLabel {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--os-text-muted);
+}
+
+.filterSelect {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-surface);
+  color: var(--os-text);
+  min-width: 160px;
+}
+
+.filterSelect:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: 1px;
+}
+
+.clearFiltersButton {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--os-border);
+  background: transparent;
+  color: var(--os-text-muted);
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.clearFiltersButton:hover {
+  border-color: var(--os-accent-red);
+  color: var(--os-accent-red);
+}
+
+@media screen and (max-width: 600px) {
+  .filterField {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .filterSelect {
+    width: 100%;
+    min-width: 0;
+  }
+}
