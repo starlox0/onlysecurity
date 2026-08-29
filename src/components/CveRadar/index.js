@@ -32,7 +32,7 @@ function CveCard({cve}) {
   return (
     <div className={styles.card}>
       <div className={styles.cardHead}>
-        
+       <a 
           href={`https://nvd.nist.gov/vuln/detail/${cve.id}`}
           target="_blank"
           rel="noopener noreferrer"
@@ -48,7 +48,7 @@ function CveCard({cve}) {
       {githubRefs.length > 0 && (
         <div className={styles.githubRefs}>
           {githubRefs.map((ref) => (
-            
+            <a
               key={ref.url}
               href={ref.url}
               target="_blank"
@@ -79,7 +79,7 @@ function GithubExploits({exploits}) {
       {exploits.status === 'error' && (
         <p className={styles.exploitsNote}>
           Couldn't search GitHub right now.{' '}
-          
+          <a
             href={`https://github.com/search?q=${encodeURIComponent(exploits.cveId)}&type=repositories`}
             target="_blank"
             rel="noopener noreferrer">
@@ -91,7 +91,7 @@ function GithubExploits({exploits}) {
       {exploits.status === 'ready' && exploits.repos.length === 0 && (
         <p className={styles.exploitsNote}>
           No public GitHub repos mention this CVE yet — check back later, or{' '}
-          
+          <a
             href={`https://github.com/search?q=${encodeURIComponent(exploits.cveId)}&type=repositories`}
             target="_blank"
             rel="noopener noreferrer">
@@ -103,7 +103,7 @@ function GithubExploits({exploits}) {
       {exploits.status === 'ready' && exploits.repos.length > 0 && (
         <div className={styles.exploitsList}>
           {exploits.repos.map((repo) => (
-            
+            <a
               key={repo.url}
               href={repo.url}
               target="_blank"
@@ -296,7 +296,7 @@ export default function CveRadar() {
             This pulls live from the National Vulnerability Database, which can rate-limit or
             time out under load. Try again in a moment, or search directly on NVD.
           </p>
-          
+         <a 
             className={styles.emptyStateLink}
             href={
               mode === 'search' && query
