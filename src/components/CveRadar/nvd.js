@@ -1,20 +1,52 @@
 const NVD_API_KEY = 'AB40B533-98CB-4074-88E3-5D5F88089102';
 const BASE_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
+const PROXY_URL = 'https://api.allorigins.win/raw?url=';
 
 const CVE_ID_PATTERN = /^CVE-\d{4}-\d{4,}$/i;
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 export function isCveId(input) {
   return CVE_ID_PATTERN.test(input.trim());
 }
 
-async function nvdFetch(params) {
-  const url = `${BASE_URL}?${params.toString()}`;
-  const headers = NVD_API_KEY ? {apiKey: NVD_API_KEY} : {};
-  const res = await fetch(url, {headers});
-  if (!res.ok) {
-    throw new Error(`NVD API responded ${res.status}`);
+function cacheKeyFor(params) {
+  return `os-cve-radar-v1:${params.toString()}`;
+}
+
+function readCache(key) {
+  try {
+    const cached = sessionStorage.getItem(key);
+    if (!cached) return null;
+    const {timestamp, data} = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_TTL_MS) return null;
+    return data;
+  } catch {
+    return null;
   }
-  return res.json();
+}
+
+function writeCache(key, data) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({timestamp: Date.now(), data}));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+async function nvdFetch(params) {
+  const key = cacheKeyFor(params);
+  const cached = readCache(key);
+  if (cached) return cached;
+
+  const targetUrl = `${BASE_URL}?${params.toString()}`;
+  const proxiedUrl = `${PROXY_URL}${encodeURIComponent(targetUrl)}`;
+  const res = await fetch(proxiedUrl);
+  if (!res.ok) {
+    throw new Error(`CVE feed responded ${res.status}`);
+  }
+  const data = await res.json();
+  writeCache(key, data);
+  return data;
 }
 
 export async function fetchRecentCves({days = 14, limit = 15} = {}) {
