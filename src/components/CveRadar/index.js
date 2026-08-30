@@ -12,6 +12,7 @@ import {
   recentYears,
 } from './nvd';
 import {fetchGithubExploits} from './github';
+import RadarScope from './RadarScope';
 import styles from './styles.module.css';
 
 function SeverityBadge({severity, score}) {
@@ -199,6 +200,9 @@ export default function CveRadar() {
 
   return (
     <div>
+     {state.status === 'ready' && state.results.length > 0 && (
+        <RadarScope cves={state.results} />
+      )}
       <form className={styles.searchBar} onSubmit={handleSearch}>
         <input
           type="text"
