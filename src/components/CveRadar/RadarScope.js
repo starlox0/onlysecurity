@@ -50,7 +50,7 @@ export default function RadarScope({cves}) {
       <div className={styles.crosshairH} />
       <div className={styles.sweep} />
       {blips.map((blip) => (
-        
+        <a
           key={blip.id}
           href={`https://nvd.nist.gov/vuln/detail/${blip.id}`}
           target="_blank"
