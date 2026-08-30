@@ -1,5 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import resources from './resources';
+import ResourceModal from './ResourceModal';
 import styles from './styles.module.css';
 
 const CATEGORY_ORDER = [
@@ -25,9 +26,13 @@ function byName(a, b) {
   return a.name.localeCompare(b.name, undefined, {sensitivity: 'base'});
 }
 
-function ResourceRow({resource}) {
+function ResourceRow({resource, onSelect}) {
   return (
-    <a href={resource.url} target="_blank" rel="noopener noreferrer" className={styles.row}>
+    <button
+      type="button"
+      className={styles.row}
+      data-trending={resource.trending ? 'true' : undefined}
+      onClick={() => onSelect(resource)}>
       <div className={styles.rowHead}>
         <span className={styles.name}>{resource.name}</span>
         <span className={styles.levelBadge} data-level={resource.level}>
@@ -35,7 +40,7 @@ function ResourceRow({resource}) {
         </span>
       </div>
       <span className={styles.description}>{resource.description}</span>
-    </a>
+    </button>
   );
 }
 
@@ -43,6 +48,7 @@ export default function SecurityResources() {
   const [view, setView] = useState('category'); // 'category' | 'alphabetical'
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState('ANY');
+  const [selected, setSelected] = useState(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -132,7 +138,7 @@ export default function SecurityResources() {
       {view === 'alphabetical' && (
         <div className={styles.jumpBar} aria-label="Jump to letter">
           {ALPHABET.map((letter) => (
-            <a
+            
               key={letter}
               href={`#letter-${letter}`}
               className={availableLetters.has(letter) ? styles.jumpLink : styles.jumpLinkDisabled}
@@ -158,7 +164,7 @@ export default function SecurityResources() {
             </h2>
             <div className={styles.list}>
               {list.map((r) => (
-                <ResourceRow key={r.name} resource={r} />
+                <ResourceRow key={r.name} resource={r} onSelect={setSelected} />
               ))}
             </div>
           </section>
@@ -172,11 +178,13 @@ export default function SecurityResources() {
               <h2 className={styles.sectionTitle}>{letter}</h2>
               <div className={styles.list}>
                 {byLetter.get(letter).map((r) => (
-                  <ResourceRow key={r.name} resource={r} />
+                  <ResourceRow key={r.name} resource={r} onSelect={setSelected} />
                 ))}
               </div>
             </section>
           ))}
+
+      {selected && <ResourceModal resource={selected} onClose={() => setSelected(null)} />}
     </div>
   );
 }
