@@ -1,0 +1,129 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(1, 4, 9, 0.72);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.panel {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  padding: 2rem 2rem 1.75rem;
+  border: 1px solid var(--os-border);
+  border-radius: 12px;
+  background: var(--os-surface);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
+}
+
+.closeButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--os-text-muted);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  border-color: var(--os-accent-red);
+  color: var(--os-accent-red);
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-right: 2.5rem;
+}
+
+.categoryBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-border);
+  color: var(--os-accent-blue);
+}
+
+.levelBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-border);
+  color: var(--os-text-muted);
+}
+
+.levelBadge[data-level='Beginner'] { color: var(--os-accent-green); border-color: var(--os-accent-green); }
+.levelBadge[data-level='Intermediate'] { color: var(--os-accent-amber); border-color: var(--os-accent-amber); }
+.levelBadge[data-level='Advanced'] { color: var(--os-accent-red); border-color: var(--os-accent-red); }
+
+.trendingBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid #d4a017;
+  color: #d4a017;
+}
+
+.title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--os-text);
+  margin: 0 0 0.3rem;
+}
+
+.hostname {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  color: var(--os-text-muted);
+  margin: 0 0 1.1rem;
+}
+
+.description {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--os-text);
+  margin: 0 0 1.6rem;
+}
+
+.visitButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.7rem 1.3rem;
+  border-radius: 6px;
+  background: var(--os-accent-green);
+  color: #06120a;
+  text-decoration: none;
+}
+
+.visitButton:hover {
+  background: var(--ifm-color-primary-light);
+  color: #06120a;
+  text-decoration: none;
+}
