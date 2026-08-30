@@ -138,7 +138,7 @@ export default function SecurityResources() {
       {view === 'alphabetical' && (
         <div className={styles.jumpBar} aria-label="Jump to letter">
           {ALPHABET.map((letter) => (
-            
+            <a
               key={letter}
               href={`#letter-${letter}`}
               className={availableLetters.has(letter) ? styles.jumpLink : styles.jumpLinkDisabled}
