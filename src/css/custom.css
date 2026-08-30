@@ -439,3 +439,63 @@ article .card {
   font-family: var(--ifm-font-family-monospace);
   font-size: 1rem;
 }
+
+.navbar__inner {
+  position: relative;
+}
+
+.navbar__items:not(.navbar__items--right) {
+  flex: 1;
+  justify-content: center;
+}
+
+.navbar__brand {
+  position: absolute;
+  left: var(--ifm-navbar-padding-horizontal);
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 0;
+}
+
+.navbar__link {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--os-text-muted);
+  padding-bottom: 4px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.navbar__link:hover {
+  color: var(--os-text);
+  text-decoration: none;
+}
+
+.navbar__link--active {
+  color: var(--os-accent-green);
+  border-bottom-color: var(--os-accent-green);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar__link {
+    transition: none;
+  }
+}
+
+/* Below ~996px Docusaurus switches to the mobile hamburger menu, where
+   this centering/absolute-brand trick doesn't apply — let it fall back to
+   normal flow so the mobile menu isn't broken. */
+@media screen and (max-width: 996px) {
+  .navbar__brand {
+    position: static;
+    transform: none;
+  }
+
+  .navbar__items:not(.navbar__items--right) {
+    flex: initial;
+    justify-content: flex-start;
+  }
+}
