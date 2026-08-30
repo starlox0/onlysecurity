@@ -1,0 +1,126 @@
+.scope {
+  position: relative;
+  width: min(280px, 70vw);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto 2.5rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(63, 185, 80, 0.08), var(--os-bg) 75%);
+  border: 1px solid var(--os-border);
+  box-shadow:
+    inset 0 0 40px rgba(63, 185, 80, 0.06),
+    0 0 30px -10px rgba(63, 185, 80, 0.15);
+  overflow: hidden;
+}
+
+/* Range rings, as three nested circles at 33% / 66% / 100% of the radius. */
+.ring {
+  position: absolute;
+  border: 1px solid rgba(63, 185, 80, 0.18);
+  border-radius: 50%;
+}
+.ring[data-ring='1'] { inset: 33.5%; }
+.ring[data-ring='2'] { inset: 16.75%; }
+.ring[data-ring='3'] { inset: 0; }
+
+.crosshairV,
+.crosshairH {
+  position: absolute;
+  background: rgba(63, 185, 80, 0.15);
+}
+.crosshairV { left: 50%; top: 0; bottom: 0; width: 1px; transform: translateX(-50%); }
+.crosshairH { top: 50%; left: 0; right: 0; height: 1px; transform: translateY(-50%); }
+
+/* The rotating sweep — a wedge of fading green light circling the scope. */
+.sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(63, 185, 80, 0.32) 0deg,
+    rgba(63, 185, 80, 0.12) 18deg,
+    transparent 55deg,
+    transparent 360deg
+  );
+  animation: os-radar-sweep 4.5s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+@keyframes os-radar-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep {
+    animation: none;
+    background: conic-gradient(
+      from 0deg,
+      rgba(63, 185, 80, 0.16) 0deg,
+      transparent 40deg,
+      transparent 360deg
+    );
+  }
+}
+
+.center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--os-accent-green);
+  box-shadow: 0 0 6px 1px rgba(63, 185, 80, 0.7);
+}
+
+/* --- Blips --- */
+.blip {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  display: block;
+  cursor: pointer;
+}
+
+.blip[data-severity='CRITICAL'] { background: #fff; box-shadow: 0 0 6px 2px var(--os-accent-red); }
+.blip[data-severity='HIGH'] { background: var(--os-accent-red); box-shadow: 0 0 5px 1px rgba(248, 81, 73, 0.7); }
+.blip[data-severity='MEDIUM'] { background: var(--os-accent-amber); box-shadow: 0 0 5px 1px rgba(210, 153, 34, 0.6); }
+.blip[data-severity='LOW'] { background: var(--os-accent-green); box-shadow: 0 0 4px 1px rgba(63, 185, 80, 0.5); }
+.blip[data-severity='UNSCORED'] { background: var(--os-text-muted); box-shadow: 0 0 3px 1px rgba(139, 148, 158, 0.4); }
+
+.blipPulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: os-blip-pulse 2.4s ease-out infinite;
+}
+
+.blip[data-severity='CRITICAL'] .blipPulse,
+.blip[data-severity='HIGH'] .blipPulse { color: var(--os-accent-red); }
+.blip[data-severity='MEDIUM'] .blipPulse { color: var(--os-accent-amber); }
+.blip[data-severity='LOW'] .blipPulse { color: var(--os-accent-green); }
+.blip[data-severity='UNSCORED'] .blipPulse { color: var(--os-text-muted); }
+
+@keyframes os-blip-pulse {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blipPulse {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .scope {
+    margin-bottom: 2rem;
+  }
+}
