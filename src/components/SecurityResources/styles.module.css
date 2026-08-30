@@ -201,3 +201,54 @@
     justify-content: center;
   }
 }
+
+/* --- Level filter & badges (added for the difficulty filter) --- */
+.levelSelect {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-surface);
+  color: var(--os-text);
+}
+
+.levelSelect:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: 1px;
+}
+
+.rowHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.levelBadge {
+  flex-shrink: 0;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-border);
+  color: var(--os-text-muted);
+  white-space: nowrap;
+}
+
+.levelBadge[data-level='Beginner'] {
+  color: var(--os-accent-green);
+  border-color: var(--os-accent-green);
+}
+
+.levelBadge[data-level='Intermediate'] {
+  color: var(--os-accent-amber);
+  border-color: var(--os-accent-amber);
+}
+
+.levelBadge[data-level='Advanced'] {
+  color: var(--os-accent-red);
+  border-color: var(--os-accent-red);
+}
