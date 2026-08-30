@@ -6,6 +6,7 @@ import Heading from '@theme/Heading';
 import LearningPath from '@site/src/components/HomepageFeatures';
 import mediumPosts from '@site/src/components/MediumPosts/posts';
 import styles from './index.module.css';
+import CursorGlow from '@site/src/components/CursorGlow';
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
