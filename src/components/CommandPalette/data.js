@@ -68,6 +68,12 @@ const entries = [
     path: '/bug-bounty-platforms',
     type: 'doc',
   },
+    {
+    title: 'Security Resources',
+    description: 'CTF platforms, hands-on labs, and open-source security frameworks.',
+    path: '/security-resources',
+    type: 'doc',
+  },
 ];
 
 export default entries;
