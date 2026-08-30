@@ -34,6 +34,7 @@ const resources = [
     url: 'https://www.hackinghub.io/',
     category: 'CTF Platforms',
     level: 'Intermediate',
+    trending: true,
     description: 'Isolated, real-world web app/API labs and courses built from actual bug bounty and pentest findings.',
   },
   {
@@ -111,6 +112,7 @@ const resources = [
     url: 'https://ctf.hacker101.com/',
     category: 'CTF Platforms',
     level: 'Beginner',
+    trending: true,
     description: 'Free CTF from HackerOne, paired with the Hacker101 web security video course.',
   },
   {
@@ -118,6 +120,7 @@ const resources = [
     url: 'https://dojo-yeswehack.com/',
     category: 'CTF Platforms',
     level: 'Intermediate',
+    trending: true,
     description: 'YesWeHack\'s free CTF training platform, with a new real-world-style challenge each month.',
   },
   {
@@ -198,6 +201,7 @@ const resources = [
     url: 'https://pwnedlabs.io/',
     category: 'Cloud Security',
     level: 'Intermediate',
+    trending: true,
     description: 'Hands-on cloud/AI security labs and cyber ranges across AWS, Azure, GCP, and M365 — free tier available.',
   },
   {
@@ -219,6 +223,7 @@ const resources = [
     url: 'https://github.com/RhinoSecurityLabs/cloudgoat',
     category: 'Cloud Security',
     level: 'Intermediate',
+    trending: true,
     description: 'Rhino Security Labs\' "vulnerable-by-design" deployable AWS environment with CTF-style scenarios.',
   },
   {
@@ -247,6 +252,7 @@ const resources = [
     url: 'https://github.com/BishopFox/iam-vulnerable',
     category: 'Cloud Security',
     level: 'Advanced',
+    trending: true,
     description: 'Terraform-built AWS IAM privilege-escalation playground covering 31 attack paths.',
   },
   {
@@ -360,6 +366,7 @@ const resources = [
     url: 'https://owasp.org/',
     category: 'Open Source Frameworks',
     level: 'All Levels',
+    trending: true,
     description: 'The nonprofit behind the Top 10, ASVS, Testing Guide, and most open web-security standards in use today.',
   },
   {
