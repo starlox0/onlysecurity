@@ -147,7 +147,39 @@
   background: var(--os-surface);
   text-decoration: none;
   color: var(--os-text);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  /* button-element resets — this used to be an <a>, now it's a <button>
+     that opens the detail modal, so browsers' default button chrome
+     needs clearing */
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+/* Trending: a small, deliberately selective set of widely-known
+   platforms get a pulsing gold border instead of the usual hover-only
+   green — a quiet "everyone knows this one" signal, not applied broadly. */
+.row[data-trending='true'] {
+  border-color: #d4a017;
+  box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.3), 0 0 12px rgba(212, 160, 23, 0.25);
+  animation: os-trending-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes os-trending-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.3), 0 0 10px rgba(212, 160, 23, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(212, 160, 23, 0.55), 0 0 18px rgba(212, 160, 23, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row[data-trending='true'] {
+    animation: none;
+  }
 }
 
 .row:hover,
@@ -156,6 +188,11 @@
   transform: translateY(-2px);
   text-decoration: none;
   color: var(--os-text);
+}
+
+.row[data-trending='true']:hover,
+.row[data-trending='true']:focus-visible {
+  border-color: #d4a017;
 }
 
 .row:focus-visible {
