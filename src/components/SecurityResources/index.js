@@ -6,10 +6,13 @@ const CATEGORY_ORDER = [
   'CTF Platforms',
   'Web Application Security',
   'Cloud Security',
+  'Android Security',
   'Reverse Engineering & Binary Exploitation',
   'Blue Team / Defensive Security',
   'Open Source Frameworks',
 ];
+
+const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -25,7 +28,12 @@ function byName(a, b) {
 function ResourceRow({resource}) {
   return (
     <a href={resource.url} target="_blank" rel="noopener noreferrer" className={styles.row}>
-      <span className={styles.name}>{resource.name}</span>
+      <div className={styles.rowHead}>
+        <span className={styles.name}>{resource.name}</span>
+        <span className={styles.levelBadge} data-level={resource.level}>
+          {resource.level}
+        </span>
+      </div>
       <span className={styles.description}>{resource.description}</span>
     </a>
   );
@@ -34,17 +42,20 @@ function ResourceRow({resource}) {
 export default function SecurityResources() {
   const [view, setView] = useState('category'); // 'category' | 'alphabetical'
   const [query, setQuery] = useState('');
+  const [level, setLevel] = useState('ANY');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return resources;
-    return resources.filter(
-      (r) =>
+    return resources.filter((r) => {
+      const matchesLevel = level === 'ANY' || r.level === level;
+      const matchesQuery =
+        !q ||
         r.name.toLowerCase().includes(q) ||
         r.description.toLowerCase().includes(q) ||
-        r.category.toLowerCase().includes(q),
-    );
-  }, [query]);
+        r.category.toLowerCase().includes(q);
+      return matchesLevel && matchesQuery;
+    });
+  }, [query, level]);
 
   const byCategory = useMemo(() => {
     const map = new Map(CATEGORY_ORDER.map((c) => [c, []]));
@@ -80,6 +91,18 @@ export default function SecurityResources() {
           className={styles.searchInput}
           aria-label="Filter resources"
         />
+        <select
+          value={level}
+          onChange={(e) => setLevel(e.target.value)}
+          className={styles.levelSelect}
+          aria-label="Filter by difficulty level">
+          <option value="ANY">Any level</option>
+          {LEVELS.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
         <div className={styles.viewToggle} role="tablist" aria-label="View mode">
           <button
             type="button"
@@ -102,6 +125,7 @@ export default function SecurityResources() {
 
       <p className={styles.resultCount}>
         {filtered.length} resource{filtered.length === 1 ? '' : 's'}
+        {level !== 'ANY' && ` · ${level}`}
         {query && ` matching "${query}"`}
       </p>
 
