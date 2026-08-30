@@ -1,0 +1,28 @@
+.glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--glow-opacity, 0);
+  transition: opacity 0.3s ease;
+  background: radial-gradient(
+    600px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    rgba(63, 185, 80, 0.10),
+    rgba(63, 185, 80, 0.04) 35%,
+    transparent 65%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow {
+    display: none;
+  }
+}
+
+/* A moving full-viewport gradient over a lot of content can be a genuine
+   performance cost on low-end devices — keep it desktop-only. */
+@media screen and (max-width: 768px) {
+  .glow {
+    display: none;
+  }
+}
