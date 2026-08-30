@@ -416,3 +416,8 @@
     display: none;
   }
 }
+
+.pageContent {
+  position: relative;
+  z-index: 1;
+}
