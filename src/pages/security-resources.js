@@ -14,10 +14,11 @@ export default function SecurityResourcesPage() {
             <span className={styles.eyebrow}>Directory</span>
             <h1 className={styles.title}>Security Resources</h1>
             <p className={styles.subtitle}>
-              CTF platforms, hands-on practice labs (web, cloud, reverse engineering, blue team),
-              and genuine open-source security frameworks — no generic course marketplaces, no
-              tools, no browser extensions, and no bug bounty platforms (those live on their{' '}
-              <a href="/onlysecurity/bug-bounty-platforms">own page</a>).
+              CTF platforms, hands-on practice labs across web, cloud, reverse engineering, and
+              blue team, plus the open-source frameworks the industry actually builds on - each
+              one picked because it's genuinely worth your time. Looking for bug bounty programs
+              instead? Those have their{' '}
+              <a href="/onlysecurity/bug-bounty-platforms">own page</a>.
             </p>
           </div>
           <SecurityResources />
