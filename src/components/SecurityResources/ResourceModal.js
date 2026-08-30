@@ -60,7 +60,7 @@ export default function ResourceModal({resource, onClose}) {
         <p className={styles.hostname}>{hostname}</p>
         <p className={styles.description}>{resource.description}</p>
 
-        
+        <a
           href={resource.url}
           target="_blank"
           rel="noopener noreferrer"
