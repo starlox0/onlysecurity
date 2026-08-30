@@ -162,12 +162,15 @@ export default function Home() {
     <Layout
       title={siteConfig.title}
       description="An open-source hub for learning security — and sharing what you know.">
-      <HomepageHeader />
-      <main>
-        <LearningPath />
-        <BlogPreview />
-        <CommunityBand />
-      </main>
+      <CursorGlow />
+      <div className={styles.pageContent}>
+        <HomepageHeader />
+        <main>
+          <LearningPath />
+          <BlogPreview />
+          <CommunityBand />
+        </main>
+      </div>
     </Layout>
   );
 }
