@@ -1,0 +1,228 @@
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 240px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-surface);
+  color: var(--os-text);
+}
+
+.searchInput:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: 1px;
+}
+
+.viewToggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface-2);
+}
+
+.viewButton,
+.viewButtonActive {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.viewButton {
+  background: transparent;
+  color: var(--os-text-muted);
+}
+
+.viewButtonActive {
+  background: var(--os-surface);
+  color: var(--os-accent-green);
+  box-shadow: 0 0 0 1px var(--os-border);
+}
+
+.resultCount {
+  font-size: 0.82rem;
+  color: var(--os-text-muted);
+  margin: 0 0 1.5rem;
+}
+
+/* --- A-Z jump bar --- */
+.jumpBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px dashed var(--os-border);
+  position: sticky;
+  top: calc(var(--ifm-navbar-height) + 0.5rem);
+  background: var(--os-bg);
+  z-index: 2;
+  padding-top: 0.5rem;
+}
+
+.jumpLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 4px;
+  color: var(--os-accent-green);
+  border: 1px solid var(--os-border);
+}
+
+.jumpLink:hover {
+  background: var(--os-surface-2);
+  text-decoration: none;
+  color: var(--os-accent-green);
+}
+
+.jumpLinkDisabled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  color: var(--os-text-muted);
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* --- Sections --- */
+.section {
+  margin-bottom: 2.5rem;
+  scroll-margin-top: calc(var(--ifm-navbar-height) + 3rem);
+}
+
+.sectionTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--os-text);
+  margin: 0 0 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--os-border);
+}
+
+.sectionCount {
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--os-text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* --- Row --- */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-surface);
+}
+
+.rowMain {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--os-accent-blue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.region {
+  font-size: 0.78rem;
+  color: var(--os-text-muted);
+  white-space: nowrap;
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pill {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-border);
+  color: var(--os-text-muted);
+}
+
+.pill[data-variant='leaderboard'] {
+  color: var(--os-accent-amber);
+  border-color: var(--os-accent-amber);
+}
+
+.metaLink {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--os-accent-green);
+  white-space: nowrap;
+}
+
+/* --- Empty state --- */
+.emptyState {
+  padding: 2rem;
+  text-align: center;
+  border: 1px dashed var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+}
+
+.emptyStateTitle {
+  font-size: 0.95rem;
+  color: var(--os-text-muted);
+  margin: 0;
+}
+
+@media screen and (max-width: 600px) {
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .jumpBar {
+    justify-content: center;
+  }
+}
