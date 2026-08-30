@@ -62,6 +62,12 @@ const entries = [
     path: '/cve-radar',
     type: 'doc',
   },
+    {
+    title: 'Bug Bounty Platforms',
+    description: '121+ bug bounty and VDP platforms, by category and A-Z.',
+    path: '/bug-bounty-platforms',
+    type: 'doc',
+  },
 ];
 
 export default entries;
