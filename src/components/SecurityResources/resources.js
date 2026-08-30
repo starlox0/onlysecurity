@@ -4,6 +4,7 @@ const resources = [
     url: 'https://tryhackme.com/',
     category: 'CTF Platforms',
     level: 'Beginner',
+    trending: true,
     description: 'Beginner-friendly, browser-based hacking rooms with guided walkthroughs across most security topics.',
   },
   {
@@ -11,6 +12,7 @@ const resources = [
     url: 'https://www.hackthebox.com/',
     category: 'CTF Platforms',
     level: 'Advanced',
+    trending: true,
     description: 'Community-driven platform with retired/active vulnerable machines, from beginner to advanced.',
   },
   {
@@ -130,6 +132,7 @@ const resources = [
     url: 'https://ctftime.org/',
     category: 'CTF Platforms',
     level: 'All Levels',
+    trending: true,
     description: 'The public calendar/directory of CTF competitions happening (or archived) worldwide.',
   },
   {
@@ -144,6 +147,7 @@ const resources = [
     url: 'https://portswigger.net/web-security',
     category: 'Web Application Security',
     level: 'All Levels',
+    trending: true,
     description: 'Free web security training with hands-on labs explicitly tiered Apprentice → Practitioner → Expert.',
   },
   {
@@ -151,6 +155,7 @@ const resources = [
     url: 'https://owasp.org/www-project-juice-shop/',
     category: 'Web Application Security',
     level: 'Beginner',
+    trending: true,
     description: 'OWASP\'s intentionally insecure modern web app — probably the most complete vulnerable app around.',
   },
   {
@@ -340,6 +345,7 @@ const resources = [
     url: 'https://attack.mitre.org/',
     category: 'Open Source Frameworks',
     level: 'All Levels',
+    trending: true,
     description: 'The open, globally-used knowledge base of real-world adversary tactics and techniques.',
   },
   {
