@@ -109,6 +109,12 @@ const config = {
           position: "left",
         },
 
+        {
+          to: "/bug-bounty-platforms",
+          label: "Platforms",
+          position: "left",
+        },
+
         // The "Resources" dropdown pointed at /docs/tools, /blog/tags/writeup,
         // and /labs — none of which exist yet, which is what was throwing the
         // build (onBrokenLinks: "throw" fails the build on any dead link).
