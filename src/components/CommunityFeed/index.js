@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {detectPublication, estimateReadingMinutes} from './publications';
+import PostCard from './PostCard';
 import styles from './styles.module.css';
 
 const RSS2JSON_API_KEY = 'mnyhvyd3fr8eddefeq8wv4avbtzqqpmf3os2ujzq';
@@ -15,6 +16,7 @@ const LOAD_MORE_STEP = 9;
 const TAGS_STORAGE_KEY = 'os-community-tags-v1';
 const SAVED_STORAGE_KEY = 'os-community-saved-v1';
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const AUTHOR_LOOKUP_DEBOUNCE_MS = 600;
 
 function loadSavedTags() {
   try {
@@ -64,16 +66,55 @@ function excerpt(html, max = 140) {
   return text.slice(0, max).replace(/\s+\S*$/, '') + '\u2026';
 }
 
-async function fetchTag(tag) {
-  const feedUrl = encodeURIComponent(`https://medium.com/feed/tag/${tag}`);
+// Medium personal-profile URLs look like medium.com/@handle/slug — this
+// extracts the handle so we can fetch that author's own feed directly.
+// Posts published only under a publication's custom domain (no @handle in
+// the URL) simply won't match, which is a real limitation, not a bug.
+function extractMediumHandle(link) {
+  if (!link) return null;
+  const match = link.match(/medium\.com\/@([a-zA-Z0-9_.-]+)/);
+  return match ? match[1] : null;
+}
+
+function mapFeedItems(items) {
+  return items.map((item) => {
+    const rawContent = item.content || item.description || '';
+    return {
+      title: item.title,
+      link: item.link,
+      author: item.author,
+      date: item.pubDate,
+      image: extractImage(item),
+      excerpt: excerpt(rawContent),
+      readingMinutes: estimateReadingMinutes(rawContent),
+      publication: detectPublication(item.link),
+      categories: item.categories || [],
+    };
+  });
+}
+
+async function fetchRss(feedUrl, count) {
+  const encoded = encodeURIComponent(feedUrl);
   const keyParam = RSS2JSON_API_KEY ? `&api_key=${RSS2JSON_API_KEY}` : '';
   const res = await fetch(
-    `https://api.rss2json.com/v1/api.json?rss_url=${feedUrl}&count=${ITEMS_PER_TAG}${keyParam}`,
+    `https://api.rss2json.com/v1/api.json?rss_url=${encoded}&count=${count}${keyParam}`,
   );
   if (!res.ok) throw new Error(`rss2json responded ${res.status}`);
   const data = await res.json();
   if (data.status !== 'ok') throw new Error(data.message || 'feed error');
   return data.items || [];
+}
+
+function fetchTag(tag) {
+  return fetchRss(`https://medium.com/feed/tag/${tag}`, ITEMS_PER_TAG);
+}
+
+// Medium's author feed only exposes each author's ~10 most recent posts —
+// there's no public metric for "top" (no clap/follower API), so this is
+// honestly their latest, not a popularity-ranked list.
+async function fetchAuthorFeed(handle) {
+  const items = await fetchRss(`https://medium.com/feed/@${handle}`, 15);
+  return mapFeedItems(items).sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
 export default function CommunityFeed() {
@@ -86,8 +127,8 @@ export default function CommunityFeed() {
   const [featuredFirst, setFeaturedFirst] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const [savedLinks, setSavedLinks] = useState([]);
+  const [authorView, setAuthorView] = useState(null); // {name, handle, status, posts} | null
 
-  // Load any saved custom tags / saved posts once, on mount, browser-only.
   useEffect(() => {
     setTags(loadSavedTags());
     setSavedLinks(loadSavedPosts());
@@ -124,27 +165,14 @@ export default function CommunityFeed() {
         if (merged.length === 0) throw new Error('all feeds failed');
 
         const seen = new Set();
-        const posts = merged
-          .filter((item) => {
-            if (seen.has(item.link)) return false;
-            seen.add(item.link);
-            return true;
-          })
-          .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate))
-          .map((item) => {
-            const rawContent = item.content || item.description || '';
-            return {
-              title: item.title,
-              link: item.link,
-              author: item.author,
-              date: item.pubDate,
-              image: extractImage(item),
-              excerpt: excerpt(rawContent),
-              readingMinutes: estimateReadingMinutes(rawContent),
-              publication: detectPublication(item.link),
-              categories: item.categories || [],
-            };
-          });
+        const dedupedItems = merged.filter((item) => {
+          if (seen.has(item.link)) return false;
+          seen.add(item.link);
+          return true;
+        });
+        const posts = mapFeedItems(dedupedItems).sort(
+          (a, b) => new Date(b.date) - new Date(a.date),
+        );
 
         setState({status: 'ready', posts});
         try {
@@ -163,6 +191,47 @@ export default function CommunityFeed() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tags]);
+
+  // If the search query matches an author already visible in the loaded
+  // pool, and we can extract their @handle from one of their post URLs,
+  // fetch that author's own feed and show it instead of the filtered grid.
+  useEffect(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || q.length < 3) {
+      setAuthorView(null);
+      return undefined;
+    }
+
+    const candidate = state.posts.find((p) => p.author && p.author.toLowerCase() === q)
+      || state.posts.find((p) => p.author && p.author.toLowerCase().includes(q));
+
+    if (!candidate) {
+      setAuthorView(null);
+      return undefined;
+    }
+
+    const handle = extractMediumHandle(candidate.link);
+    if (!handle) {
+      setAuthorView({name: candidate.author, handle: null, status: 'unavailable', posts: []});
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setAuthorView({name: candidate.author, handle, status: 'loading', posts: []});
+      try {
+        const posts = await fetchAuthorFeed(handle);
+        if (!cancelled) setAuthorView({name: candidate.author, handle, status: 'ready', posts});
+      } catch {
+        if (!cancelled) setAuthorView({name: candidate.author, handle, status: 'error', posts: []});
+      }
+    }, AUTHOR_LOOKUP_DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, state.posts]);
 
   function handleAddTag(e) {
     e.preventDefault();
@@ -306,9 +375,9 @@ export default function CommunityFeed() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search loaded posts — e.g. xss, methodology, a tag, an author..."
+          placeholder="Search loaded posts, or type an author's name — e.g. xss, methodology..."
           className={styles.searchInput}
-          aria-label="Search loaded posts"
+          aria-label="Search loaded posts or an author's name"
         />
         <label className={styles.checkboxLabel}>
           <input
@@ -328,7 +397,58 @@ export default function CommunityFeed() {
         </label>
       </div>
 
-      {state.status === 'loading' && (
+      {authorView && (
+        <div className={styles.authorPanel}>
+          {authorView.status === 'unavailable' && (
+            <p className={styles.authorNote}>
+              Found posts by <strong>{authorView.name}</strong>, but can't look up more from
+              them — they only appear here via a publication, which doesn't expose a personal
+              feed link.
+            </p>
+          )}
+          {authorView.status === 'loading' && (
+            <p className={styles.authorNote}>Looking up more from {authorView.name}…</p>
+          )}
+          {authorView.status === 'error' && (
+            <p className={styles.authorNote}>
+              Couldn't load more from {authorView.name} right now — their feed may be
+              rate-limited. Try again in a moment.
+            </p>
+          )}
+          {authorView.status === 'ready' && (
+            <>
+              <div className={styles.authorHeader}>
+                <h3 className={styles.authorHeading}>
+                  Latest from {authorView.name}{' '}
+                  <span className={styles.authorCount}>({authorView.posts.length})</span>
+                </h3>
+                <button
+                  type="button"
+                  className={styles.tagResetButton}
+                  onClick={() => setQuery('')}>
+                  ← Back to browsing
+                </button>
+              </div>
+              {authorView.posts.length === 0 ? (
+                <p className={styles.authorNote}>No other public posts found for this author.</p>
+              ) : (
+                <div className={styles.grid}>
+                  {authorView.posts.map((post) => (
+                    <PostCard
+                      key={post.link}
+                      post={post}
+                      isSaved={savedLinks.includes(post.link)}
+                      onToggleSave={() => toggleSaved(post.link)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {!authorView && state.status === 'loading' && (
         <div className={styles.grid}>
           {Array.from({length: 6}).map((_, i) => (
             <div key={i} className={styles.skeletonCard} aria-hidden="true">
@@ -340,7 +460,7 @@ export default function CommunityFeed() {
         </div>
       )}
 
-      {state.status === 'error' && (
+      {!authorView && state.status === 'error' && (
         <div className={styles.emptyState}>
           <p className={styles.emptyStateTitle}>Couldn't load the live feed right now.</p>
           <p className={styles.emptyStateBody}>
@@ -353,7 +473,7 @@ export default function CommunityFeed() {
         </div>
       )}
 
-      {state.status === 'ready' && visiblePosts.length === 0 && (
+      {!authorView && state.status === 'ready' && visiblePosts.length === 0 && (
         <div className={styles.emptyState}>
           <p className={styles.emptyStateTitle}>
             {savedOnly ? "You haven't saved anything yet." : `No loaded posts match "${query}".`}
@@ -361,46 +481,16 @@ export default function CommunityFeed() {
         </div>
       )}
 
-      {state.status === 'ready' && visiblePosts.length > 0 && (
+      {!authorView && state.status === 'ready' && visiblePosts.length > 0 && (
         <>
           <div className={styles.grid}>
             {visiblePosts.slice(0, visibleCount).map((post) => (
-              <div key={post.link} className={styles.card}>
-                <a href={post.link} target="_blank" rel="noopener noreferrer" className={styles.cardLink}>
-                  <div className={styles.imageWrap}>
-                    {post.image ? (
-                      <img src={post.image} alt="" loading="lazy" className={styles.image} />
-                    ) : (
-                      <div className={styles.imagePlaceholder} />
-                    )}
-                  </div>
-                  <div className={styles.body}>
-                    <div className={styles.badgeRow}>
-                      {post.publication && (
-                        <span className={styles.pubBadge} title={`${post.publication.followers} followers`}>
-                          {post.publication.name}
-                        </span>
-                      )}
-                      {post.readingMinutes && (
-                        <span className={styles.readingBadge}>{post.readingMinutes} min read</span>
-                      )}
-                    </div>
-                    <h3 className={styles.title}>{post.title}</h3>
-                    <p className={styles.excerpt}>{post.excerpt}</p>
-                    <span className={styles.meta}>
-                      {post.author ? `${post.author} · ` : ''}Read on Medium →
-                    </span>
-                  </div>
-                </a>
-                <button
-                  type="button"
-                  className={styles.saveButton}
-                  data-saved={savedLinks.includes(post.link)}
-                  onClick={() => toggleSaved(post.link)}
-                  aria-label={savedLinks.includes(post.link) ? 'Remove from saved' : 'Save for later'}>
-                  {savedLinks.includes(post.link) ? '★' : '☆'}
-                </button>
-              </div>
+              <PostCard
+                key={post.link}
+                post={post}
+                isSaved={savedLinks.includes(post.link)}
+                onToggleSave={() => toggleSaved(post.link)}
+              />
             ))}
           </div>
 
