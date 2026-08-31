@@ -16,7 +16,6 @@ const LOAD_MORE_STEP = 9;
 const TAGS_STORAGE_KEY = 'os-community-tags-v1';
 const SAVED_STORAGE_KEY = 'os-community-saved-v1';
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-const AUTHOR_LOOKUP_DEBOUNCE_MS = 600;
 
 function loadSavedTags() {
   try {
@@ -45,6 +44,18 @@ function sanitizeTag(input) {
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '');
+}
+
+// Loose sanitizer for a directly-typed handle guess — Medium handles are
+// lowercase alphanumeric plus - _ . with no spaces, so this strips a
+// leading @ and anything that couldn't possibly be part of one.
+function sanitizeHandleGuess(input) {
+  return input
+    .trim()
+    .replace(/^@/, '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9_.-]/g, '');
 }
 
 function stripHtml(html) {
@@ -127,6 +138,7 @@ export default function CommunityFeed() {
   const [featuredFirst, setFeaturedFirst] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const [savedLinks, setSavedLinks] = useState([]);
+  const [authorInput, setAuthorInput] = useState('');
   const [authorView, setAuthorView] = useState(null); // {name, handle, status, posts} | null
 
   useEffect(() => {
@@ -192,46 +204,56 @@ export default function CommunityFeed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tags]);
 
-  // If the search query matches an author already visible in the loaded
-  // pool, and we can extract their @handle from one of their post URLs,
-  // fetch that author's own feed and show it instead of the filtered grid.
-  useEffect(() => {
-    const q = query.trim().toLowerCase();
-    if (!q || q.length < 3) {
-      setAuthorView(null);
-      return undefined;
-    }
+  // Explicit author lookup — only runs when the form below is submitted,
+  // never automatically while typing. Prefers a confirmed @handle pulled
+  // from a post already in the loaded pool (accurate), but falls back to
+  // treating the typed text itself as a handle guess and querying Medium
+  // directly — this is what actually finds an author who simply hasn't
+  // posted recently under any of the followed tags.
+  async function handleAuthorSearch(e) {
+    e.preventDefault();
+    const raw = authorInput.trim();
+    if (!raw) return;
 
-    const candidate = state.posts.find((p) => p.author && p.author.toLowerCase() === q)
-      || state.posts.find((p) => p.author && p.author.toLowerCase().includes(q));
+    const candidate =
+      state.posts.find((p) => p.author && p.author.toLowerCase() === raw.toLowerCase()) ||
+      state.posts.find((p) => p.author && p.author.toLowerCase().includes(raw.toLowerCase()));
 
-    if (!candidate) {
-      setAuthorView(null);
-      return undefined;
-    }
+    const confirmedHandle = candidate ? extractMediumHandle(candidate.link) : null;
 
-    const handle = extractMediumHandle(candidate.link);
-    if (!handle) {
+    if (candidate && !confirmedHandle) {
       setAuthorView({name: candidate.author, handle: null, status: 'unavailable', posts: []});
-      return undefined;
+      return;
     }
 
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      setAuthorView({name: candidate.author, handle, status: 'loading', posts: []});
-      try {
-        const posts = await fetchAuthorFeed(handle);
-        if (!cancelled) setAuthorView({name: candidate.author, handle, status: 'ready', posts});
-      } catch {
-        if (!cancelled) setAuthorView({name: candidate.author, handle, status: 'error', posts: []});
-      }
-    }, AUTHOR_LOOKUP_DEBOUNCE_MS);
+    const handle = confirmedHandle || sanitizeHandleGuess(raw);
+    const displayName = candidate ? candidate.author : raw;
+    const guessed = !confirmedHandle;
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [query, state.posts]);
+    if (!handle) {
+      setAuthorView({name: displayName, handle: null, status: 'unavailable', posts: []});
+      return;
+    }
+
+    setAuthorView({name: displayName, handle, status: 'loading', posts: [], guessed});
+    try {
+      const posts = await fetchAuthorFeed(handle);
+      setAuthorView({
+        name: displayName,
+        handle,
+        status: posts.length === 0 ? 'not-found' : 'ready',
+        posts,
+        guessed,
+      });
+    } catch {
+      setAuthorView({name: displayName, handle, status: 'error', posts: [], guessed});
+    }
+  }
+
+  function clearAuthorSearch() {
+    setAuthorInput('');
+    setAuthorView(null);
+  }
 
   function handleAddTag(e) {
     e.preventDefault();
@@ -375,9 +397,9 @@ export default function CommunityFeed() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search loaded posts, or type an author's name — e.g. xss, methodology..."
+          placeholder="Search loaded posts — e.g. xss, methodology, a tag..."
           className={styles.searchInput}
-          aria-label="Search loaded posts or an author's name"
+          aria-label="Search loaded posts"
         />
         <label className={styles.checkboxLabel}>
           <input
@@ -397,52 +419,76 @@ export default function CommunityFeed() {
         </label>
       </div>
 
+      <form className={styles.authorSearchRow} onSubmit={handleAuthorSearch}>
+        <input
+          type="text"
+          value={authorInput}
+          onChange={(e) => setAuthorInput(e.target.value)}
+          placeholder="Look up a specific author — their name or @handle..."
+          className={styles.searchInput}
+          aria-label="Look up an author by name or Medium handle"
+        />
+        <button type="submit" className={styles.tagAddButton}>
+          Look up
+        </button>
+        {authorView && (
+          <button type="button" className={styles.tagResetButton} onClick={clearAuthorSearch}>
+            Clear
+          </button>
+        )}
+      </form>
+
       {authorView && (
         <div className={styles.authorPanel}>
           {authorView.status === 'unavailable' && (
             <p className={styles.authorNote}>
-              Found posts by <strong>{authorView.name}</strong>, but can't look up more from
-              them — they only appear here via a publication, which doesn't expose a personal
-              feed link.
+              {authorView.name ? (
+                <>
+                  Found posts by <strong>{authorView.name}</strong>, but can't look up more from
+                  them — they only appear here via a publication, which doesn't expose a personal
+                  feed link.
+                </>
+              ) : (
+                "That doesn't look like a valid name or handle — try their exact @handle."
+              )}
             </p>
           )}
           {authorView.status === 'loading' && (
-            <p className={styles.authorNote}>Looking up more from {authorView.name}…</p>
+            <p className={styles.authorNote}>Looking up @{authorView.handle}…</p>
+          )}
+          {authorView.status === 'not-found' && (
+            <p className={styles.authorNote}>
+              No public Medium account found at <strong>@{authorView.handle}</strong>. If you
+              know their exact handle, try typing it directly (with or without the @).
+            </p>
           )}
           {authorView.status === 'error' && (
             <p className={styles.authorNote}>
-              Couldn't load more from {authorView.name} right now — their feed may be
-              rate-limited. Try again in a moment.
+              Couldn't reach @{authorView.handle}'s feed right now — it may be rate-limited.
+              Try again in a moment.
             </p>
           )}
           {authorView.status === 'ready' && (
             <>
               <div className={styles.authorHeader}>
                 <h3 className={styles.authorHeading}>
-                  Latest from {authorView.name}{' '}
+                  Latest from {authorView.guessed ? `@${authorView.handle}` : authorView.name}{' '}
                   <span className={styles.authorCount}>({authorView.posts.length})</span>
                 </h3>
-                <button
-                  type="button"
-                  className={styles.tagResetButton}
-                  onClick={() => setQuery('')}>
+                <button type="button" className={styles.tagResetButton} onClick={clearAuthorSearch}>
                   ← Back to browsing
                 </button>
               </div>
-              {authorView.posts.length === 0 ? (
-                <p className={styles.authorNote}>No other public posts found for this author.</p>
-              ) : (
-                <div className={styles.grid}>
-                  {authorView.posts.map((post) => (
-                    <PostCard
-                      key={post.link}
-                      post={post}
-                      isSaved={savedLinks.includes(post.link)}
-                      onToggleSave={() => toggleSaved(post.link)}
-                    />
-                  ))}
-                </div>
-              )}
+              <div className={styles.grid}>
+                {authorView.posts.map((post) => (
+                  <PostCard
+                    key={post.link}
+                    post={post}
+                    isSaved={savedLinks.includes(post.link)}
+                    onToggleSave={() => toggleSaved(post.link)}
+                  />
+                ))}
+              </div>
             </>
           )}
         </div>
