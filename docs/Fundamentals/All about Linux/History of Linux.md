@@ -1,9 +1,8 @@
 ---
-
 sidebar_position: 1
-title: "Linux: The Penguin in the Room"
-description: "An introduction to Linux, its history, evolution, use cases, and relevance to cybersecurity."
------------------------------------------------------------------------------------------------------------
+title: Linux: The Penguin in the Room
+description: An introduction to Linux, its history, evolution, use cases, and relevance to cybersecurity.
+---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -18,9 +17,9 @@ import Admonition from '@theme/Admonition';
 
 ## Introduction
 
-We often talk about Windows OS and macOS. But did you know there’s an *imposter* in the room — a Penguin? Yes, that’s **Linux**. Some of you may have heard about it, some may not — but it’s one of the **most important topics to learn in Cybersecurity** today.
+We often talk about Windows OS and macOS. But did you know there’s an *imposter* in the room - a Penguin? Yes, that’s **Linux**. Some of you may have heard about it, some may not — but it’s one of the **most important topics to learn in Cybersecurity** today.
 
-**Linux** is a powerful, free, and open-source operating system (OS) that runs across a vast range of devices — from personal computers to web servers, smartphones, embedded systems, supercomputers, and even space missions.
+**Linux** is a powerful, free, and open-source operating system (OS) that runs across a vast range of devices - from personal computers to web servers, smartphones, embedded systems, supercomputers, and even space missions.
 
 Unlike commercial operating systems like **Microsoft Windows** and **Apple macOS**, Linux gives users complete control over its source code, allowing them to **modify**, **redistribute**, or **optimize** the system however they want.
 
@@ -59,7 +58,7 @@ UNIX introduced many concepts that would later influence operating-system design
 
 </TabItem>
 
-<TabItem value="gnu" label="1983 — GNU">
+<TabItem value="gnu" label="1983 - GNU">
 
 ## 2. The GNU Project Begins
 
@@ -71,13 +70,13 @@ UNIX introduced many concepts that would later influence operating-system design
 
 <Admonition type="note" title="The Missing Component">
 
-The GNU Project had developed many essential operating-system components, but it still needed a kernel — the core component responsible for managing system resources and communicating with hardware.
+The GNU Project had developed many essential operating-system components, but it still needed a kernel - the core component responsible for managing system resources and communicating with hardware.
 
 </Admonition>
 
 </TabItem>
 
-<TabItem value="linux" label="1991 — Linux">
+<TabItem value="linux" label="1991 - Linux">
 
 ## 3. Linux Kernel is Born
 
@@ -121,7 +120,7 @@ The kernel provides the core operating-system functionality, while GNU provides 
 
 </TabItem>
 
-<TabItem value="distros" label="1992–1994 — Distributions">
+<TabItem value="distros" label="1992–1994 - Distributions">
 
 ## 5. First Linux Distributions
 
