@@ -452,3 +452,41 @@
     transition: none;
   }
 }
+
+/* --- Author lookup panel (search by author name) --- */
+.authorPanel {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--os-accent-blue);
+  border-radius: 10px;
+  background: var(--os-surface);
+}
+
+.authorHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.authorHeading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--os-text);
+  margin: 0;
+}
+
+.authorCount {
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 400;
+  color: var(--os-text-muted);
+  font-size: 0.85rem;
+}
+
+.authorNote {
+  font-size: 0.88rem;
+  color: var(--os-text-muted);
+  margin: 0;
+}
