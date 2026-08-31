@@ -1,30 +1,45 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {detectPublication, estimateReadingMinutes} from './publications';
+import {fetchMediumTag, fetchMediumAuthor, fetchDevToTag, fetchProjectZero} from './sources';
 import PostCard from './PostCard';
 import styles from './styles.module.css';
 
-const RSS2JSON_API_KEY = 'mnyhvyd3fr8eddefeq8wv4avbtzqqpmf3os2ujzq';
-
-// Medium tag feeds are public and unauthenticated: https://medium.com/feed/tag/<tag>
-const DEFAULT_TAGS = ['bug-bounty', 'penetration-testing', 'cybersecurity', 'infosec'];
-const MAX_TAGS = 8; // cap simultaneous requests — each tag is one network call
+// Each source keeps its own tag list, since tag naming conventions differ
+// (Medium tags are hyphenated multi-word, dev.to tags are single words).
+const DEFAULT_MEDIUM_TAGS = ['bug-bounty', 'penetration-testing', 'cybersecurity', 'infosec'];
+const DEFAULT_DEVTO_TAGS = ['security', 'cybersecurity', 'hacking', 'infosec'];
+const MAX_TAGS = 8; // cap simultaneous requests per source — each tag is one network call
 
 const ITEMS_PER_TAG = 15; // pull a deep pool upfront so "See more" needs no extra calls
 const INITIAL_VISIBLE = 9;
 const LOAD_MORE_STEP = 9;
 
-const TAGS_STORAGE_KEY = 'os-community-tags-v1';
+const MEDIUM_TAGS_KEY = 'os-community-tags-v1';
+const DEVTO_TAGS_KEY = 'os-community-devto-tags-v1';
+const SOURCES_KEY = 'os-community-sources-v1';
 const SAVED_STORAGE_KEY = 'os-community-saved-v1';
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
-function loadSavedTags() {
+const DEFAULT_SOURCES = {medium: true, devto: true, projectzero: true};
+
+function loadTags(key, fallback) {
   try {
-    const raw = localStorage.getItem(TAGS_STORAGE_KEY);
-    if (!raw) return DEFAULT_TAGS;
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TAGS;
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : fallback;
   } catch {
-    return DEFAULT_TAGS;
+    return fallback;
+  }
+}
+
+function loadSources() {
+  try {
+    const raw = localStorage.getItem(SOURCES_KEY);
+    if (!raw) return DEFAULT_SOURCES;
+    const parsed = JSON.parse(raw);
+    return {...DEFAULT_SOURCES, ...parsed};
+  } catch {
+    return DEFAULT_SOURCES;
   }
 }
 
@@ -46,9 +61,13 @@ function sanitizeTag(input) {
     .replace(/[^a-z0-9-]/g, '');
 }
 
+// dev.to tags are single lowercase words/numbers only, no hyphens.
+function sanitizeDevToTag(input) {
+  return input.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 // Loose sanitizer for a directly-typed handle guess — Medium handles are
-// lowercase alphanumeric plus - _ . with no spaces, so this strips a
-// leading @ and anything that couldn't possibly be part of one.
+// lowercase alphanumeric plus - _ . with no spaces.
 function sanitizeHandleGuess(input) {
   return input
     .trim()
@@ -56,25 +75,6 @@ function sanitizeHandleGuess(input) {
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[^a-z0-9_.-]/g, '');
-}
-
-function stripHtml(html) {
-  if (typeof window === 'undefined') return '';
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
-}
-
-function extractImage(item) {
-  if (item.thumbnail) return item.thumbnail;
-  const source = item.content || item.description || '';
-  const match = source.match(/<img[^>]+src=["']([^"']+)["']/i);
-  return match ? match[1] : null;
-}
-
-function excerpt(html, max = 140) {
-  const text = stripHtml(html);
-  if (text.length <= max) return text;
-  return text.slice(0, max).replace(/\s+\S*$/, '') + '\u2026';
 }
 
 // Medium personal-profile URLs look like medium.com/@handle/slug — this
@@ -87,66 +87,38 @@ function extractMediumHandle(link) {
   return match ? match[1] : null;
 }
 
-function mapFeedItems(items) {
-  return items.map((item) => {
-    const rawContent = item.content || item.description || '';
-    return {
-      title: item.title,
-      link: item.link,
-      author: item.author,
-      date: item.pubDate,
-      image: extractImage(item),
-      excerpt: excerpt(rawContent),
-      readingMinutes: estimateReadingMinutes(rawContent),
-      publication: detectPublication(item.link),
-      categories: item.categories || [],
-    };
-  });
-}
-
-async function fetchRss(feedUrl, count) {
-  const encoded = encodeURIComponent(feedUrl);
-  const keyParam = RSS2JSON_API_KEY ? `&api_key=${RSS2JSON_API_KEY}` : '';
-  const res = await fetch(
-    `https://api.rss2json.com/v1/api.json?rss_url=${encoded}&count=${count}${keyParam}`,
-  );
-  if (!res.ok) throw new Error(`rss2json responded ${res.status}`);
-  const data = await res.json();
-  if (data.status !== 'ok') throw new Error(data.message || 'feed error');
-  return data.items || [];
-}
-
-function fetchTag(tag) {
-  return fetchRss(`https://medium.com/feed/tag/${tag}`, ITEMS_PER_TAG);
-}
-
-// Medium's author feed only exposes each author's ~10 most recent posts —
-// there's no public metric for "top" (no clap/follower API), so this is
-// honestly their latest, not a popularity-ranked list.
-async function fetchAuthorFeed(handle) {
-  const items = await fetchRss(`https://medium.com/feed/@${handle}`, 15);
-  return mapFeedItems(items).sort((a, b) => new Date(b.date) - new Date(a.date));
-}
-
 export default function CommunityFeed() {
-  const [tags, setTags] = useState(DEFAULT_TAGS);
-  const [tagInput, setTagInput] = useState('');
+  const [sources, setSources] = useState(DEFAULT_SOURCES);
+  const [mediumTags, setMediumTags] = useState(DEFAULT_MEDIUM_TAGS);
+  const [devToTags, setDevToTags] = useState(DEFAULT_DEVTO_TAGS);
+  const [mediumTagInput, setMediumTagInput] = useState('');
+  const [devToTagInput, setDevToTagInput] = useState('');
   const [tagError, setTagError] = useState('');
   const [state, setState] = useState({status: 'loading', posts: []});
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
   const [query, setQuery] = useState('');
   const [featuredFirst, setFeaturedFirst] = useState(false);
+  const [reactionsFirst, setReactionsFirst] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const [savedLinks, setSavedLinks] = useState([]);
   const [authorInput, setAuthorInput] = useState('');
-  const [authorView, setAuthorView] = useState(null); // {name, handle, status, posts} | null
+  const [authorView, setAuthorView] = useState(null); // {name, handle, status, posts, guessed} | null
 
   useEffect(() => {
-    setTags(loadSavedTags());
+    setSources(loadSources());
+    setMediumTags(loadTags(MEDIUM_TAGS_KEY, DEFAULT_MEDIUM_TAGS));
+    setDevToTags(loadTags(DEVTO_TAGS_KEY, DEFAULT_DEVTO_TAGS));
     setSavedLinks(loadSavedPosts());
   }, []);
 
-  const cacheKey = useMemo(() => `os-community-feed-v3:${[...tags].sort().join(',')}`, [tags]);
+  const cacheKey = useMemo(() => {
+    const sourceKey = Object.entries(sources)
+      .filter(([, on]) => on)
+      .map(([name]) => name)
+      .sort()
+      .join(',');
+    return `os-community-feed-v4:${sourceKey}:${[...mediumTags].sort().join(',')}:${[...devToTags].sort().join(',')}`;
+  }, [sources, mediumTags, devToTags]);
 
   const load = useCallback(
     async (forceFresh = false) => {
@@ -168,23 +140,38 @@ export default function CommunityFeed() {
         }
       }
 
+      const jobs = [];
+      if (sources.medium) {
+        mediumTags.forEach((tag) => jobs.push(fetchMediumTag(tag, ITEMS_PER_TAG)));
+      }
+      if (sources.devto) {
+        devToTags.forEach((tag) => jobs.push(fetchDevToTag(tag, ITEMS_PER_TAG)));
+      }
+      if (sources.projectzero) {
+        jobs.push(fetchProjectZero(10));
+      }
+
+      if (jobs.length === 0) {
+        setState({status: 'ready', posts: []});
+        return;
+      }
+
       try {
-        const results = await Promise.allSettled(tags.map(fetchTag));
+        const results = await Promise.allSettled(jobs);
         const merged = results
           .filter((r) => r.status === 'fulfilled')
           .flatMap((r) => r.value);
 
-        if (merged.length === 0) throw new Error('all feeds failed');
+        if (merged.length === 0) throw new Error('all sources failed');
 
         const seen = new Set();
-        const dedupedItems = merged.filter((item) => {
-          if (seen.has(item.link)) return false;
-          seen.add(item.link);
-          return true;
-        });
-        const posts = mapFeedItems(dedupedItems).sort(
-          (a, b) => new Date(b.date) - new Date(a.date),
-        );
+        const posts = merged
+          .filter((post) => {
+            if (seen.has(post.link)) return false;
+            seen.add(post.link);
+            return true;
+          })
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
 
         setState({status: 'ready', posts});
         try {
@@ -192,32 +179,45 @@ export default function CommunityFeed() {
         } catch {
           // ignore quota errors
         }
-      } catch (err) {
+      } catch {
         setState({status: 'error', posts: []});
       }
     },
-    [tags, cacheKey],
+    [sources, mediumTags, devToTags, cacheKey],
   );
 
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tags]);
+  }, [sources, mediumTags, devToTags]);
 
-  // Explicit author lookup — only runs when the form below is submitted,
-  // never automatically while typing. Prefers a confirmed @handle pulled
-  // from a post already in the loaded pool (accurate), but falls back to
+  function toggleSource(name) {
+    setSources((prev) => {
+      const next = {...prev, [name]: !prev[name]};
+      try {
+        localStorage.setItem(SOURCES_KEY, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }
+
+  // Explicit author lookup (Medium only — dev.to and Project Zero don't
+  // have the same per-author feed pattern this relies on). Only runs on
+  // submit, never automatically while typing. Prefers a confirmed @handle
+  // pulled from a post already in the loaded pool, but falls back to
   // treating the typed text itself as a handle guess and querying Medium
-  // directly — this is what actually finds an author who simply hasn't
-  // posted recently under any of the followed tags.
+  // directly.
   async function handleAuthorSearch(e) {
     e.preventDefault();
     const raw = authorInput.trim();
     if (!raw) return;
 
+    const mediumPosts = state.posts.filter((p) => p.source === 'medium');
     const candidate =
-      state.posts.find((p) => p.author && p.author.toLowerCase() === raw.toLowerCase()) ||
-      state.posts.find((p) => p.author && p.author.toLowerCase().includes(raw.toLowerCase()));
+      mediumPosts.find((p) => p.author && p.author.toLowerCase() === raw.toLowerCase()) ||
+      mediumPosts.find((p) => p.author && p.author.toLowerCase().includes(raw.toLowerCase()));
 
     const confirmedHandle = candidate ? extractMediumHandle(candidate.link) : null;
 
@@ -237,7 +237,8 @@ export default function CommunityFeed() {
 
     setAuthorView({name: displayName, handle, status: 'loading', posts: [], guessed});
     try {
-      const posts = await fetchAuthorFeed(handle);
+      const posts = await fetchMediumAuthor(handle, 15);
+      posts.sort((a, b) => new Date(b.date) - new Date(a.date));
       setAuthorView({
         name: displayName,
         handle,
@@ -255,50 +256,100 @@ export default function CommunityFeed() {
     setAuthorView(null);
   }
 
-  function handleAddTag(e) {
+  function handleAddMediumTag(e) {
     e.preventDefault();
-    const clean = sanitizeTag(tagInput);
+    const clean = sanitizeTag(mediumTagInput);
     if (!clean) {
-      setTagError('Enter a tag using letters, numbers, and hyphens.');
+      setTagError('Enter a Medium tag using letters, numbers, and hyphens.');
       return;
     }
-    if (tags.includes(clean)) {
-      setTagError('Already following that tag.');
+    if (mediumTags.includes(clean)) {
+      setTagError('Already following that Medium tag.');
       return;
     }
-    if (tags.length >= MAX_TAGS) {
-      setTagError(`You can follow up to ${MAX_TAGS} tags at once.`);
+    if (mediumTags.length >= MAX_TAGS) {
+      setTagError(`You can follow up to ${MAX_TAGS} Medium tags at once.`);
       return;
     }
-    const next = [...tags, clean];
-    setTags(next);
+    const next = [...mediumTags, clean];
+    setMediumTags(next);
     try {
-      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(MEDIUM_TAGS_KEY, JSON.stringify(next));
     } catch {
-      // ignore storage errors (private browsing, quota, etc.)
+      // ignore storage errors
     }
-    setTagInput('');
+    setMediumTagInput('');
     setTagError('');
   }
 
-  function handleRemoveTag(tag) {
-    if (tags.length === 1) {
-      setTagError('Keep at least one tag.');
+  function handleRemoveMediumTag(tag) {
+    if (mediumTags.length === 1) {
+      setTagError('Keep at least one Medium tag.');
       return;
     }
-    const next = tags.filter((t) => t !== tag);
-    setTags(next);
+    const next = mediumTags.filter((t) => t !== tag);
+    setMediumTags(next);
     try {
-      localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(MEDIUM_TAGS_KEY, JSON.stringify(next));
     } catch {
       // ignore storage errors
     }
   }
 
-  function handleResetTags() {
-    setTags(DEFAULT_TAGS);
+  function handleResetMediumTags() {
+    setMediumTags(DEFAULT_MEDIUM_TAGS);
     try {
-      localStorage.removeItem(TAGS_STORAGE_KEY);
+      localStorage.removeItem(MEDIUM_TAGS_KEY);
+    } catch {
+      // ignore storage errors
+    }
+    setTagError('');
+  }
+
+  function handleAddDevToTag(e) {
+    e.preventDefault();
+    const clean = sanitizeDevToTag(devToTagInput);
+    if (!clean) {
+      setTagError('Enter a dev.to tag using letters and numbers only.');
+      return;
+    }
+    if (devToTags.includes(clean)) {
+      setTagError('Already following that dev.to tag.');
+      return;
+    }
+    if (devToTags.length >= MAX_TAGS) {
+      setTagError(`You can follow up to ${MAX_TAGS} dev.to tags at once.`);
+      return;
+    }
+    const next = [...devToTags, clean];
+    setDevToTags(next);
+    try {
+      localStorage.setItem(DEVTO_TAGS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage errors
+    }
+    setDevToTagInput('');
+    setTagError('');
+  }
+
+  function handleRemoveDevToTag(tag) {
+    if (devToTags.length === 1) {
+      setTagError('Keep at least one dev.to tag.');
+      return;
+    }
+    const next = devToTags.filter((t) => t !== tag);
+    setDevToTags(next);
+    try {
+      localStorage.setItem(DEVTO_TAGS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  function handleResetDevToTags() {
+    setDevToTags(DEFAULT_DEVTO_TAGS);
+    try {
+      localStorage.removeItem(DEVTO_TAGS_KEY);
     } catch {
       // ignore storage errors
     }
@@ -317,8 +368,12 @@ export default function CommunityFeed() {
     });
   }
 
-  const isCustomized =
-    tags.length !== DEFAULT_TAGS.length || tags.some((t) => !DEFAULT_TAGS.includes(t));
+  const isMediumCustomized =
+    mediumTags.length !== DEFAULT_MEDIUM_TAGS.length ||
+    mediumTags.some((t) => !DEFAULT_MEDIUM_TAGS.includes(t));
+  const isDevToCustomized =
+    devToTags.length !== DEFAULT_DEVTO_TAGS.length ||
+    devToTags.some((t) => !DEFAULT_DEVTO_TAGS.includes(t));
 
   // Search matches title, excerpt, author, and category/tag text — covers
   // both "search a topic" (xss, methodology) and "search a tag" in one box.
@@ -344,53 +399,138 @@ export default function CommunityFeed() {
         const aFeatured = a.publication ? 1 : 0;
         const bFeatured = b.publication ? 1 : 0;
         if (aFeatured !== bFeatured) return bFeatured - aFeatured;
-        return new Date(b.date) - new Date(a.date); // newest within each group
+        return new Date(b.date) - new Date(a.date);
+      });
+    }
+
+    // Real interaction-based ranking — only dev.to provides an actual
+    // public reaction count, so posts without one (Medium, Project Zero)
+    // honestly sort to the bottom rather than being guessed at.
+    if (reactionsFirst) {
+      posts = [...posts].sort((a, b) => {
+        const aReactions = typeof a.reactions === 'number' ? a.reactions : -1;
+        const bReactions = typeof b.reactions === 'number' ? b.reactions : -1;
+        if (aReactions !== bReactions) return bReactions - aReactions;
+        return new Date(b.date) - new Date(a.date);
       });
     }
 
     return posts;
-  }, [state.posts, query, featuredFirst, savedOnly, savedLinks]);
+  }, [state.posts, query, featuredFirst, reactionsFirst, savedOnly, savedLinks]);
 
   return (
     <div>
-      <form className={styles.tagBar} onSubmit={handleAddTag}>
-        <div className={styles.tagChips}>
-          {tags.map((tag) => (
-            <span key={tag} className={styles.tagChip}>
-              #{tag}
-              <button
-                type="button"
-                className={styles.tagChipRemove}
-                onClick={() => handleRemoveTag(tag)}
-                aria-label={`Stop following ${tag}`}>
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-        <div className={styles.tagInputRow}>
+      <div className={styles.sourceToggleRow}>
+        <span className={styles.sourceToggleLabel}>Sources:</span>
+        <label className={styles.checkboxLabel}>
           <input
-            type="text"
-            value={tagInput}
-            onChange={(e) => {
-              setTagInput(e.target.value);
-              setTagError('');
-            }}
-            placeholder="add a tag, e.g. cloud-security"
-            className={styles.tagInput}
-            aria-label="Add a Medium tag to follow"
+            type="checkbox"
+            checked={sources.medium}
+            onChange={() => toggleSource('medium')}
           />
-          <button type="submit" className={styles.tagAddButton}>
-            Add
-          </button>
-          {isCustomized && (
-            <button type="button" className={styles.tagResetButton} onClick={handleResetTags}>
-              Reset
+          Medium
+        </label>
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={sources.devto}
+            onChange={() => toggleSource('devto')}
+          />
+          dev.to
+        </label>
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={sources.projectzero}
+            onChange={() => toggleSource('projectzero')}
+          />
+          Google Project Zero
+        </label>
+      </div>
+
+      {sources.medium && (
+        <form className={styles.tagBar} onSubmit={handleAddMediumTag}>
+          <div className={styles.tagChips}>
+            <span className={styles.tagGroupLabel}>Medium:</span>
+            {mediumTags.map((tag) => (
+              <span key={tag} className={styles.tagChip}>
+                #{tag}
+                <button
+                  type="button"
+                  className={styles.tagChipRemove}
+                  onClick={() => handleRemoveMediumTag(tag)}
+                  aria-label={`Stop following Medium tag ${tag}`}>
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className={styles.tagInputRow}>
+            <input
+              type="text"
+              value={mediumTagInput}
+              onChange={(e) => {
+                setMediumTagInput(e.target.value);
+                setTagError('');
+              }}
+              placeholder="add a Medium tag, e.g. cloud-security"
+              className={styles.tagInput}
+              aria-label="Add a Medium tag to follow"
+            />
+            <button type="submit" className={styles.tagAddButton}>
+              Add
             </button>
-          )}
-        </div>
-        {tagError && <p className={styles.tagError}>{tagError}</p>}
-      </form>
+            {isMediumCustomized && (
+              <button type="button" className={styles.tagResetButton} onClick={handleResetMediumTags}>
+                Reset
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+
+      {sources.devto && (
+        <form className={styles.tagBar} onSubmit={handleAddDevToTag}>
+          <div className={styles.tagChips}>
+            <span className={styles.tagGroupLabel}>dev.to:</span>
+            {devToTags.map((tag) => (
+              <span key={tag} className={styles.tagChip}>
+                #{tag}
+                <button
+                  type="button"
+                  className={styles.tagChipRemove}
+                  onClick={() => handleRemoveDevToTag(tag)}
+                  aria-label={`Stop following dev.to tag ${tag}`}>
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className={styles.tagInputRow}>
+            <input
+              type="text"
+              value={devToTagInput}
+              onChange={(e) => {
+                setDevToTagInput(e.target.value);
+                setTagError('');
+              }}
+              placeholder="add a dev.to tag, e.g. pentesting"
+              className={styles.tagInput}
+              aria-label="Add a dev.to tag to follow"
+            />
+            <button type="submit" className={styles.tagAddButton}>
+              Add
+            </button>
+            {isDevToCustomized && (
+              <button type="button" className={styles.tagResetButton} onClick={handleResetDevToTags}>
+                Reset
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+
+      {tagError && <p className={styles.tagError}>{tagError}</p>}
 
       <div className={styles.searchRow}>
         <input
@@ -412,6 +552,14 @@ export default function CommunityFeed() {
         <label className={styles.checkboxLabel}>
           <input
             type="checkbox"
+            checked={reactionsFirst}
+            onChange={(e) => setReactionsFirst(e.target.checked)}
+          />
+          Most reactions first
+        </label>
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
             checked={savedOnly}
             onChange={(e) => setSavedOnly(e.target.checked)}
           />
@@ -423,9 +571,9 @@ export default function CommunityFeed() {
             type="text"
             value={authorInput}
             onChange={(e) => setAuthorInput(e.target.value)}
-            placeholder="author or @handle"
+            placeholder="Medium author or @handle"
             className={styles.authorInlineInput}
-            aria-label="Look up an author by name or Medium handle"
+            aria-label="Look up a Medium author by name or handle"
           />
           <button type="submit" className={styles.authorInlineButton}>
             Look up
@@ -510,8 +658,8 @@ export default function CommunityFeed() {
         <div className={styles.emptyState}>
           <p className={styles.emptyStateTitle}>Couldn't load the live feed right now.</p>
           <p className={styles.emptyStateBody}>
-            This pulls live from public Medium tags via a third-party proxy, which
-            occasionally rate-limits or times out.
+            This pulls live from Medium, dev.to, and Project Zero via public feeds/APIs, which can
+            occasionally rate-limit or time out.
           </p>
           <button type="button" className={styles.retryButton} onClick={() => load(true)}>
             Try again
@@ -522,7 +670,11 @@ export default function CommunityFeed() {
       {!authorView && state.status === 'ready' && visiblePosts.length === 0 && (
         <div className={styles.emptyState}>
           <p className={styles.emptyStateTitle}>
-            {savedOnly ? "You haven't saved anything yet." : `No loaded posts match "${query}".`}
+            {savedOnly
+              ? "You haven't saved anything yet."
+              : Object.values(sources).every((v) => !v)
+                ? 'No sources enabled — turn at least one back on above.'
+                : `No loaded posts match "${query}".`}
           </p>
         </div>
       )}
