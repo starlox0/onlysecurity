@@ -1,6 +1,12 @@
 import React from 'react';
 import styles from './styles.module.css';
 
+const SOURCE_LABELS = {
+  medium: 'Medium',
+  devto: 'dev.to',
+  projectzero: 'Project Zero',
+};
+
 export default function PostCard({post, isSaved, onToggleSave}) {
   return (
     <div className={styles.card}>
@@ -14,19 +20,29 @@ export default function PostCard({post, isSaved, onToggleSave}) {
         </div>
         <div className={styles.body}>
           <div className={styles.badgeRow}>
+            <span className={styles.sourceBadge} data-source={post.source}>
+              {SOURCE_LABELS[post.source] || post.source}
+            </span>
             {post.publication && (
-              <span className={styles.pubBadge} title={`${post.publication.followers} followers`}>
+              <span className={styles.pubBadge} title={`${post.publication.followers ? post.publication.followers + ' followers' : ''}`}>
                 {post.publication.name}
               </span>
             )}
             {post.readingMinutes && (
               <span className={styles.readingBadge}>{post.readingMinutes} min read</span>
             )}
+            {typeof post.reactions === 'number' && (
+              <span className={styles.reactionsBadge}>▲ {post.reactions}</span>
+            )}
+            {typeof post.comments === 'number' && (
+              <span className={styles.commentsBadge}>💬 {post.comments}</span>
+            )}
           </div>
           <h3 className={styles.title}>{post.title}</h3>
           <p className={styles.excerpt}>{post.excerpt}</p>
           <span className={styles.meta}>
-            {post.author ? `${post.author} · ` : ''}Read on Medium →
+            {post.author ? `${post.author} · ` : ''}
+            {SOURCE_LABELS[post.source] ? `Read on ${SOURCE_LABELS[post.source]} →` : 'Read more →'}
           </span>
         </div>
       </a>
