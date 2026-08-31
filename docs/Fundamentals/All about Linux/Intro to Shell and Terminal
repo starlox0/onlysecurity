@@ -1,0 +1,1012 @@
+---
+sidebar_position: 2
+title: "Linux Shell and Shell Prompt"
+description: "Learn how the Linux shell works, understand shell prompts, identify user privileges, and customize the Bash PS1 variable."
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Details from '@theme/Details';
+import Admonition from '@theme/Admonition';
+
+# Linux Shell and Shell Prompt
+
+The **shell** is one of the most crucial components in the Linux operating system. It acts as a bridge between the user and the system's core (the **kernel**), giving you full control over the OS.
+
+If you truly want to **learn Linux**, you must understand the **shell** — it's where real power lies.
+
+---
+
+## What Is a Shell?
+
+A **Linux terminal**, often referred to as the **shell** or **command line interface (CLI)**, provides a **text-based input/output interface** that allows users to interact directly with the system.
+
+Through commands typed into the shell, users can:
+
+- Execute programs
+- Manage files
+- Monitor processes
+- Configure system settings
+- Manage users and permissions
+- Work with networks
+- Automate tasks
+- Write shell scripts
+- Perform system administration
+
+All of this can be done without relying on a graphical interface.
+
+:::info Important Distinction
+
+The terms **terminal**, **shell**, **CLI**, and **prompt** are often used interchangeably in casual conversation, but they technically describe different things.
+
+:::
+
+### Terminal vs Shell vs CLI
+
+| Term | Description |
+|---|---|
+| **Terminal** | The application or interface through which you interact with the system |
+| **Shell** | The program that interprets and executes commands |
+| **CLI** | The text-based method of interacting with a system |
+| **Prompt** | The text displayed by the shell indicating that it is ready to accept input |
+
+A simplified representation is:
+
+```text
+User
+  |
+  v
+Terminal
+  |
+  v
+Shell
+  |
+  v
+Kernel
+  |
+  v
+Hardware / System Resources
+````
+
+For example, when you open a terminal application and see:
+
+```text
+user@hostname:~$
+```
+
+the terminal provides the interface, while the shell is responsible for interpreting the command you type.
+
+---
+
+## Popular Linux Shells
+
+Linux supports multiple shells, each with different features and capabilities.
+
+Some commonly encountered shells include:
+
+* `bash` (Bourne Again Shell) – widely used and the default shell in many Linux environments
+* `zsh` – provides additional customization and interactive features
+* `fish` – designed to provide a user-friendly interactive shell
+* `ksh` – KornShell
+* `sh` – traditional Unix shell interface
+
+The shell used by a user can vary depending on the Linux distribution, system configuration, and personal preference.
+
+### Check Your Current Shell
+
+You can determine your configured login shell with:
+
+```bash
+echo $SHELL
+```
+
+Example:
+
+```text
+/bin/bash
+```
+
+You can also inspect the shell process currently running:
+
+```bash
+echo $0
+```
+
+or:
+
+```bash
+ps -p $$ -o comm=
+```
+
+Example:
+
+```text
+bash
+```
+
+<Details summary="What does $$ mean?">
+
+`$$` is a special shell variable that contains the process ID (PID) of the current shell.
+
+Therefore:
+
+```bash
+ps -p $$ -o comm=
+```
+
+asks the operating system to display information about the current shell process.
+
+</Details>
+
+---
+
+## Why the Shell Matters in Cybersecurity
+
+Mastering the shell is essential for **cybersecurity professionals, system administrators, and developers**, as it enables deep interaction, automation, scripting, and system-level control.
+
+For cybersecurity professionals, the shell is particularly important because many security activities are performed through command-line tools.
+
+For example:
+
+```bash
+nmap
+tcpdump
+curl
+wget
+ssh
+netstat
+ss
+ps
+grep
+awk
+sed
+find
+```
+
+A security analyst or penetration tester may use the shell to:
+
+* Enumerate systems
+* Inspect network connections
+* Analyze logs
+* Search files
+* Investigate processes
+* Connect to remote systems
+* Automate repetitive tasks
+* Execute security tools
+* Write scripts for reconnaissance and analysis
+
+The command line therefore becomes an important interface for interacting with Linux systems during security assessments.
+
+---
+
+# Shell Prompts
+
+The **shell prompt** is a simple yet powerful indicator that gives you important context about your current session.
+
+It appears whenever the terminal is ready to accept a command.
+
+By looking at the prompt, you can quickly understand key information such as:
+
+* **User Privilege** — Admin or non-admin
+* **Username**
+* **Hostname** — Computer name
+* **Current Working Directory**
+* **Optional Information** — Time, Git branch, or custom information in advanced prompts
+
+A typical prompt might look like:
+
+```text
+user@hostname:~/current-directory$
+```
+
+Let's break it down:
+
+```text
+user        @ hostname : ~/current-directory $
+  |              |              |             |
+Username      Hostname       Directory      Prompt
+```
+
+The exact appearance of a prompt depends on the shell configuration.
+
+---
+
+## Unprivileged User Shell Prompt
+
+A typical unprivileged user prompt ends with:
+
+```text
+$
+```
+
+For example:
+
+```text
+user@hostname:~$
+```
+
+The `$` convention commonly indicates that the current shell is operating as a regular user.
+
+However, this is only a convention. Shell prompts are configurable, so you should never rely solely on the visible prompt to determine privilege.
+
+---
+
+## Privileged Root Shell Prompt
+
+A typical root shell prompt ends with:
+
+```text
+#
+```
+
+For example:
+
+```text
+root@hostname:~#
+```
+
+The `#` convention commonly indicates a root shell.
+
+However, just like `$`, the prompt can be customized.
+
+When privilege matters, verify it explicitly.
+
+```bash
+whoami
+```
+
+Example:
+
+```text
+root
+```
+
+You can also use:
+
+```bash
+id
+```
+
+Example:
+
+```text
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+The important part here is:
+
+```text
+uid=0(root)
+```
+
+UID `0` represents the root account.
+
+:::warning Do Not Trust the Prompt Alone
+
+A `$` or `#` at the end of a prompt is only a visual convention.
+
+A user can customize `PS1` and make a prompt look like:
+
+```text
+root@server:~#
+```
+
+even when the user is not actually root.
+
+When performing security testing or system administration, verify privileges using commands such as:
+
+```bash
+whoami
+id
+```
+
+:::
+
+---
+
+# Understanding a Shell Prompt
+
+Consider the following prompt:
+
+```text
+alice@web-server:/var/www/html$
+```
+
+It can be interpreted as:
+
+| Component | Value           | Meaning                                         |
+| --------- | --------------- | ----------------------------------------------- |
+| Username  | `alice`         | Current user                                    |
+| Hostname  | `web-server`    | Current machine                                 |
+| Directory | `/var/www/html` | Current working directory                       |
+| `$`       | `$`             | Conventional indicator of an unprivileged shell |
+
+Now compare it with:
+
+```text
+root@web-server:/var/www/html#
+```
+
+The visible difference is the final character:
+
+```text
+$
+```
+
+versus:
+
+```text
+#
+```
+
+But remember that the actual privilege should be verified rather than assumed.
+
+---
+
+# Useful Commands for Understanding Your Shell
+
+Before learning how to customize the prompt, it is useful to understand some commands that reveal information about your current session.
+
+<Tabs>
+<TabItem value="identity" label="Identity" default>
+
+### Identify the Current User
+
+```bash
+whoami
+```
+
+Example:
+
+```text
+alice
+```
+
+To retrieve more detailed identity and group information:
+
+```bash
+id
+```
+
+Example:
+
+```text
+uid=1000(alice) gid=1000(alice) groups=1000(alice),27(sudo)
+```
+
+</TabItem>
+
+<TabItem value="location" label="Location">
+
+### Identify the Current Directory
+
+```bash
+pwd
+```
+
+Example:
+
+```text
+/home/alice
+```
+
+`pwd` means **print working directory**.
+
+</TabItem>
+
+<TabItem value="hostname" label="Hostname">
+
+### Identify the Host
+
+```bash
+hostname
+```
+
+Example:
+
+```text
+web-server
+```
+
+For additional system information:
+
+```bash
+hostnamectl
+```
+
+</TabItem>
+
+<TabItem value="terminal" label="Terminal">
+
+### Identify the Terminal Device
+
+```bash
+tty
+```
+
+Example:
+
+```text
+/dev/pts/0
+```
+
+This identifies the terminal device associated with the current shell session.
+
+</TabItem>
+
+</Tabs>
+
+---
+
+# PS1 Variable in Linux
+
+In Linux, the **`PS1` variable (Prompt String 1)** defines how your **command prompt looks** in the terminal.
+
+It controls the **text, symbols, colors, and structure** of the prompt you see every time you're ready to type a command.
+
+For Bash, `PS1` is the primary interactive prompt variable.
+
+Bash also provides other prompt variables such as `PS2`, `PS3`, and `PS4`.
+
+## Why Is PS1 Important?
+
+The prompt can provide useful context about your current session.
+
+It can show:
+
+* Current user
+* Hostname
+* Current directory
+* Time
+* Git branch
+* Privilege level
+* Other custom information
+
+It can also be customized for clarity, productivity, or aesthetics.
+
+---
+
+## View Your Current PS1
+
+You can inspect the current value using:
+
+```bash
+echo "$PS1"
+```
+
+Depending on your configuration, you may see something similar to:
+
+```text
+\u@\h:\w\$
+```
+
+---
+
+## A Basic PS1 Example
+
+For a normal user, your shell prompt might look like:
+
+```text
+user@host:~/folder$
+```
+
+Behind the scenes, this can be generated by a `PS1` value such as:
+
+```bash
+PS1='\u@\h:\w\$ '
+```
+
+The escape sequences are interpreted by Bash when the prompt is displayed.
+
+---
+
+# Common Escape Sequences in PS1
+
+| Sequence | Meaning                                   |
+| -------- | ----------------------------------------- |
+| `\u`     | Username                                  |
+| `\h`     | Hostname up to the first `.`              |
+| `\H`     | Full hostname                             |
+| `\w`     | Current working directory                 |
+| `\W`     | Basename of the current working directory |
+| `\t`     | Current time in `HH:MM:SS` format         |
+| `\d`     | Current date                              |
+| `\#`     | Command number                            |
+| `\$`     | `#` for root and `$` for other users      |
+
+---
+
+# Building a Custom Prompt
+
+Suppose you want the prompt to display:
+
+```text
+username@hostname:/current/path$
+```
+
+You can use:
+
+```bash
+PS1='\u@\h:\w\$ '
+```
+
+This maps to:
+
+```text
+\u  → username
+\h  → hostname
+\w  → current directory
+\$  → # for root, $ for normal users
+```
+
+Therefore:
+
+```text
+\u@\h:\w\$
+```
+
+becomes something like:
+
+```text
+alice@web-server:/home/alice$
+```
+
+---
+
+# Customizing the Prompt with Colors
+
+Bash also allows ANSI escape sequences to be used to add colors to the prompt.
+
+For example:
+
+```bash
+PS1='\[\e[1;32m\]\u@\h:\w\$ \[\e[0m\]'
+```
+
+This creates a prompt with colored text.
+
+The important parts are:
+
+```text
+\e[1;32m
+```
+
+which enables the color, and:
+
+```text
+\e[0m
+```
+
+which resets the terminal formatting.
+
+:::note Why Are \(and\) Used?
+
+When Bash prompt escape sequences contain non-printing characters, wrapping them with:
+
+```text
+\[
+\]
+```
+
+helps Bash correctly calculate the visible prompt length.
+
+This is particularly important when using line editing and command history.
+
+:::
+
+---
+
+# Temporary vs Permanent Changes
+
+When you modify `PS1` directly from the terminal:
+
+```bash
+PS1='\u@\h:\w\$ '
+```
+
+the change normally applies to the current shell session.
+
+If you close the terminal and start a new shell, the change may disappear.
+
+To make the configuration persistent for Bash interactive shells, you will commonly place the configuration in:
+
+```text
+~/.bashrc
+```
+
+For example:
+
+```bash
+nano ~/.bashrc
+```
+
+Add:
+
+```bash
+PS1='\u@\h:\w\$ '
+```
+
+Then reload the configuration:
+
+```bash
+source ~/.bashrc
+```
+
+You can verify the result by checking:
+
+```bash
+echo "$PS1"
+```
+
+:::warning Be Careful When Editing .bashrc
+
+A mistake in `.bashrc` can affect every new interactive Bash session.
+
+If you are experimenting, keep a backup:
+
+```bash
+cp ~/.bashrc ~/.bashrc.backup
+```
+
+Then make your changes.
+
+:::
+
+---
+
+# PS1 Is Not the Only Prompt Variable
+
+Bash provides several prompt variables.
+
+| Variable | Purpose                                         |
+| -------- | ----------------------------------------------- |
+| `PS1`    | Primary interactive prompt                      |
+| `PS2`    | Secondary prompt                                |
+| `PS3`    | Prompt used by the `select` construct           |
+| `PS4`    | Prefix used when tracing commands with `set -x` |
+
+For example, if Bash expects additional input, you may see the secondary prompt:
+
+```text
+>
+```
+
+This can happen when a command has not been completed.
+
+Example:
+
+```bash
+echo "Hello
+```
+
+Bash may wait for the closing quote and display:
+
+```text
+>
+```
+
+You can cancel the incomplete command with:
+
+```text
+Ctrl+C
+```
+
+---
+
+# Shell Prompt in Security Operations
+
+Understanding the shell prompt is especially important during penetration testing and system administration.
+
+Imagine you connect to a remote system:
+
+```bash
+ssh analyst@server
+```
+
+You receive:
+
+```text
+analyst@server:~$
+```
+
+You should immediately establish basic context:
+
+```bash
+whoami
+id
+hostname
+pwd
+```
+
+This gives you:
+
+```text
+Current user
+Current privileges
+Target hostname
+Current directory
+```
+
+A simple workflow is:
+
+```text
+Connect
+  |
+  v
+whoami
+  |
+  v
+id
+  |
+  v
+hostname
+  |
+  v
+pwd
+  |
+  v
+Continue enumeration
+```
+
+This habit is useful because commands executed on the wrong host, wrong directory, or wrong privilege level can have unintended consequences.
+
+---
+
+# Shell and Command Execution
+
+One of the most important concepts for cybersecurity professionals is understanding how the shell interprets commands.
+
+Consider:
+
+```bash
+echo "Hello"
+```
+
+The shell parses the command and invokes the appropriate program or shell builtin.
+
+More complex commands can contain:
+
+* Pipes
+* Redirection
+* Variables
+* Command substitution
+* Wildcards
+* Quoting
+* Command chaining
+
+For example:
+
+```bash
+cat access.log | grep "401"
+```
+
+Here:
+
+```text
+cat access.log
+      |
+      v
+   Output
+      |
+      v
+     grep
+      |
+      v
+Matching lines
+```
+
+The `|` character creates a **pipe**, connecting the output of one command to the input of another.
+
+---
+
+# Shell Metacharacters
+
+The shell recognizes a number of special characters that can change how commands are interpreted.
+
+Common examples include:
+
+```text
+|
+>
+>>
+<
+;
+&&
+||
+$
+*
+?
+```
+
+For example:
+
+```bash
+cat file.txt | grep "password"
+```
+
+uses:
+
+```text
+|
+```
+
+to pipe output from one command into another.
+
+Similarly:
+
+```bash
+echo "hello" > output.txt
+```
+
+uses:
+
+```text
+>
+```
+
+to redirect output into a file.
+
+Understanding these characters becomes particularly important when studying **command injection** vulnerabilities.
+
+---
+
+# Why This Matters for Web Security
+
+Many applications have functionality that interacts with operating-system commands.
+
+For example, an application might internally execute something conceptually similar to:
+
+```text
+command + user_input
+```
+
+If untrusted input is incorporated into shell commands without appropriate protections, an attacker may be able to alter the intended command execution.
+
+This class of vulnerability is known as **OS Command Injection**.
+
+OWASP recommends avoiding direct OS command execution where possible and, when it cannot be avoided, using appropriate parameterization and input validation.
+
+:::info Security Connection
+
+Understanding how the shell interprets:
+
+```text
+;
+&&
+||
+|
+>
+<
+$
+```
+
+is useful when learning how command injection works.
+
+The same knowledge is also important for defending applications that interact with operating-system commands.
+
+:::
+
+---
+
+# Practical Exercise
+
+If you have access to a Linux system, try the following commands one by one.
+
+## Step 1 — Identify Yourself
+
+```bash
+whoami
+```
+
+## Step 2 — Check Your Privileges
+
+```bash
+id
+```
+
+## Step 3 — Identify the Host
+
+```bash
+hostname
+```
+
+## Step 4 — Identify Your Current Directory
+
+```bash
+pwd
+```
+
+## Step 5 — Identify Your Shell
+
+```bash
+echo "$SHELL"
+```
+
+## Step 6 — Inspect the Prompt Configuration
+
+```bash
+echo "$PS1"
+```
+
+## Step 7 — Temporarily Change the Prompt
+
+```bash
+PS1='\u@\h:\w\$ '
+```
+
+## Step 8 — Restore Your Shell Configuration
+
+If you modified `.bashrc`, reload it:
+
+```bash
+source ~/.bashrc
+```
+
+---
+
+# Useful References
+
+The following resources are useful when learning Linux shells and Bash:
+
+* [GNU Bash Reference Manual](https://www.gnu.org/software/bash/manual/bash.html)
+* [Bash Manual — Controlling the Prompt](https://www.gnu.org/software/bash/manual/html_node/Controlling-the-Prompt.html)
+* [Bash Linux Manual Page](https://www.man7.org/linux/man-pages/man1/bash.1.html)
+* [Ubuntu — The Linux Command Line for Beginners](https://ubuntu.com/desktop/docs/en/26.04/tutorial/the-linux-command-line-for-beginners/)
+* [Ubuntu — Welcome to the Terminal](https://ubuntu.com/server/docs/tutorial/welcome-to-the-terminal/)
+* [OWASP — OS Command Injection Defense](https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html)
+
+---
+
+# Key Takeaways
+
+By the end of this section, you should understand:
+
+* What a **shell** is
+* The difference between a **terminal, shell, CLI, and prompt**
+* Common Linux shells such as `bash`, `zsh`, `fish`, and `ksh`
+* How to identify your current shell
+* How to identify your current user and privileges
+* How to interpret a shell prompt
+* What the `PS1` variable does
+* Common Bash prompt escape sequences
+* How to customize `PS1`
+* How `.bashrc` is used for interactive Bash configuration
+* What `PS2`, `PS3`, and `PS4` are used for
+* Why shell syntax matters in cybersecurity
+* Why understanding shell metacharacters is important when studying command injection
+
+---
+
+# Next
+
+Now that you understand the **Linux shell and shell prompt**, the next step is to learn the commands you will use every day.
+
+The natural progression is:
+
+```text
+Linux Shell
+     |
+     v
+Basic Commands
+     |
+     v
+File & Directory Management
+     |
+     v
+Users & Permissions
+     |
+     v
+Processes
+     |
+     v
+Networking
+     |
+     v
+Shell Scripting
+     |
+     v
+Linux Security & Privilege Escalation
+```
+
+```
+```
