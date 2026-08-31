@@ -5,29 +5,37 @@
 }
 
 .card {
-  display: flex;
-  flex-direction: column;
+  position: relative;
   border: 1px solid var(--os-border);
   border-radius: 8px;
   overflow: hidden;
   background: var(--os-surface);
-  text-decoration: none;
-  color: var(--os-text);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover,
-.card:focus-visible {
+.card:focus-within {
   border-color: var(--os-accent-green);
   transform: translateY(-3px);
   box-shadow:
     0 0 0 1px rgba(63, 185, 80, 0.25),
     0 12px 24px -12px rgba(0, 0, 0, 0.45);
+}
+
+.cardLink {
+  display: flex;
+  flex-direction: column;
   text-decoration: none;
   color: var(--os-text);
 }
 
-.card:focus-visible {
+.cardLink:hover,
+.cardLink:focus-visible {
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.cardLink:focus-visible {
   outline: 2px solid var(--os-accent-blue);
   outline-offset: -2px;
 }
@@ -334,6 +342,113 @@
 
 @media (prefers-reduced-motion: reduce) {
   .loadMoreButton {
+    transition: none;
+  }
+}
+
+/* --- Search row (added alongside tag search) --- */
+.searchRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0 1.75rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--os-border);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 240px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-surface);
+  color: var(--os-text);
+}
+
+.searchInput:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: 1px;
+}
+
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  color: var(--os-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.checkboxLabel input {
+  accent-color: var(--os-accent-green);
+}
+
+/* --- Badges on each card --- */
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.pubBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-accent-amber);
+  color: var(--os-accent-amber);
+}
+
+.readingBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  color: var(--os-text-muted);
+  border: 1px solid var(--os-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+}
+
+/* --- Save-for-later button --- */
+.saveButton {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--os-border);
+  border-radius: 50%;
+  background: rgba(1, 4, 9, 0.55);
+  backdrop-filter: blur(2px);
+  color: var(--os-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.saveButton:hover {
+  border-color: var(--os-accent-amber);
+  color: var(--os-accent-amber);
+}
+
+.saveButton[data-saved='true'] {
+  color: var(--os-accent-amber);
+  border-color: var(--os-accent-amber);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
     transition: none;
   }
 }
