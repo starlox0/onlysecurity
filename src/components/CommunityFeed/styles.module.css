@@ -542,3 +542,58 @@
     width: auto;
   }
 }
+
+/* --- Source toggles --- */
+.sourceToggleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--os-border);
+}
+
+.sourceToggleLabel {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--os-text-muted);
+}
+
+.tagGroupLabel {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--os-text-muted);
+  align-self: center;
+  margin-right: 0.2rem;
+}
+
+/* --- Source / reaction / comment badges on cards --- */
+.sourceBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid var(--os-border);
+  color: var(--os-text-muted);
+}
+
+.sourceBadge[data-source='medium'] { color: var(--os-text); border-color: var(--os-text); }
+.sourceBadge[data-source='devto'] { color: #a5f3fc; border-color: #a5f3fc; }
+.sourceBadge[data-source='projectzero'] { color: var(--os-accent-red); border-color: var(--os-accent-red); }
+
+.reactionsBadge,
+.commentsBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  color: var(--os-text-muted);
+  border: 1px solid var(--os-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+}
