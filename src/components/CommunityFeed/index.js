@@ -417,26 +417,26 @@ export default function CommunityFeed() {
           />
           Saved only ({savedLinks.length})
         </label>
-      </div>
 
-      <form className={styles.authorSearchRow} onSubmit={handleAuthorSearch}>
-        <input
-          type="text"
-          value={authorInput}
-          onChange={(e) => setAuthorInput(e.target.value)}
-          placeholder="Look up a specific author — their name or @handle..."
-          className={styles.searchInput}
-          aria-label="Look up an author by name or Medium handle"
-        />
-        <button type="submit" className={styles.tagAddButton}>
-          Look up
-        </button>
-        {authorView && (
-          <button type="button" className={styles.tagResetButton} onClick={clearAuthorSearch}>
-            Clear
+        <form className={styles.authorInline} onSubmit={handleAuthorSearch}>
+          <input
+            type="text"
+            value={authorInput}
+            onChange={(e) => setAuthorInput(e.target.value)}
+            placeholder="author or @handle"
+            className={styles.authorInlineInput}
+            aria-label="Look up an author by name or Medium handle"
+          />
+          <button type="submit" className={styles.authorInlineButton}>
+            Look up
           </button>
-        )}
-      </form>
+          {authorView && (
+            <button type="button" className={styles.authorInlineButton} onClick={clearAuthorSearch}>
+              ×
+            </button>
+          )}
+        </form>
+      </div>
 
       {authorView && (
         <div className={styles.authorPanel}>
