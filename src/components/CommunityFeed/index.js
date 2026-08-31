@@ -1,12 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {detectPublication, estimateReadingMinutes} from './publications';
 import styles from './styles.module.css';
 
-// --- Configuration -------------------------------------------------------
-// Free, no-signup usage of rss2json shares a public rate-limit pool across
-// everyone who doesn't set a key, which can make this feed unreliable under
-// load. Get a free key at https://rss2json.com/ (no cost, just an email)
-// and paste it here for a private quota — the feed works without one, just
-// less reliably.
 const RSS2JSON_API_KEY = 'mnyhvyd3fr8eddefeq8wv4avbtzqqpmf3os2ujzq';
 
 // Medium tag feeds are public and unauthenticated: https://medium.com/feed/tag/<tag>
@@ -18,6 +13,7 @@ const INITIAL_VISIBLE = 9;
 const LOAD_MORE_STEP = 9;
 
 const TAGS_STORAGE_KEY = 'os-community-tags-v1';
+const SAVED_STORAGE_KEY = 'os-community-saved-v1';
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 function loadSavedTags() {
@@ -28,6 +24,16 @@ function loadSavedTags() {
     return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TAGS;
   } catch {
     return DEFAULT_TAGS;
+  }
+}
+
+function loadSavedPosts() {
+  try {
+    const raw = localStorage.getItem(SAVED_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
@@ -76,13 +82,18 @@ export default function CommunityFeed() {
   const [tagError, setTagError] = useState('');
   const [state, setState] = useState({status: 'loading', posts: []});
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const [query, setQuery] = useState('');
+  const [featuredFirst, setFeaturedFirst] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [savedLinks, setSavedLinks] = useState([]);
 
-  // Load any saved custom tags once, on mount, in the browser only.
+  // Load any saved custom tags / saved posts once, on mount, browser-only.
   useEffect(() => {
     setTags(loadSavedTags());
+    setSavedLinks(loadSavedPosts());
   }, []);
 
-  const cacheKey = useMemo(() => `os-community-feed-v2:${[...tags].sort().join(',')}`, [tags]);
+  const cacheKey = useMemo(() => `os-community-feed-v3:${[...tags].sort().join(',')}`, [tags]);
 
   const load = useCallback(
     async (forceFresh = false) => {
@@ -120,14 +131,20 @@ export default function CommunityFeed() {
             return true;
           })
           .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate))
-          .map((item) => ({
-            title: item.title,
-            link: item.link,
-            author: item.author,
-            date: item.pubDate,
-            image: extractImage(item),
-            excerpt: excerpt(item.description || item.content || ''),
-          }));
+          .map((item) => {
+            const rawContent = item.content || item.description || '';
+            return {
+              title: item.title,
+              link: item.link,
+              author: item.author,
+              date: item.pubDate,
+              image: extractImage(item),
+              excerpt: excerpt(rawContent),
+              readingMinutes: estimateReadingMinutes(rawContent),
+              publication: detectPublication(item.link),
+              categories: item.categories || [],
+            };
+          });
 
         setState({status: 'ready', posts});
         try {
@@ -197,8 +214,51 @@ export default function CommunityFeed() {
     setTagError('');
   }
 
+  function toggleSaved(link) {
+    setSavedLinks((prev) => {
+      const next = prev.includes(link) ? prev.filter((l) => l !== link) : [...prev, link];
+      try {
+        localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  }
+
   const isCustomized =
     tags.length !== DEFAULT_TAGS.length || tags.some((t) => !DEFAULT_TAGS.includes(t));
+
+  // Search matches title, excerpt, author, and category/tag text — covers
+  // both "search a topic" (xss, methodology) and "search a tag" in one box.
+  const visiblePosts = useMemo(() => {
+    let posts = state.posts;
+
+    if (savedOnly) {
+      posts = posts.filter((p) => savedLinks.includes(p.link));
+    }
+
+    const q = query.trim().toLowerCase();
+    if (q) {
+      posts = posts.filter((p) => {
+        const haystack = [p.title, p.excerpt, p.author, ...(p.categories || [])]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+
+    if (featuredFirst) {
+      posts = [...posts].sort((a, b) => {
+        const aFeatured = a.publication ? 1 : 0;
+        const bFeatured = b.publication ? 1 : 0;
+        if (aFeatured !== bFeatured) return bFeatured - aFeatured;
+        return new Date(b.date) - new Date(a.date); // newest within each group
+      });
+    }
+
+    return posts;
+  }, [state.posts, query, featuredFirst, savedOnly, savedLinks]);
 
   return (
     <div>
@@ -241,6 +301,33 @@ export default function CommunityFeed() {
         {tagError && <p className={styles.tagError}>{tagError}</p>}
       </form>
 
+      <div className={styles.searchRow}>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search loaded posts — e.g. xss, methodology, a tag, an author..."
+          className={styles.searchInput}
+          aria-label="Search loaded posts"
+        />
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={featuredFirst}
+            onChange={(e) => setFeaturedFirst(e.target.checked)}
+          />
+          Featured publications first
+        </label>
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={savedOnly}
+            onChange={(e) => setSavedOnly(e.target.checked)}
+          />
+          Saved only ({savedLinks.length})
+        </label>
+      </div>
+
       {state.status === 'loading' && (
         <div className={styles.grid}>
           {Array.from({length: 6}).map((_, i) => (
@@ -266,41 +353,64 @@ export default function CommunityFeed() {
         </div>
       )}
 
-      {state.status === 'ready' && (
+      {state.status === 'ready' && visiblePosts.length === 0 && (
+        <div className={styles.emptyState}>
+          <p className={styles.emptyStateTitle}>
+            {savedOnly ? "You haven't saved anything yet." : `No loaded posts match "${query}".`}
+          </p>
+        </div>
+      )}
+
+      {state.status === 'ready' && visiblePosts.length > 0 && (
         <>
           <div className={styles.grid}>
-            {state.posts.slice(0, visibleCount).map((post) => (
-              <a
-                key={post.link}
-                href={post.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.card}>
-                <div className={styles.imageWrap}>
-                  {post.image ? (
-                    <img src={post.image} alt="" loading="lazy" className={styles.image} />
-                  ) : (
-                    <div className={styles.imagePlaceholder} />
-                  )}
-                </div>
-                <div className={styles.body}>
-                  <h3 className={styles.title}>{post.title}</h3>
-                  <p className={styles.excerpt}>{post.excerpt}</p>
-                  <span className={styles.meta}>
-                    {post.author ? `${post.author} · ` : ''}Read on Medium →
-                  </span>
-                </div>
-              </a>
+            {visiblePosts.slice(0, visibleCount).map((post) => (
+              <div key={post.link} className={styles.card}>
+                <a href={post.link} target="_blank" rel="noopener noreferrer" className={styles.cardLink}>
+                  <div className={styles.imageWrap}>
+                    {post.image ? (
+                      <img src={post.image} alt="" loading="lazy" className={styles.image} />
+                    ) : (
+                      <div className={styles.imagePlaceholder} />
+                    )}
+                  </div>
+                  <div className={styles.body}>
+                    <div className={styles.badgeRow}>
+                      {post.publication && (
+                        <span className={styles.pubBadge} title={`${post.publication.followers} followers`}>
+                          {post.publication.name}
+                        </span>
+                      )}
+                      {post.readingMinutes && (
+                        <span className={styles.readingBadge}>{post.readingMinutes} min read</span>
+                      )}
+                    </div>
+                    <h3 className={styles.title}>{post.title}</h3>
+                    <p className={styles.excerpt}>{post.excerpt}</p>
+                    <span className={styles.meta}>
+                      {post.author ? `${post.author} · ` : ''}Read on Medium →
+                    </span>
+                  </div>
+                </a>
+                <button
+                  type="button"
+                  className={styles.saveButton}
+                  data-saved={savedLinks.includes(post.link)}
+                  onClick={() => toggleSaved(post.link)}
+                  aria-label={savedLinks.includes(post.link) ? 'Remove from saved' : 'Save for later'}>
+                  {savedLinks.includes(post.link) ? '★' : '☆'}
+                </button>
+              </div>
             ))}
           </div>
 
-          {visibleCount < state.posts.length && (
+          {visibleCount < visiblePosts.length && (
             <div className={styles.loadMoreRow}>
               <button
                 type="button"
                 className={styles.loadMoreButton}
                 onClick={() => setVisibleCount((c) => c + LOAD_MORE_STEP)}>
-                See more ({state.posts.length - visibleCount} more)
+                See more ({visiblePosts.length - visibleCount} more)
               </button>
             </div>
           )}
