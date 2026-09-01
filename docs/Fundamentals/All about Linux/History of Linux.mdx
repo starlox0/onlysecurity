@@ -13,23 +13,38 @@ import Admonition from '@theme/Admonition';
 
 > Linux is one of the most important operating systems to understand as a cybersecurity professional.
 
+`Fundamentals` · `Reading time: ~8 min` · **Next up:** [Linux Shell and Shell Prompt](./Intro%20to%20Shell%20and%20Terminal)
+
 ---
 
 ## Introduction
 
-We often talk about Windows OS and macOS. But did you know there’s an *imposter* in the room - a Penguin? Yes, that’s **Linux**. Some of you may have heard about it, some may not — but it’s one of the **most important topics to learn in Cybersecurity** today.
+We often talk about Windows and macOS. But did you know there's an *imposter* in the room — a penguin? Yes, that's **Linux**. Some of you may have heard of it, some may not — but it's one of the **most important topics to learn in cybersecurity** today.
 
-**Linux** is a powerful, free, and open-source operating system (OS) that runs across a vast range of devices - from personal computers to web servers, smartphones, embedded systems, supercomputers, and even space missions.
+**Linux** is a powerful, free, and open-source operating system (OS) that runs across a vast range of devices — from personal computers to web servers, smartphones, embedded systems, supercomputers, and even space missions.
 
-Unlike commercial operating systems like **Microsoft Windows** and **Apple macOS**, Linux gives users complete control over its source code, allowing them to **modify**, **redistribute**, or **optimize** the system however they want.
+Unlike commercial operating systems like **Microsoft Windows** and **Apple macOS**, Linux gives users complete control over its source code, letting them **modify**, **redistribute**, or **optimize** the system however they want.
 
-This makes it incredibly flexible, secure, and ideal for developers, ethical hackers, and cybersecurity professionals.
+That's what makes it flexible, transparent, and the default choice for developers, ethical hackers, and cybersecurity professionals.
+
+> "Talk is cheap. Show me the code." — **Linus Torvalds**, creator of the Linux kernel
 
 <Admonition type="info" title="Why Linux Matters in Cybersecurity">
 
 Linux is widely used across servers, cloud infrastructure, networking, embedded systems, and security tooling. Understanding Linux therefore provides an important foundation for cybersecurity work.
 
 </Admonition>
+
+### Linux vs. Windows vs. macOS
+
+| | **Linux** | **Windows** | **macOS** |
+| --- | :---: | :---: | :---: |
+| Source model | Open source | Closed source | Closed source (Unix-based core) |
+| Cost | Free | Paid license | Bundled with Apple hardware |
+| Customization | Full — kernel to desktop | Limited | Limited |
+| Dominant server market | Yes | Niche | Rare |
+| Default in cybersecurity tooling (Kali, Parrot) | Yes | No | No |
+| Typical desktop user | Developers, sysadmins, power users | General consumers, enterprises | Creative & consumer users |
 
 ---
 
@@ -106,15 +121,11 @@ The GNU Project had developed many essential operating-system components, but it
 
 <Details summary="How the pieces fit together">
 
-```text
-GNU Software
-    +
-Linux Kernel
-    =
-GNU/Linux
-```
-
-The kernel provides the core operating-system functionality, while GNU provides many of the tools and utilities required to interact with and operate the system.
+| Piece | Provides |
+| --- | --- |
+| **Linux kernel** | Core OS functionality — process scheduling, memory management, device drivers, hardware communication |
+| **GNU software** | The tools and utilities needed to actually *use* the kernel — shell (`bash`), compiler (`gcc`), core utilities (`ls`, `cp`, `grep`, ...) |
+| **GNU + Linux kernel** | = A complete, usable operating system: **GNU/Linux** |
 
 </Details>
 
@@ -279,16 +290,18 @@ This demonstrates the scalability of Linux across extremely powerful computing e
 
 Linux powers:
 
-| Environment           | Linux |
-| --------------------- | :---: |
-| Most internet servers |  Yes  |
-| Android smartphones   |  Yes  |
-| Cloud infrastructure  |  Yes  |
-| Cybersecurity tools   |  Yes  |
-| Firewalls             |  Yes  |
-| Supercomputers        |  Yes  |
-| Networking devices    |  Yes  |
-| IoT devices           |  Yes  |
+| Environment              | Linux |
+| ------------------------ | :---: |
+| Most internet servers    |  ✅   |
+| Android smartphones      |  ✅   |
+| Cloud infrastructure     |  ✅   |
+| Cybersecurity tools      |  ✅   |
+| Firewalls                |  ✅   |
+| Supercomputers           |  ✅   |
+| Networking devices       |  ✅   |
+| IoT devices              |  ✅   |
+| Containers (Docker/K8s)  |  ✅   |
+| CI/CD build runners      |  ✅   |
 
 ---
 
@@ -437,8 +450,17 @@ And that's why learning Linux is one of the **most important skills for a cybers
 
 ---
 
+## Further Reading
+
+* [The Linux Kernel Archives (kernel.org)](https://www.kernel.org/)
+* [GNU Project — gnu.org](https://www.gnu.org/)
+* [DistroWatch — compare Linux distributions](https://distrowatch.com/)
+* [Top500 — the world's fastest supercomputers](https://top500.org/)
+
+---
+
 <Admonition type="tip" title="What's Next?">
 
-Now that you know **what Linux is and where it came from**, the next step is learning how to actually interact with it — starting with the **Linux terminal and basic commands**.
+Now that you know **what Linux is and where it came from**, the next step is learning how to actually interact with it — starting with the **[Linux shell and shell prompt](./Intro%20to%20Shell%20and%20Terminal)**.
 
 </Admonition>
