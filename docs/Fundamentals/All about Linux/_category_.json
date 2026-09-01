@@ -1,0 +1,9 @@
+{
+  "label": "All about Linux",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "title": "All about Linux",
+    "description": "Where Linux came from, why it dominates servers/cloud/security tooling, and how to actually drive a shell — the two building blocks you need before touching commands, permissions, or privilege escalation."
+  }
+}
