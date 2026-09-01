@@ -499,3 +499,128 @@ article .card {
     justify-content: flex-start;
   }
 }
+
+
+/* ==========================================================================
+   Docs pages ("Learn" section) — bring the same terminal/card language
+   used everywhere else on the site into the docs, which were previously
+   still on stock Docusaurus styling. Everything below targets Docusaurus's
+   own documented, stable theme-doc-* classnames (or standard Infima
+   classes like .menu__link) — no swizzle needed, safe against upgrades.
+   ========================================================================== */
+
+/* --- Category index page header (e.g. the "Fundamentals" landing page) --- */
+main article > header h1 {
+  font-size: clamp(2rem, 4vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--os-text);
+}
+
+main article > header p {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--os-text-muted);
+  max-width: 65ch;
+}
+
+/* --- Category/doc cards (the actual thing in the screenshot) --- */
+.theme-doc-card-container {
+  border: 1px solid var(--os-border) !important;
+  border-radius: 10px !important;
+  background: var(--os-surface) !important;
+  box-shadow: none !important;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-doc-card-container:hover {
+  border-color: var(--os-accent-green) !important;
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(63, 185, 80, 0.25),
+    0 14px 28px -14px rgba(0, 0, 0, 0.5) !important;
+  text-decoration: none !important;
+}
+
+.theme-doc-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  margin-right: 0.65rem;
+  border-radius: 8px;
+  background: var(--os-surface-2);
+  border: 1px solid var(--os-border);
+  font-size: 1.1rem;
+}
+
+.theme-doc-card-heading {
+  display: flex;
+  align-items: center;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--os-text) !important;
+  margin: 0 0 0.5rem;
+}
+
+.theme-doc-card-description {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--os-text-muted) !important;
+}
+
+/* --- Sidebar --- */
+.theme-doc-sidebar-container {
+  border-right: 1px solid var(--os-border) !important;
+}
+
+.menu__link {
+  font-size: 0.88rem;
+  border-radius: 6px;
+  color: var(--os-text-muted);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.menu__link:hover {
+  background: var(--os-surface-2);
+  color: var(--os-text);
+}
+
+.menu__link--active,
+.menu__link--active:hover {
+  background: rgba(63, 185, 80, 0.1);
+  color: var(--os-accent-green) !important;
+  font-weight: 600;
+}
+
+.menu__list-item-collapsible:hover {
+  background: transparent;
+}
+
+.menu__list-item-collapsible .menu__link {
+  font-weight: 700;
+}
+
+/* --- Breadcrumbs --- */
+.breadcrumbs__link {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  color: var(--os-text-muted);
+}
+
+.breadcrumbs__item--active .breadcrumbs__link {
+  color: var(--os-accent-green);
+  background: transparent;
+}
+
+.breadcrumbs__link:hover {
+  color: var(--os-text);
+  background: var(--os-surface-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-doc-card-container {
+    transition: none;
+  }
+}
