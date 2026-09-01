@@ -17,7 +17,7 @@ const MEDIUM_TAGS_KEY = 'os-community-tags-v1';
 const DEVTO_TAGS_KEY = 'os-community-devto-tags-v1';
 const SOURCES_KEY = 'os-community-sources-v1';
 const SAVED_STORAGE_KEY = 'os-community-saved-v1';
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const CACHE_TTL_MS = 90 * 60 * 1000; // 90 minutes
 
 const DEFAULT_SOURCES = {medium: true, devto: true, projectzero: true};
 
@@ -129,7 +129,7 @@ export default function CommunityFeed() {
 
       if (!forceFresh) {
         try {
-          const cached = sessionStorage.getItem(cacheKey);
+          const cached = localStorage.getItem(cacheKey);
           if (cached) {
             const {timestamp, posts, debug} = JSON.parse(cached);
             if (Date.now() - timestamp < CACHE_TTL_MS && posts.length > 0) {
@@ -195,7 +195,7 @@ export default function CommunityFeed() {
 
         setState({status: 'ready', posts});
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify({timestamp: Date.now(), posts, debug}));
+          localStorage.setItem(cacheKey, JSON.stringify({timestamp: Date.now(), posts, debug}));
         } catch {
           // ignore quota errors
         }
