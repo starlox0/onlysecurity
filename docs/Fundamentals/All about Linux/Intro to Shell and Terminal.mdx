@@ -8,12 +8,21 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import Details from '@theme/Details';
 import Admonition from '@theme/Admonition';
+import LinuxTerminal from '@site/src/components/LinuxTerminal';
 
 # Linux Shell and Shell Prompt
+
+`Fundamentals` · `All about Linux` · `Reading time: ~12 min`
 
 The **shell** is one of the most crucial components in the Linux operating system. It acts as a bridge between the user and the system's core (the **kernel**), giving you full control over the OS.
 
 If you truly want to **learn Linux**, you must understand the **shell** — it's where real power lies.
+
+<Admonition type="tip" title="Try it as you read">
+
+This page includes a live, in-browser practice shell near the end. You don't need a real Linux box to follow along — feel free to jump down and try `whoami`, `pwd`, `ls`, and `hostname` right now.
+
+</Admonition>
 
 ---
 
@@ -576,18 +585,31 @@ which enables the color, and:
 
 which resets the terminal formatting.
 
-:::note Why Are \(and\) Used?
+### Common ANSI Color Codes
 
-When Bash prompt escape sequences contain non-printing characters, wrapping them with:
+| Code | Color | Code | Color |
+| --- | --- | --- | --- |
+| `\e[0;30m` | Black | `\e[1;30m` | Bright Black (Gray) |
+| `\e[0;31m` | Red | `\e[1;31m` | Bright Red |
+| `\e[0;32m` | Green | `\e[1;32m` | Bright Green |
+| `\e[0;33m` | Yellow | `\e[1;33m` | Bright Yellow |
+| `\e[0;34m` | Blue | `\e[1;34m` | Bright Blue |
+| `\e[0;35m` | Magenta | `\e[1;35m` | Bright Magenta |
+| `\e[0;36m` | Cyan | `\e[1;36m` | Bright Cyan |
+| `\e[0m` | Reset — always end your `PS1` with this | | |
+
+:::note Why Are `\[` and `\]` Used?
+
+When Bash prompt escape sequences contain non-printing characters (like color codes), wrapping them with:
 
 ```text
 \[
 \]
 ```
 
-helps Bash correctly calculate the visible prompt length.
+tells Bash "don't count these characters toward the visible prompt width."
 
-This is particularly important when using line editing and command history.
+Without this, Bash miscalculates where the prompt text actually starts, which causes visual glitches when you use line editing, command history recall (arrow keys), or terminal line-wrapping.
 
 :::
 
@@ -887,7 +909,17 @@ The same knowledge is also important for defending applications that interact wi
 
 # Practical Exercise
 
-If you have access to a Linux system, try the following commands one by one.
+No Linux box handy? Use the sandbox below — it's a small in-browser practice shell (not a real system, nothing you type here can break anything). Try the steps that follow directly in it.
+
+<LinuxTerminal />
+
+<Details summary="What can this practice shell do?">
+
+It supports a small, safe subset of real Bash behavior so you can build muscle memory: `whoami`, `id`-style identity checks via `whoami`, `pwd`, `hostname`, `ls`, `cd`, `cat`, `mkdir`, `touch`, `rm`, `cp`, `mv`, `grep`, `find`, `echo`, `clear`, and `history`. Use the ↑ / ↓ arrows to recall previous commands and `Tab` to autocomplete.
+
+</Details>
+
+If you have access to a real Linux system, try the following commands one by one there as well — the practice shell above is a good warm-up, but nothing beats the real thing.
 
 ## Step 1 — Identify Yourself
 
@@ -1004,3 +1036,9 @@ Shell Scripting
      v
 Linux Security & Privilege Escalation
 ```
+
+<Admonition type="tip" title="Recap">
+
+New here? Start with **[Linux: The Penguin in the Room](./History%20of%20Linux)** for the history and use cases, then come back to this page for the shell fundamentals.
+
+</Admonition>
