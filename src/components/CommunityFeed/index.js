@@ -715,6 +715,22 @@ export default function CommunityFeed() {
             This pulls live from Medium, dev.to, and Project Zero via public feeds/APIs, which can
             occasionally rate-limit or time out.
           </p>
+          {sourceDebug.length > 0 && (
+            <div className={styles.debugPanel}>
+              {sourceDebug.map((d) => (
+                <div key={d.label} className={styles.debugLine}>
+                  <span className={styles.debugLabel}>{d.label}</span>
+                  {d.status === 'ok' ? (
+                    <span className={styles.debugOk}>{d.count} post{d.count === 1 ? '' : 's'} (empty)</span>
+                  ) : (
+                    <span className={styles.debugFail} title={d.error || ''}>
+                      failed{d.error ? `: ${d.error}` : ''}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <button type="button" className={styles.retryButton} onClick={() => load(true)}>
             Try again
           </button>
