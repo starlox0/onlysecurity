@@ -103,6 +103,8 @@ export default function CommunityFeed() {
   const [savedLinks, setSavedLinks] = useState([]);
   const [authorInput, setAuthorInput] = useState('');
   const [authorView, setAuthorView] = useState(null); // {name, handle, status, posts, guessed} | null
+  const [sourceDebug, setSourceDebug] = useState([]); // [{label, status, count, error}]
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     setSources(loadSources());
@@ -129,9 +131,10 @@ export default function CommunityFeed() {
         try {
           const cached = sessionStorage.getItem(cacheKey);
           if (cached) {
-            const {timestamp, posts} = JSON.parse(cached);
+            const {timestamp, posts, debug} = JSON.parse(cached);
             if (Date.now() - timestamp < CACHE_TTL_MS && posts.length > 0) {
               setState({status: 'ready', posts});
+              setSourceDebug(debug || []);
               return;
             }
           }
@@ -140,27 +143,44 @@ export default function CommunityFeed() {
         }
       }
 
+      // Each job carries a human-readable label so a failure or an
+      // empty-but-successful result can actually be pinned to a specific
+      // source+tag, instead of silently vanishing into a merged pool —
+      // this is what "why are only 10 posts showing up" needs to answer.
       const jobs = [];
       if (sources.medium) {
-        mediumTags.forEach((tag) => jobs.push(fetchMediumTag(tag, ITEMS_PER_TAG)));
+        mediumTags.forEach((tag) =>
+          jobs.push({label: `Medium #${tag}`, promise: fetchMediumTag(tag, ITEMS_PER_TAG)}),
+        );
       }
       if (sources.devto) {
-        devToTags.forEach((tag) => jobs.push(fetchDevToTag(tag, ITEMS_PER_TAG)));
+        devToTags.forEach((tag) =>
+          jobs.push({label: `dev.to #${tag}`, promise: fetchDevToTag(tag, ITEMS_PER_TAG)}),
+        );
       }
       if (sources.projectzero) {
-        jobs.push(fetchProjectZero(10));
+        jobs.push({label: 'Project Zero', promise: fetchProjectZero(10)});
       }
 
       if (jobs.length === 0) {
         setState({status: 'ready', posts: []});
+        setSourceDebug([]);
         return;
       }
 
       try {
-        const results = await Promise.allSettled(jobs);
+        const results = await Promise.allSettled(jobs.map((j) => j.promise));
+        const debug = results.map((r, i) => ({
+          label: jobs[i].label,
+          status: r.status === 'fulfilled' ? 'ok' : 'failed',
+          count: r.status === 'fulfilled' ? r.value.length : 0,
+          error: r.status === 'rejected' ? String(r.reason?.message || r.reason) : null,
+        }));
         const merged = results
           .filter((r) => r.status === 'fulfilled')
           .flatMap((r) => r.value);
+
+        setSourceDebug(debug); // set now so it's visible even if we're about to throw below
 
         if (merged.length === 0) throw new Error('all sources failed');
 
@@ -175,7 +195,7 @@ export default function CommunityFeed() {
 
         setState({status: 'ready', posts});
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify({timestamp: Date.now(), posts}));
+          sessionStorage.setItem(cacheKey, JSON.stringify({timestamp: Date.now(), posts, debug}));
         } catch {
           // ignore quota errors
         }
@@ -585,6 +605,40 @@ export default function CommunityFeed() {
           )}
         </form>
       </div>
+
+      {!authorView && state.status === 'ready' && (
+        <div className={styles.debugRow}>
+          <span className={styles.resultCount}>
+            {visiblePosts.length} of {state.posts.length} loaded post{state.posts.length === 1 ? '' : 's'}
+            {query && ` matching "${query}"`}
+          </span>
+          {sourceDebug.length > 0 && (
+            <button
+              type="button"
+              className={styles.debugToggle}
+              onClick={() => setShowDebug((v) => !v)}>
+              {showDebug ? 'Hide' : 'Show'} source breakdown
+            </button>
+          )}
+        </div>
+      )}
+
+      {showDebug && sourceDebug.length > 0 && (
+        <div className={styles.debugPanel}>
+          {sourceDebug.map((d) => (
+            <div key={d.label} className={styles.debugLine}>
+              <span className={styles.debugLabel}>{d.label}</span>
+              {d.status === 'ok' ? (
+                <span className={styles.debugOk}>{d.count} post{d.count === 1 ? '' : 's'}</span>
+              ) : (
+                <span className={styles.debugFail} title={d.error || ''}>
+                  failed{d.error ? `: ${d.error}` : ''}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {authorView && (
         <div className={styles.authorPanel}>
