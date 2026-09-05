@@ -53,12 +53,15 @@
   box-shadow: 0 0 0 2px var(--ifm-navbar-background-color, var(--os-surface));
 }
 
-/* --- Panel: opens downward, right-aligned so it never overflows off the
-   right edge of the navbar --- */
+/* --- Panel: rendered via a React portal into document.body (see
+   NotificationBell/index.js) so it isn't clipped by the navbar's
+   `overflow: hidden` glitch effect. Position is fixed and computed in JS
+   from the bell button's location — top/right below are just a fallback,
+   inline styles set the real values. --- */
 .panel {
-  position: absolute;
-  top: calc(100% + 0.6rem);
-  right: 0;
+  position: fixed;
+  top: 4rem;
+  right: 1.5rem;
   width: min(340px, calc(100vw - 2rem));
   max-height: 70vh;
   overflow-y: auto;
@@ -171,14 +174,4 @@
   padding-top: 0.6rem;
   border-top: 1px dashed var(--os-border);
   color: var(--os-accent-green);
-}
-
-@media screen and (max-width: 996px) {
-  /* Docusaurus folds right-side navbar items into the mobile sidebar menu
-     below this breakpoint — right-align the panel within that narrower
-     context instead of assuming navbar width. */
-  .panel {
-    right: auto;
-    left: 0;
-  }
 }
