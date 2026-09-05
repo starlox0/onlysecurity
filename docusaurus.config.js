@@ -139,12 +139,6 @@ const config = {
           type: "custom-notificationBell",
           position: "right",
         },
-
-        {
-           href: "https://github.com/starlox0/onlysecurity",
-           label: "GitHub",
-           position: "right",
-        },
        
         {
           href: "https://github.com/starlox0/onlysecurity",
