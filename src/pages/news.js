@@ -14,12 +14,13 @@ export default function NewsPage() {
             <span className={styles.eyebrow}>OS-ADV · Live Feed · The Hacker News</span>
             <h1 className={styles.title}>Threat Wire</h1>
             <p className={styles.subtitle}>
-              Pulled live from{' '}
-              <a href="https://thehackernews.com/" target="_blank" rel="noopener noreferrer">
-                The Hacker News
-              </a>{' '}
-              — breaches, exploited flaws, malware campaigns, and incident write-ups as they're
-              published. Any CVE mentioned in a story is called out directly on the card.
+                Curated in real time from{' '}
+                <a href="https://thehackernews.com/" target="_blank" rel="noopener noreferrer">
+                  The Hacker News
+                </a>{' '}
+                — breaches, actively exploited flaws, malware campaigns, and incident
+                analysis as they break. Any CVE referenced in a story is automatically
+                surfaced for quick cross-reference.
             </p>
           </div>
           <ThreatWire />
