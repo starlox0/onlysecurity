@@ -58,8 +58,14 @@ const entries = [
   },
     {
     title: 'CVE Radar',
-    description: 'Live vulnerability feed — search by CVE ID, product, or GitHub username.',
-    path: '/cve-radar',
+    description: 'Live NVD vulnerability feed — search by CVE ID, product, or GitHub username.',
+    path: '/cve-radar?tool=cve',
+    type: 'doc',
+  },
+    {
+    title: 'CISA KEV Tracker',
+    description: 'Vulnerabilities confirmed exploited in the wild — filter by ransomware use and deadline.',
+    path: '/cve-radar?tool=kev',
     type: 'doc',
   },
     {
