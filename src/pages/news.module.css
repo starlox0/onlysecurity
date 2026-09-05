@@ -1,0 +1,38 @@
+.wrapper {
+  padding: 3rem 0 4rem;
+}
+
+.header {
+  max-width: 680px;
+  margin: 0 auto 2.5rem;
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--os-accent-green);
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 800;
+  margin: 0 0 0.9rem;
+  color: var(--os-text);
+}
+
+.subtitle {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--os-text-muted);
+  margin: 0;
+}
+
+.subtitle a {
+  color: var(--os-accent-green);
+}
