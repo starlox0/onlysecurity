@@ -69,6 +69,12 @@ const entries = [
     type: 'doc',
   },
     {
+    title: 'Threat Wire',
+    description: 'Live cybersecurity news from The Hacker News, tagged and cross-linked to CVEs.',
+    path: '/news',
+    type: 'doc',
+  },
+    {
     title: 'Bug Bounty Platforms',
     description: '121+ bug bounty and VDP platforms, by category and A-Z.',
     path: '/bug-bounty-platforms',
