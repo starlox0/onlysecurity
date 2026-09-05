@@ -1,4 +1,4 @@
-// @ts-check
+  // @ts-check
 
 import { themes as prismThemes } from "prism-react-renderer";
 
@@ -135,7 +135,17 @@ const config = {
         //   - Tools:     create docs/tools.md, then re-add { label: "Tools", to: "/docs/tools" }
         //   - Write-ups: tag a blog post with `tags: [writeup]`, then re-add { label: "Write-ups", to: "/blog/tags/writeup" }
         //   - Labs:      create src/pages/labs.js (or docs/labs.md), then re-add { label: "Labs", to: "/labs" }
+        {
+          type: "custom-notificationBell",
+          position: "right",
+        },
 
+        {
+           href: "https://github.com/starlox0/onlysecurity",
+           label: "GitHub",
+           position: "right",
+        },
+       
         {
           href: "https://github.com/starlox0/onlysecurity",
           label: "GitHub",
