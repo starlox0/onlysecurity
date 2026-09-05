@@ -110,6 +110,12 @@ const config = {
         },
 
         {
+          to: "/news",
+          label: "Threat Wire",
+          position: "left",
+        },
+
+        {
           to: "/bug-bounty-platforms",
           label: "Platforms",
           position: "left",
