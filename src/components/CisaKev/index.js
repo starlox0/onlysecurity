@@ -256,24 +256,36 @@ export default function CisaKevTracker() {
   return (
     <div>
       {catalogStats && (
-        <dl className={styles.statsBar}>
-          <div className={styles.statItem}>
-            <dt>{catalogStats.total.toLocaleString()}</dt>
-            <dd>total in KEV catalog</dd>
+        <div className={styles.statsBar}>
+          <div className={styles.statCard} data-tone="neutral">
+            <span className={styles.statIcon} aria-hidden="true">📋</span>
+            <div className={styles.statBody}>
+              <span className={styles.statValue}>{catalogStats.total.toLocaleString()}</span>
+              <span className={styles.statLabel}>total in KEV catalog</span>
+            </div>
           </div>
-          <div className={styles.statItem} data-tone="danger">
-            <dt>{catalogStats.ransomwareCount.toLocaleString()}</dt>
-            <dd>tied to ransomware campaigns</dd>
+          <div className={styles.statCard} data-tone="danger">
+            <span className={styles.statIcon} aria-hidden="true">☣</span>
+            <div className={styles.statBody}>
+              <span className={styles.statValue}>{catalogStats.ransomwareCount.toLocaleString()}</span>
+              <span className={styles.statLabel}>tied to ransomware campaigns</span>
+            </div>
           </div>
-          <div className={styles.statItem} data-tone="danger">
-            <dt>{catalogStats.overdueCount.toLocaleString()}</dt>
-            <dd>past their remediation deadline</dd>
+          <div className={styles.statCard} data-tone="danger">
+            <span className={styles.statIcon} aria-hidden="true">⏰</span>
+            <div className={styles.statBody}>
+              <span className={styles.statValue}>{catalogStats.overdueCount.toLocaleString()}</span>
+              <span className={styles.statLabel}>past their remediation deadline</span>
+            </div>
           </div>
-          <div className={styles.statItem} data-tone="amber">
-            <dt>{catalogStats.dueSoonCount.toLocaleString()}</dt>
-            <dd>due within 7 days</dd>
+          <div className={styles.statCard} data-tone="amber">
+            <span className={styles.statIcon} aria-hidden="true">⏳</span>
+            <div className={styles.statBody}>
+              <span className={styles.statValue}>{catalogStats.dueSoonCount.toLocaleString()}</span>
+              <span className={styles.statLabel}>due within 7 days</span>
+            </div>
           </div>
-        </dl>
+        </div>
       )}
 
       {state.status === 'ready' && state.results.length > 0 && mode === 'radar' && (
