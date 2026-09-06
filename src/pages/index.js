@@ -50,6 +50,11 @@ function HomepageHeader() {
                 <dt>100%</dt>
                 <dd>free, always</dd>
               </div>
+              <div className={styles.trustDivider} />
+              <div className={styles.trustItem}>
+                <dt>3</dt>
+                <dd>live intel feeds</dd>
+              </div>
             </dl>
           </div>
 
@@ -80,6 +85,66 @@ function HomepageHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+const LIVE_TOOLS = [
+  {
+    icon: '📡',
+    title: 'CVE Radar',
+    body: 'Search live National Vulnerability Database records by CVE ID, affected product, or researcher — with public GitHub proof-of-concepts surfaced automatically.',
+    href: '/cve-radar?tool=cve',
+    cta: 'Open CVE Radar',
+  },
+  {
+    icon: '☣',
+    title: 'CISA KEV Tracker',
+    body: "Vulnerabilities with confirmed, active exploitation — not just a theoretical score. Filter by ransomware association or remediation deadline.",
+    href: '/cve-radar?tool=kev',
+    cta: 'Open KEV Tracker',
+  },
+  {
+    icon: '🗞️',
+    title: 'Threat Wire',
+    body: 'Real-time security news pulled from The Hacker News, auto-tagged by category and cross-linked to any CVE a story mentions.',
+    href: '/news',
+    cta: 'Open Threat Wire',
+  },
+];
+
+function LiveIntel() {
+  return (
+    <section className={styles.liveIntel}>
+      <div className="container">
+        <div className={styles.sectionHead}>
+          <span className={styles.eyebrow}>Updated automatically · No login required</span>
+          <Heading as="h2" className={styles.sectionTitle}>
+            Live security intelligence, not static pages
+          </Heading>
+          <p className={styles.liveIntelSubtitle}>
+            Three tools pulling directly from primary sources — NVD, CISA, and The Hacker
+            News — right in the browser. Turn on the 🔔 in the navbar to get notified the
+            moment new incidents land.
+          </p>
+        </div>
+        <div className={styles.liveGrid}>
+          {LIVE_TOOLS.map((tool) => (
+            <Link key={tool.href} to={tool.href} className={styles.liveCard}>
+              <div className={styles.liveCardHead}>
+                <span className={styles.liveCardIcon} aria-hidden="true">{tool.icon}</span>
+                <span className={styles.liveBadge}>
+                  <span className={styles.liveDot} aria-hidden="true" />
+                  Live
+                </span>
+              </div>
+              <h3 className={styles.liveCardTitle}>{tool.title}</h3>
+              <p className={styles.liveCardBody}>{tool.body}</p>
+              <span className={styles.liveCardLink}>{tool.cta} →</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -167,6 +232,7 @@ export default function Home() {
         <HomepageHeader />
         <main>
           <LearningPath />
+          <LiveIntel />
           <BlogPreview />
           <CommunityBand />
         </main>
