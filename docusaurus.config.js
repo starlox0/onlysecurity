@@ -98,18 +98,6 @@ const config = {
         },
 
         {
-          type: "dropdown",
-          label: "Other",
-          position: "left",
-          items: [
-       {
-          to: "/practice",
-          label: "Practice",
-        },
-            ],
-      },
-
-        {
           to: "/cve-radar",
           label: "CVE Radar",
           position: "left",
@@ -132,6 +120,18 @@ const config = {
           label: "Resources",
           position: "left",
         },
+
+        {
+          type: "dropdown",
+          label: "Other",
+          position: "left",
+          items: [
+       {
+          to: "/practice",
+          label: "Practice",
+        },
+            ],
+      },
 
         // The "Resources" dropdown pointed at /docs/tools, /blog/tags/writeup,
         // and /labs — none of which exist yet, which is what was throwing the
