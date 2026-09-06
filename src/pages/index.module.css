@@ -52,10 +52,19 @@
 }
 
 .heroTagline {
-  font-size: 1.15rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1.02rem;
   font-weight: 600;
   color: var(--os-text);
-  margin: 0 0 0.9rem;
+  margin: 0 0 1.1rem;
+}
+
+.heroTaglinePrompt {
+  color: var(--os-accent-green);
+  font-weight: 700;
 }
 
 .heroBody {
@@ -140,7 +149,10 @@
   border: 1px solid var(--os-border);
   border-radius: 10px;
   background: var(--os-surface);
-  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(63, 185, 80, 0.06),
+    0 35px 90px -35px rgba(63, 185, 80, 0.3),
+    0 25px 60px -25px rgba(0, 0, 0, 0.55);
   overflow: hidden;
 }
 
@@ -240,7 +252,7 @@
 .sectionTitle {
   font-size: clamp(1.6rem, 2.5vw, 2.1rem);
   font-weight: 700;
-  margin: 0.4rem 0 0;
+  margin: 0;
   color: var(--os-text);
 }
 
@@ -266,10 +278,10 @@
 .liveCard {
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 1.4rem 1.6rem;
   border: 1px solid var(--os-border);
   border-radius: 8px;
   background: var(--os-surface);
+  overflow: hidden;
   text-decoration: none;
   color: var(--os-text);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -291,31 +303,51 @@
   outline-offset: -2px;
 }
 
-.liveCardHead {
+/* Same window-chrome bar as the hero terminal demo (.demoBar/.dot/.demoPath
+   are shared) — deliberately reused so the whole homepage reads as one
+   object language instead of a second, competing card style. */
+.liveCardBar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
+  gap: 0.45rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--os-surface-2);
+  border-bottom: 1px solid var(--os-border);
+}
+
+.liveCardPath {
+  margin-left: 0.6rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.74rem;
+  color: var(--os-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  margin-left: auto;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--os-accent-green);
+  flex-shrink: 0;
+}
+
+.liveCardBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 1.3rem 1.4rem 1.5rem;
 }
 
 .liveCardIcon {
   font-size: 1.6rem;
   line-height: 1;
-}
-
-.liveBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-family: var(--ifm-font-family-monospace);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--os-accent-green);
-  color: var(--os-accent-green);
+  margin-bottom: 0.7rem;
 }
 
 .liveDot {
@@ -338,7 +370,7 @@
   color: var(--os-text);
 }
 
-.liveCardBody {
+.liveCardText {
   font-size: 0.87rem;
   line-height: 1.55;
   color: var(--os-text-muted);
