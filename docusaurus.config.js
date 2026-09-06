@@ -98,10 +98,16 @@ const config = {
         },
 
         {
+          type: "dropdown",
+          label: "Other",
+          position: "left",
+          items: [
+       {
           to: "/practice",
           label: "Practice",
-          position: "left",
         },
+            ],
+      },
 
         {
           to: "/cve-radar",
