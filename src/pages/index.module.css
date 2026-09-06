@@ -244,6 +244,124 @@
   color: var(--os-text);
 }
 
+/* ---------- Live intelligence ---------- */
+.liveIntel {
+  padding: 5rem 0;
+  border-top: 1px solid var(--os-border);
+}
+
+.liveIntelSubtitle {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--os-text-muted);
+  margin: 0.8rem 0 0;
+}
+
+.liveGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.liveCard {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.4rem 1.6rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+  text-decoration: none;
+  color: var(--os-text);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.liveCard:hover,
+.liveCard:focus-visible {
+  border-color: var(--os-accent-green);
+  transform: translateY(-3px);
+  box-shadow:
+    0 0 0 1px rgba(63, 185, 80, 0.25),
+    0 12px 24px -12px rgba(0, 0, 0, 0.45);
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.liveCard:focus-visible {
+  outline: 2px solid var(--os-accent-blue);
+  outline-offset: -2px;
+}
+
+.liveCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.liveCardIcon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-accent-green);
+  color: var(--os-accent-green);
+}
+
+.liveDot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--os-accent-green);
+  animation: os-live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes os-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.liveCardTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.55rem;
+  color: var(--os-text);
+}
+
+.liveCardBody {
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: var(--os-text-muted);
+  margin: 0 0 1.1rem;
+  flex: 1;
+}
+
+.liveCardLink {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--os-accent-green);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveCard {
+    transition: none;
+  }
+  .liveDot {
+    animation: none;
+  }
+}
+
 /* ---------- Blog preview ---------- */
 .blogPreview {
   padding: 5rem 0;
