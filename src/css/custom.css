@@ -227,7 +227,6 @@
 
 .navbar__inner {
   position: relative;
-  overflow: hidden;
   animation: os-navbar-glitch 8s infinite;
 }
 
