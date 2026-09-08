@@ -1,4 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
+import Link from '@docusaurus/Link';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   fetchFindings,
@@ -8,12 +9,14 @@ import {
   groupByOwasp,
   groupByYear,
   getTopPrograms,
+  getPayGapOfTheDay,
   filterReports,
   getStats,
   getSeverityTone,
   formatBounty,
 } from './findings';
 import ChartPanel from './ChartPanel';
+import PayGapOfTheDay from './PayGapOfTheDay';
 import styles from './styles.module.css';
 
 const MODES = [
@@ -28,8 +31,14 @@ const PAGE_SIZE = 30;
 function ReportCard({report}) {
   const bounty = formatBounty(report.bounty);
   return (
-    <a href={report.url} target="_blank" rel="noopener noreferrer" className={styles.card}>
-      <span className={styles.cardTitle}>{report.title}</span>
+    <div className={styles.card}>
+      <a
+        href={report.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.cardTitle}>
+        {report.title}
+      </a>
       <span className={styles.cardMeta}>
         <span className={styles.programTag}>{report.program}</span>
         {report.severity && (
@@ -38,10 +47,17 @@ function ReportCard({report}) {
           </span>
         )}
         {bounty && <span className={styles.bountyTag}>{bounty}</span>}
-        {report.cve && <span className={styles.cveTag}>{report.cve}</span>}
+        {report.cve && (
+          <Link
+            to={`/cve-radar?tool=cve&q=${encodeURIComponent(report.cve)}`}
+            className={styles.cveTag}
+            title={`View ${report.cve} in CVE Radar`}>
+            {report.cve} ↗
+          </Link>
+        )}
         <span className={styles.votesTag}>▲ {report.votes}</span>
       </span>
-    </a>
+    </div>
   );
 }
 
@@ -101,10 +117,14 @@ export default function BountyVault() {
     };
   }, [reports, owaspNames]);
 
+  const payGap = useMemo(() => (reports.length ? getPayGapOfTheDay(reports) : null), [reports]);
+
   return (
     <div>
       {state.status === 'ready' && (
         <>
+          <PayGapOfTheDay gap={payGap} />
+
           <div className={styles.statsBar}>
             <div className={styles.statCard}>
               <span className={styles.statValue}>{stats.total.toLocaleString()}</span>
