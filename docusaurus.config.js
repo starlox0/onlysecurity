@@ -130,6 +130,10 @@ const config = {
           to: "/practice",
           label: "Practice",
         },
+        {
+          to: "/bounty-vault",
+          label: "Bounty Vault",
+        },
             ],
       },
 
