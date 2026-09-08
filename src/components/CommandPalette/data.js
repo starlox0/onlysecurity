@@ -86,6 +86,12 @@ const entries = [
     path: '/security-resources',
     type: 'doc',
   },
+  {
+   title: 'Bounty Vault',
+  description: 'HackerOne disclosed reports, categorized by vuln type, severity, bounty range, and OWASP Top 10.',
+  path: '/bounty-vault',
+  type: 'doc',
+  },
 ];
 
 export default entries;
