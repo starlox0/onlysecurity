@@ -155,3 +155,41 @@ export function formatBounty(bounty) {
   if (!bounty) return null;
   return `$${bounty.toLocaleString()}`;
 }
+
+// "Pay gap of the day" — finds vulnerability-type categories where two
+// bountied reports paid wildly different amounts, and rotates through the
+// most dramatic ones by day of year (stable across visits on the same day,
+// changes the next day) rather than a purely random pick on every load.
+export function getPayGapOfTheDay(reports) {
+  const bountied = reports.filter((r) => r.bounty > 0);
+  const byWeakness = new Map();
+  for (const r of bountied) {
+    const key = r.weakness || 'Uncategorized';
+    if (!byWeakness.has(key)) byWeakness.set(key, []);
+    byWeakness.get(key).push(r);
+  }
+
+  const candidates = [];
+  for (const [weakness, list] of byWeakness) {
+    if (list.length < 2) continue;
+    const sorted = [...list].sort((a, b) => a.bounty - b.bounty);
+    const low = sorted[0];
+    const high = sorted[sorted.length - 1];
+    const ratio = high.bounty / low.bounty;
+    const diff = high.bounty - low.bounty;
+    // Only surface gaps that are actually dramatic, not just noise.
+    if (ratio < 5 || diff < 500) continue;
+    candidates.push({weakness, low, high, ratio});
+  }
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => b.ratio - a.ratio);
+  const pool = candidates.slice(0, 20);
+
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - startOfYear) / (24 * 60 * 60 * 1000));
+
+  return pool[dayOfYear % pool.length];
+}
