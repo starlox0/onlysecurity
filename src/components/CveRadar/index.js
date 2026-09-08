@@ -128,8 +128,8 @@ function GithubExploits({exploits}) {
 
 const YEARS = recentYears();
 
-export default function CveRadar() {
-  const [query, setQuery] = useState('');
+export default function CveRadar({initialQuery} = {}) {
+  const [query, setQuery] = useState(initialQuery || '');
   const [year, setYear] = useState('RECENT');
   const [severity, setSeverity] = useState('ANY');
   const [cweId, setCweId] = useState('ANY');
@@ -147,16 +147,9 @@ export default function CveRadar() {
     }
   }
 
-  useEffect(() => {
-    loadRadar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const hasActiveFilters = year !== 'RECENT' || severity !== 'ANY' || cweId !== 'ANY';
 
-  async function handleSearch(e) {
-    e.preventDefault();
-    const trimmed = query.trim();
+  async function performSearch(trimmed) {
     if (!trimmed && !hasActiveFilters) return; // nothing to actually search for
 
     setMode('search');
@@ -186,6 +179,23 @@ export default function CveRadar() {
     } catch {
       setState({status: 'error', results: []});
     }
+  }
+
+  // A deep link (e.g. from Bounty Vault, "View this CVE →") arrives with an
+  // initialQuery — run that search immediately instead of showing the
+  // radar first and making the person search again themselves.
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      performSearch(initialQuery.trim());
+    } else {
+      loadRadar();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSearch(e) {
+    e.preventDefault();
+    await performSearch(query.trim());
   }
 
   function backToRadar() {
