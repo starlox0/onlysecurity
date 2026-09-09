@@ -52,19 +52,19 @@ const entries = [
   },
     {
     title: 'Practice Terminal',
-    description: 'A simulated Linux shell — practice real commands in your browser.',
+    description: 'A simulated Linux shell - practice real commands in your browser.',
     path: '/practice',
     type: 'doc',
   },
     {
     title: 'CVE Radar',
-    description: 'Live NVD vulnerability feed — search by CVE ID, product, or GitHub username.',
+    description: 'Live NVD vulnerability feed - search by CVE ID, product, or GitHub username.',
     path: '/cve-radar?tool=cve',
     type: 'doc',
   },
     {
     title: 'CISA KEV Tracker',
-    description: 'Vulnerabilities confirmed exploited in the wild — filter by ransomware use and deadline.',
+    description: 'Vulnerabilities confirmed exploited in the wild - filter by ransomware use and deadline.',
     path: '/cve-radar?tool=kev',
     type: 'doc',
   },
@@ -92,6 +92,12 @@ const entries = [
   path: '/bounty-vault',
   type: 'doc',
   },
+  {
+  title: 'Byte Forge',
+  description: 'JWT decode, Base64/Hex/URL encoding, hashing, and more - chainable recipe pipeline, runs in your browser.',
+  path: '/byte-forge',
+  type: 'doc',
+ },
 ];
 
 export default entries;
