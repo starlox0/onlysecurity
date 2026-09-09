@@ -1,0 +1,404 @@
+.workbench {
+  display: grid;
+  grid-template-columns: 220px 320px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.paneTitle {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--os-text-muted);
+  margin: 0;
+}
+
+/* --- Catalog --- */
+.catalogPane {
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  background: var(--os-surface);
+  padding: 0.8rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  position: sticky;
+  top: 1rem;
+}
+
+.catalogSearch {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-surface-2);
+  color: var(--os-text);
+  font-size: 0.84rem;
+  margin-bottom: 0.8rem;
+}
+
+.catalogSearch:focus {
+  outline: none;
+  border-color: var(--os-accent-green);
+}
+
+.catalogCategory + .catalogCategory {
+  margin-top: 1rem;
+}
+
+.catalogCategoryTitle {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--os-accent-green);
+  margin: 0 0 0.4rem;
+}
+
+.catalogItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--os-text);
+  cursor: grab;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.catalogItem:hover {
+  background: var(--os-surface-2);
+  border-color: var(--os-border);
+}
+
+.catalogItemAdd {
+  color: var(--os-accent-green);
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.catalogItem:hover .catalogItemAdd {
+  opacity: 1;
+}
+
+.catalogEmpty {
+  font-size: 0.82rem;
+  color: var(--os-text-muted);
+  padding: 0.5rem;
+}
+
+/* --- Recipe --- */
+.recipePane {
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  background: var(--os-surface);
+  padding: 0.9rem;
+  min-height: 300px;
+}
+
+.recipeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.clearRecipeButton {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--os-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.clearRecipeButton:hover {
+  color: var(--os-accent-red);
+}
+
+.recipeEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1rem;
+  padding: 2rem 0.5rem;
+  border: 1px dashed var(--os-border);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--os-text-muted);
+}
+
+.exampleRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.exampleButton {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface-2);
+  color: var(--os-text);
+  cursor: pointer;
+}
+
+.exampleButton:hover {
+  border-color: var(--os-accent-green);
+  color: var(--os-accent-green);
+}
+
+.recipeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.recipeStep {
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface-2);
+  padding: 0.6rem 0.7rem;
+  cursor: grab;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.recipeStep[data-enabled='false'] {
+  opacity: 0.45;
+}
+
+.recipeStep[data-failed='true'] {
+  border-color: var(--os-accent-red);
+}
+
+.recipeStepHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dragHandle {
+  color: var(--os-text-muted);
+  font-size: 0.9rem;
+  cursor: grab;
+}
+
+.recipeStepNumber {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--os-text-muted);
+  min-width: 1.2rem;
+}
+
+.recipeStepName {
+  flex: 1;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--os-text);
+}
+
+.stepToggle input {
+  cursor: pointer;
+}
+
+.stepRemove {
+  background: none;
+  border: none;
+  color: var(--os-text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+}
+
+.stepRemove:hover {
+  color: var(--os-accent-red);
+}
+
+.argList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--os-border);
+}
+
+.argField {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--os-text-muted);
+}
+
+.argField span {
+  flex-shrink: 0;
+}
+
+.argSelect,
+.argInput {
+  flex: 1;
+  max-width: 60%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--os-border);
+  border-radius: 4px;
+  background: var(--os-surface);
+  color: var(--os-text);
+  font-size: 0.78rem;
+}
+
+.argCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+/* --- Input/Output --- */
+.ioPane {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ioBlock {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  background: var(--os-surface);
+  overflow: hidden;
+}
+
+.ioHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.9rem;
+  background: var(--os-surface-2);
+  border-bottom: 1px solid var(--os-border);
+}
+
+.ioLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--os-text-muted);
+}
+
+.bakingDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--os-accent-green);
+  animation: bf-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes bf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.ioMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  color: var(--os-text-muted);
+}
+
+.copyButton {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  color: var(--os-text);
+  cursor: pointer;
+}
+
+.copyButton:hover {
+  border-color: var(--os-accent-green);
+  color: var(--os-accent-green);
+}
+
+.ioTextarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 0.8rem 0.9rem;
+  border: none;
+  background: transparent;
+  color: var(--os-text);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.ioTextarea:focus {
+  outline: none;
+}
+
+.ioTextarea[data-error='true'] {
+  color: var(--os-accent-red);
+}
+
+.errorNote {
+  font-size: 0.78rem;
+  color: var(--os-accent-red);
+  padding: 0 0.9rem 0.7rem;
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bakingDot {
+    animation: none;
+  }
+}
+
+/* --- Responsive: stack into a single column, IO first --- */
+@media screen and (max-width: 996px) {
+  .workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .ioPane {
+    order: -2;
+  }
+
+  .recipePane {
+    order: -1;
+  }
+
+  .catalogPane {
+    position: static;
+    max-height: none;
+  }
+}
