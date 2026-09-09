@@ -66,6 +66,19 @@ function ArgControl({arg, value, onChange}) {
       </label>
     );
   }
+  if (arg.type === 'textarea') {
+    return (
+      <label className={styles.argFieldStacked}>
+        <span>{arg.label}</span>
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={styles.argTextarea}
+          rows={3}
+        />
+      </label>
+    );
+  }
   return (
     <label className={styles.argField}>
       <span>{arg.label}</span>
