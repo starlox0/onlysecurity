@@ -273,6 +273,26 @@
   cursor: pointer;
 }
 
+.argFieldStacked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--os-text-muted);
+}
+
+.argTextarea {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--os-border);
+  border-radius: 4px;
+  background: var(--os-surface);
+  color: var(--os-text);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.76rem;
+  resize: vertical;
+}
+
 /* --- Input/Output --- */
 .ioPane {
   display: flex;
