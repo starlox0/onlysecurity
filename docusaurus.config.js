@@ -134,6 +134,10 @@ const config = {
           to: "/bounty-vault",
           label: "Bounty Vault",
         },
+        {
+          to: "/byte-forge",
+          label: "Byte Forge",
+        },
             ],
       },
 
