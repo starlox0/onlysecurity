@@ -1,6 +1,7 @@
 import React, {useMemo, useState} from 'react';
 import {EDITIONS, THEMES, getEdition} from './data';
 import AttackWheel from './AttackWheel';
+import TechniqueModal from './TechniqueModal';
 import styles from './styles.module.css';
 
 const TRACKS = [
@@ -19,6 +20,7 @@ export default function AttackAtlas() {
   const [track, setTrack] = useState('web');
   const [editionKey, setEditionKey] = useState('web2025');
   const [activeCode, setActiveCode] = useState('A01');
+  const [openTechnique, setOpenTechnique] = useState(null);
 
   const edition = getEdition(editionKey);
   const yearKeys = useMemo(() => editionKeysForTrack(track), [track]);
@@ -107,9 +109,13 @@ export default function AttackAtlas() {
                     <p className={styles.techniqueLabel}>Attack techniques in this category</p>
                     <div className={styles.techniqueList}>
                       {cat.techniques.map((t) => (
-                        <span key={t} className={styles.techniqueChip}>
+                        <button
+                          key={t}
+                          type="button"
+                          className={styles.techniqueChip}
+                          onClick={() => setOpenTechnique(t)}>
                           {t}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -119,6 +125,8 @@ export default function AttackAtlas() {
           })}
         </div>
       </div>
+
+      <TechniqueModal label={openTechnique} onClose={() => setOpenTechnique(null)} />
     </div>
   );
 }
