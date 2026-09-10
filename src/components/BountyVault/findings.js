@@ -100,9 +100,10 @@ export function groupByOwasp(reports, owaspNames) {
 export function filterReports(reports, {mode, groupKey, keyword}) {
   let results = reports;
 
-  if (groupKey) {
+if (groupKey) {
     if (mode === 'vuln') {
-      results = results.filter((r) => (r.weakness || 'Uncategorized') === groupKey);
+      const keys = Array.isArray(groupKey) ? groupKey : [groupKey];
+      results = results.filter((r) => keys.includes(r.weakness || 'Uncategorized'));
     } else if (mode === 'severity') {
       results = results.filter((r) => (r.severity || 'none') === groupKey);
     } else if (mode === 'bounty') {
