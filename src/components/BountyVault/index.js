@@ -68,6 +68,7 @@ export default function BountyVault() {
   const [groupKey, setGroupKey] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [incomingLabel, setIncomingLabel] = useState(null);
 
   useEffect(() => {
     fetchFindings(dataUrl)
@@ -75,14 +76,42 @@ export default function BountyVault() {
       .catch(() => setState({status: 'error', data: null}));
   }, [dataUrl]);
 
+  // A deep link (e.g. "See real disclosed reports of this type" from Attack
+  // Atlas) arrives with ?weakness=A,B,C&label=Human+Readable+Name — apply
+  // that as the active filter immediately instead of showing the default
+  // unfiltered view.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const weaknessParam = params.get('weakness');
+    const label = params.get('label');
+    if (weaknessParam) {
+      const keys = weaknessParam.split(',').filter(Boolean);
+      setMode('vuln');
+      setGroupKey(keys.length === 1 ? keys[0] : keys);
+      setIncomingLabel(label || keys.join(', '));
+    }
+  }, []);
+
+  function clearIncomingFilter() {
+    setIncomingLabel(null);
+    setGroupKey(null);
+    setVisibleCount(PAGE_SIZE);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+
   function switchMode(nextMode) {
     setMode(nextMode);
     setGroupKey(null);
+    setIncomingLabel(null);
     setVisibleCount(PAGE_SIZE);
   }
 
   function selectGroup(key) {
     setGroupKey((prev) => (prev === key ? null : key));
+    setIncomingLabel(null);
     setVisibleCount(PAGE_SIZE);
   }
 
@@ -178,6 +207,17 @@ export default function BountyVault() {
             </div>
           </div>
         </>
+      )}
+
+      {incomingLabel && (
+        <div className={styles.incomingFilterBanner}>
+          <span>
+            Showing reports related to <strong>{incomingLabel}</strong> — via Attack Atlas
+          </span>
+          <button type="button" className={styles.incomingFilterClear} onClick={clearIncomingFilter}>
+            Clear filter
+          </button>
+        </div>
       )}
 
       <div className={styles.modeTabs} role="tablist" aria-label="Categorize findings by">
