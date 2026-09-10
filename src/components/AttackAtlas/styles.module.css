@@ -263,12 +263,21 @@
 }
 
 .techniqueChip {
+  font-family: inherit;
   font-size: 0.78rem;
   padding: 0.28rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--os-border);
   color: var(--os-text);
   background: var(--os-surface-2);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.techniqueChip:hover,
+.techniqueChip:focus-visible {
+  border-color: var(--os-accent-green);
+  color: var(--os-accent-green);
 }
 
 @media screen and (max-width: 900px) {
@@ -277,5 +286,207 @@
   }
   .wheelColumn {
     position: static;
+  }
+}
+
+/* --- Technique detail modal --- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 4vh 1rem;
+  z-index: 500;
+  overflow-y: auto;
+}
+
+.modalPanel {
+  width: 100%;
+  max-width: 640px;
+  background: var(--os-surface);
+  border: 1px solid var(--os-border);
+  border-radius: 12px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.modalClose {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface-2);
+  color: var(--os-text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.modalClose:hover {
+  border-color: var(--os-accent-red);
+  color: var(--os-accent-red);
+}
+
+.modalBody {
+  padding: 2rem 1.8rem 1.8rem;
+}
+
+.modalEyebrow {
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--os-accent-green);
+  margin-bottom: 0.5rem;
+}
+
+.modalTitle {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--os-text);
+  margin: 0 0 0.7rem;
+}
+
+.modalSummary {
+  font-size: 0.94rem;
+  line-height: 1.65;
+  color: var(--os-text-muted);
+  margin: 0 0 1.6rem;
+}
+
+.modalFallback {
+  font-size: 0.9rem;
+  color: var(--os-text-muted);
+}
+
+.modalSection + .modalSection {
+  margin-top: 1.7rem;
+  padding-top: 1.7rem;
+  border-top: 1px dashed var(--os-border);
+}
+
+.modalSectionTitle {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--os-text);
+  margin: 0 0 1rem;
+}
+
+/* How it works — numbered vertical flow */
+.flowList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.flowStep {
+  display: flex;
+  gap: 0.9rem;
+  padding-bottom: 1rem;
+  position: relative;
+}
+
+.flowStep:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.85rem;
+  top: 1.9rem;
+  bottom: 0;
+  width: 1px;
+  background: var(--os-border);
+}
+
+.flowStepNumber {
+  flex-shrink: 0;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: var(--os-accent-green);
+  color: #06120a;
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 800;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.flowStepText {
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: var(--os-text-muted);
+  padding-top: 0.2rem;
+}
+
+/* Types & variants */
+.typeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.7rem;
+}
+
+.typeCard {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface-2);
+}
+
+.typeName {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--os-text);
+  margin: 0 0 0.35rem;
+}
+
+.typeDescription {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--os-text-muted);
+  margin: 0;
+}
+
+/* Defenses */
+.defenseList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.defenseItem {
+  font-size: 0.87rem;
+  line-height: 1.5;
+  color: var(--os-text-muted);
+  padding-left: 1.3rem;
+  position: relative;
+}
+
+.defenseItem::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--os-accent-green);
+  font-weight: 700;
+}
+
+@media screen and (max-width: 600px) {
+  .modalBody {
+    padding: 1.6rem 1.2rem 1.4rem;
   }
 }
