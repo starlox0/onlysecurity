@@ -1,4 +1,5 @@
 import React, {useEffect, useRef} from 'react';
+import Link from '@docusaurus/Link';
 import {getTechniqueForLabel} from './techniques';
 import styles from './styles.module.css';
 
@@ -42,8 +43,29 @@ export default function TechniqueModal({label, onClose}) {
         ) : (
           <div className={styles.modalBody}>
             <span className={styles.modalEyebrow}>Attack technique</span>
-            <h2 className={styles.modalTitle}>{technique.title}</h2>
+            <div className={styles.modalTitleRow}>
+              <h2 className={styles.modalTitle}>{technique.title}</h2>
+              {technique.cwe && (
+                <a
+                  href={`https://cwe.mitre.org/data/definitions/${technique.cwe.replace('CWE-', '')}.html`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.cweBadge}
+                  title="View this weakness on cwe.mitre.org">
+                  {technique.cwe}
+                </a>
+              )}
+            </div>
             <p className={styles.modalSummary}>{technique.summary}</p>
+
+            {technique.vaultWeakness && (
+              <Link
+                to={`/bounty-vault?weakness=${technique.vaultWeakness.map(encodeURIComponent).join(',')}&label=${encodeURIComponent(technique.title)}`}
+                className={styles.vaultLink}
+                onClick={onClose}>
+                See real disclosed reports of this type in Bounty Vault →
+              </Link>
+            )}
 
             <section className={styles.modalSection}>
               <h3 className={styles.modalSectionTitle}>How it works</h3>
@@ -68,6 +90,26 @@ export default function TechniqueModal({label, onClose}) {
                 ))}
               </div>
             </section>
+
+            {technique.code && (
+              <section className={styles.modalSection}>
+                <h3 className={styles.modalSectionTitle}>Vulnerable vs. fixed</h3>
+                <div className={styles.codeGrid}>
+                  <div className={styles.codeBlock} data-variant="vulnerable">
+                    <span className={styles.codeLabel}>✕ Vulnerable</span>
+                    <pre className={styles.codePre}>
+                      <code>{technique.code.vulnerable}</code>
+                    </pre>
+                  </div>
+                  <div className={styles.codeBlock} data-variant="fixed">
+                    <span className={styles.codeLabel}>✓ Fixed</span>
+                    <pre className={styles.codePre}>
+                      <code>{technique.code.fixed}</code>
+                    </pre>
+                  </div>
+                </div>
+              </section>
+            )}
 
             <section className={styles.modalSection}>
               <h3 className={styles.modalSectionTitle}>How to defend against it</h3>
