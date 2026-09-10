@@ -346,11 +346,107 @@
   margin-bottom: 0.5rem;
 }
 
+.modalTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.7rem;
+}
+
 .modalTitle {
   font-size: 1.35rem;
   font-weight: 800;
   color: var(--os-text);
-  margin: 0 0 0.7rem;
+  margin: 0;
+}
+
+.cweBadge {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  border: 1px solid var(--os-accent-blue);
+  color: var(--os-accent-blue);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.cweBadge:hover {
+  background: rgba(88, 166, 255, 0.14);
+  color: var(--os-accent-blue);
+  text-decoration: none;
+}
+
+.vaultLink {
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--os-accent-green);
+  margin-bottom: 1.4rem;
+}
+
+/* Vulnerable vs fixed code */
+.codeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.9rem;
+}
+
+.codeBlock {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--os-border);
+}
+
+.codeBlock[data-variant='vulnerable'] {
+  border-color: var(--os-accent-red);
+}
+
+.codeBlock[data-variant='fixed'] {
+  border-color: var(--os-accent-green);
+}
+
+.codeLabel {
+  display: block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.4rem 0.7rem;
+}
+
+.codeBlock[data-variant='vulnerable'] .codeLabel {
+  background: rgba(248, 81, 73, 0.12);
+  color: var(--os-accent-red);
+}
+
+.codeBlock[data-variant='fixed'] .codeLabel {
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--os-accent-green);
+}
+
+.codePre {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  background: var(--os-surface-2);
+  overflow-x: auto;
+}
+
+.codePre code {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--os-text);
+  background: none;
+  white-space: pre;
+}
+
+@media screen and (max-width: 600px) {
+  .modalBody {
+    padding: 1.6rem 1.2rem 1.4rem;
+  }
 }
 
 .modalSummary {
@@ -483,10 +579,4 @@
   left: 0;
   color: var(--os-accent-green);
   font-weight: 700;
-}
-
-@media screen and (max-width: 600px) {
-  .modalBody {
-    padding: 1.6rem 1.2rem 1.4rem;
-  }
 }
