@@ -278,6 +278,43 @@
   margin: -1.3rem 0 2rem;
 }
 
+/* --- Incoming filter banner (deep link from Attack Atlas) --- */
+.incomingFilterBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--os-accent-blue);
+  border-radius: 8px;
+  background: rgba(88, 166, 255, 0.08);
+  font-size: 0.86rem;
+  color: var(--os-text);
+}
+
+.incomingFilterBanner strong {
+  color: var(--os-accent-blue);
+}
+
+.incomingFilterClear {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.incomingFilterClear:hover {
+  border-color: var(--os-accent-red);
+  color: var(--os-accent-red);
+}
+
 /* --- Mode tabs --- */
 .modeTabs {
   display: flex;
