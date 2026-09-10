@@ -98,6 +98,12 @@ const entries = [
   path: '/byte-forge',
   type: 'doc',
  },
+  {
+  title: 'Attack Atlas',
+  description: 'Interactive wheel mapping web/API attack techniques to every OWASP Top 10 edition, 2017–2025.',
+  path: '/attack-atlas',
+  type: 'doc',
+},
 ];
 
 export default entries;
