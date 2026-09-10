@@ -2,7 +2,21 @@
 // in AttackAtlas/data.js. Content is original (written for this site, not
 // copied from any source) and deliberately reads beginner → expert
 // top-to-bottom: Overview (what it is) → How It Works (the flow) →
-// Types & Variants (depth) → How To Defend (practical).
+// Types & Variants (depth) → Vulnerable vs Fixed code (where available) →
+// How To Defend (practical).
+//
+// cwe: the official MITRE CWE identifier, where one clear match exists.
+// Omitted (rather than guessed) for categories that don't map to a single
+// CWE — a business-logic flaw or an inventory-management gap genuinely
+// isn't one specific weakness type.
+//
+// vaultWeakness: the exact `weakness` string(s) used in Bounty Vault's
+// HackerOne dataset, so a reader can jump straight to real disclosed
+// reports of this type. Only set where a confident, accurate match exists
+// against HackerOne's own weakness taxonomy — left unset rather than
+// force-matched to something approximate.
+//
+// code: a short vulnerable/fixed snippet pair, illustrative only.
 //
 // ALIASES maps every chip label that ever appears in data.js to one of
 // these canonical entries, since many labels ("SQL Injection" vs "SQL
@@ -11,6 +25,8 @@
 export const TECHNIQUES = {
   'sql-injection': {
     title: 'SQL Injection',
+    cwe: 'CWE-89',
+    vaultWeakness: ['SQL Injection'],
     summary: 'Untrusted input is inserted directly into a database query, letting an attacker change what the query actually does — read data they shouldn\'t see, bypass a login, or modify records.',
     howItWorks: [
       'An app builds a SQL query by concatenating user input directly into the query string, instead of treating input as data.',
@@ -24,10 +40,17 @@ export const TECHNIQUES = {
       {name: 'Blind (time-based)', description: 'The attacker injects a deliberate delay (e.g. a SLEEP() call) and measures response time to infer answers one bit at a time.'},
       {name: 'Out-of-band', description: 'Results are exfiltrated through a separate channel, like a DNS lookup, when direct or blind extraction isn\'t practical.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;\ndb.query(query);",
+      fixed: "const query = 'SELECT * FROM users WHERE username = ? AND password = ?';\ndb.query(query, [username, password]);",
+    },
     defenses: ['Parameterized queries / prepared statements (never string-concatenate input into SQL)', 'Least-privilege database accounts for the app', 'Input validation as defense-in-depth, not the primary control', 'A WAF as a compensating control, not a substitute for fixing the query'],
   },
   'command-injection': {
     title: 'Command Injection',
+    cwe: 'CWE-78',
+    vaultWeakness: ['Command Injection - Generic', 'OS Command Injection'],
     summary: 'User input reaches a system shell command, letting an attacker run their own OS commands with the application\'s privileges.',
     howItWorks: [
       'An app passes user input into a function that executes a shell command (e.g. to ping a host or process a file).',
@@ -40,10 +63,16 @@ export const TECHNIQUES = {
       {name: 'Blind injection', description: 'No output is returned; the attacker confirms execution via time delays or out-of-band callbacks.'},
       {name: 'Argument injection', description: 'Instead of chaining commands, the attacker manipulates flags/arguments passed to the intended binary.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "const { exec } = require('child_process');\nexec(`ping -c 4 ${userInput}`);",
+      fixed: "const { execFile } = require('child_process');\nexecFile('ping', ['-c', '4', userInput]);",
+    },
     defenses: ['Avoid shell execution entirely; use language-native APIs instead', 'If unavoidable, use an allowlist of exact arguments, never string concatenation', 'Run with the least OS privilege necessary', 'Sandbox or containerize processes that must shell out'],
   },
   'ldap-injection': {
     title: 'LDAP Injection',
+    cwe: 'CWE-90',
     summary: 'Untrusted input is inserted into an LDAP query (used for directory/authentication lookups), letting an attacker alter the filter logic.',
     howItWorks: [
       'An app builds an LDAP search filter using user input (e.g. a username in a login form).',
@@ -59,6 +88,7 @@ export const TECHNIQUES = {
   },
   'xpath-injection': {
     title: 'XPath Injection',
+    cwe: 'CWE-643',
     summary: 'Untrusted input is inserted into an XPath query against an XML document, letting an attacker alter which nodes the query selects.',
     howItWorks: [
       'An app queries an XML document using XPath built from user input.',
@@ -73,6 +103,7 @@ export const TECHNIQUES = {
   },
   'nosql-injection': {
     title: 'NoSQL Injection',
+    cwe: 'CWE-943',
     summary: 'Untrusted input is passed into a NoSQL database query (like MongoDB) as a structured object instead of a plain value, letting an attacker alter query logic using the database\'s own operators.',
     howItWorks: [
       'An app accepts input (often JSON) and passes it into a query without validating its structure.',
@@ -88,6 +119,8 @@ export const TECHNIQUES = {
   },
   xss: {
     title: 'Cross-Site Scripting (XSS)',
+    cwe: 'CWE-79',
+    vaultWeakness: ['Cross-site Scripting (XSS) - Stored', 'Cross-site Scripting (XSS) - Generic', 'Cross-site Scripting (XSS) - Reflected', 'Cross-site Scripting (XSS) - DOM'],
     summary: 'Untrusted data is rendered in a browser without proper escaping, letting an attacker\'s script run inside another user\'s session — reading their cookies, acting as them, or defacing the page.',
     howItWorks: [
       'An app takes input (a comment, a search term, a URL parameter) and includes it in an HTML page.',
@@ -101,10 +134,17 @@ export const TECHNIQUES = {
       {name: 'DOM-based XSS', description: 'The vulnerable code runs entirely in client-side JavaScript, manipulating the page\'s DOM based on untrusted input, without the server ever seeing the payload.'},
       {name: 'Mutation XSS (mXSS)', description: 'A payload that looks safe when checked, but is "mutated" into a dangerous form once the browser\'s HTML parser processes it.'},
     ],
+    code: {
+      language: 'jsx',
+      vulnerable: '<div dangerouslySetInnerHTML={{ __html: comment.text }} />',
+      fixed: '<div>{comment.text}</div>  {/* React escapes this automatically */}',
+    },
     defenses: ['Context-aware output encoding (HTML, attribute, JS, and URL contexts each need different escaping)', 'A strict Content-Security-Policy', 'Use frameworks that auto-escape by default (React, etc.) and avoid `dangerouslySetInnerHTML`-style escape hatches', 'HttpOnly cookies to limit what a successful XSS can steal'],
   },
   idor: {
     title: 'Insecure Direct Object Reference (IDOR)',
+    cwe: 'CWE-639',
+    vaultWeakness: ['Insecure Direct Object Reference (IDOR)'],
     summary: 'An app lets a user access an object (a file, record, or account) by its ID, but doesn\'t check whether that user is actually allowed to access it.',
     howItWorks: [
       'A request references an object directly by its ID (e.g. `/invoices/1042`).',
@@ -117,10 +157,17 @@ export const TECHNIQUES = {
       {name: 'Object ID leakage', description: 'IDs aren\'t sequential, but are exposed elsewhere (emails, other API responses) and reused directly.'},
       {name: 'IDOR in write operations', description: 'The same missing check applies to an update or delete request, not just a read.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "app.get('/invoices/:id', (req, res) => {\n  const invoice = db.getInvoice(req.params.id);\n  res.json(invoice);\n});",
+      fixed: "app.get('/invoices/:id', (req, res) => {\n  const invoice = db.getInvoice(req.params.id);\n  if (invoice.userId !== req.user.id) return res.status(403).end();\n  res.json(invoice);\n});",
+    },
     defenses: ['Check ownership/authorization server-side on every object access, every time', 'Use indirect references (session-scoped tokens) instead of raw database IDs where practical', 'Apply the same authorization check consistently to read, write, and delete paths'],
   },
   'privilege-escalation': {
     title: 'Privilege Escalation',
+    cwe: 'CWE-269',
+    vaultWeakness: ['Privilege Escalation'],
     summary: 'An attacker gains access to functionality or data beyond what their account is supposed to have — either another user\'s data (horizontal) or an admin-level capability (vertical).',
     howItWorks: [
       'An application restricts certain data or actions to specific users or roles.',
@@ -137,6 +184,7 @@ export const TECHNIQUES = {
   },
   'cors-misconfig': {
     title: 'CORS Misconfiguration',
+    cwe: 'CWE-942',
     summary: 'A server\'s Cross-Origin Resource Sharing policy is set too permissively, letting untrusted websites make authenticated requests to it on a victim\'s behalf.',
     howItWorks: [
       'A server sets `Access-Control-Allow-Origin` to reflect any requesting origin, or to `*` combined with credentials.',
@@ -149,10 +197,17 @@ export const TECHNIQUES = {
       {name: 'Wildcard with credentials', description: 'Combining `*` with `Access-Control-Allow-Credentials: true` — invalid per spec but sometimes shipped anyway via misconfigured proxies.'},
       {name: 'Null origin allowance', description: 'Trusting the `null` origin, which is trivially spoofable from sandboxed iframes or local files.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "app.use((req, res, next) => {\n  res.header('Access-Control-Allow-Origin', req.headers.origin);\n  res.header('Access-Control-Allow-Credentials', 'true');\n  next();\n});",
+      fixed: "const ALLOWED = ['https://app.example.com'];\napp.use((req, res, next) => {\n  if (ALLOWED.includes(req.headers.origin)) {\n    res.header('Access-Control-Allow-Origin', req.headers.origin);\n    res.header('Access-Control-Allow-Credentials', 'true');\n  }\n  next();\n});",
+    },
     defenses: ['Use an explicit allowlist of trusted origins, never reflect or wildcard with credentials', 'Only enable credentials mode where genuinely required', 'Treat CORS as an access-control decision, not a formality'],
   },
   'forced-browsing': {
     title: 'Forced Browsing',
+    cwe: 'CWE-425',
+    vaultWeakness: ['Improper Access Control - Generic'],
     summary: 'An attacker directly requests URLs or resources that aren\'t linked from the UI, hoping the server enforces no additional access check on them.',
     howItWorks: [
       'A resource exists at a predictable or guessable URL (e.g. `/admin`, `/backup.zip`, `/user/settings?id=5`).',
@@ -168,6 +223,8 @@ export const TECHNIQUES = {
   },
   ssrf: {
     title: 'Server-Side Request Forgery (SSRF)',
+    cwe: 'CWE-918',
+    vaultWeakness: ['Server-Side Request Forgery (SSRF)'],
     summary: 'An application fetches a URL supplied (directly or indirectly) by the user, letting an attacker make the server issue requests to places it shouldn\'t — internal services, cloud metadata endpoints, or other systems.',
     howItWorks: [
       'A feature accepts a URL from the user (e.g. "fetch this image," "check this webhook," a PDF-generation tool that loads a page).',
@@ -181,10 +238,17 @@ export const TECHNIQUES = {
       {name: 'Cloud metadata access', description: 'Targeting a cloud provider\'s internal metadata endpoint (like `169.254.169.254`) to steal instance credentials.'},
       {name: 'Filter bypass via encoding', description: 'Using decimal/hex IP encoding, DNS rebinding, or redirects to evade a naive blocklist on the target URL.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "app.post('/fetch-preview', async (req, res) => {\n  const response = await fetch(req.body.url);\n  res.send(await response.text());\n});",
+      fixed: "app.post('/fetch-preview', async (req, res) => {\n  const url = new URL(req.body.url);\n  if (!ALLOWED_HOSTS.includes(url.hostname)) return res.status(400).end();\n  const response = await fetch(url);\n  res.send(await response.text());\n});",
+    },
     defenses: ['Validate destination URLs against an allowlist of expected hosts, not a denylist', 'Block requests to private/link-local IP ranges at the network layer, not just in application code', 'Disable unnecessary URL-fetching features entirely where not needed', 'For cloud environments, use metadata service versions that require an explicit token (like IMDSv2)'],
   },
   xxe: {
     title: 'XML External Entities (XXE)',
+    cwe: 'CWE-611',
+    vaultWeakness: ['XML External Entities (XXE)'],
     summary: 'A poorly configured XML parser processes external entity references in an XML document, letting an attacker read local files, trigger internal requests, or crash the service.',
     howItWorks: [
       'An application accepts XML input and parses it with a parser that has external entity resolution enabled (the historical default in many XML libraries).',
@@ -198,10 +262,17 @@ export const TECHNIQUES = {
       {name: 'Billion Laughs (XML bomb)', description: 'Nested entity definitions that expand exponentially, exhausting memory and causing denial of service.'},
       {name: 'Blind XXE via out-of-band channel', description: 'When output isn\'t reflected, exfiltrating data via a DNS or HTTP request the entity triggers to an attacker-controlled server.'},
     ],
+    code: {
+      language: 'python',
+      vulnerable: "from lxml import etree\ntree = etree.parse(user_supplied_xml)",
+      fixed: "from lxml import etree\nparser = etree.XMLParser(resolve_entities=False, no_network=True)\ntree = etree.parse(user_supplied_xml, parser)",
+    },
     defenses: ['Disable external entity and DTD processing in the XML parser entirely — this is the real fix', 'Prefer data formats like JSON where XML isn\'t specifically required', 'Keep XML libraries patched, since safe defaults have improved over time but older configs linger'],
   },
   'insecure-deserialization': {
     title: 'Insecure Deserialization',
+    cwe: 'CWE-502',
+    vaultWeakness: ['Deserialization of Untrusted Data'],
     summary: 'An application deserializes untrusted data into objects without validation, and the deserialization process itself can be abused to execute code or tamper with application logic.',
     howItWorks: [
       'An app accepts a serialized object (often from a cookie, cache, or API payload) and deserializes it back into a native object.',
@@ -214,10 +285,17 @@ export const TECHNIQUES = {
       {name: 'PHP object injection', description: 'Crafting a serialized PHP object that invokes a class\'s magic methods (like `__wakeup` or `__destruct`) to unintended effect.'},
       {name: 'Python pickle exploitation', description: 'Python\'s `pickle` format can execute arbitrary code during deserialization by design — never unpickle untrusted data.'},
     ],
+    code: {
+      language: 'python',
+      vulnerable: 'import pickle\ndata = pickle.loads(request_body)',
+      fixed: 'import json\ndata = json.loads(request_body)  # plain data, no code execution risk',
+    },
     defenses: ['Avoid deserializing untrusted data at all; prefer plain data formats like JSON with strict schemas', 'If deserialization of complex objects is unavoidable, use signing/integrity checks so tampered payloads are rejected before deserializing', 'Keep deserialization libraries patched and minimize "gadget"-capable classes on the classpath'],
   },
   'credential-stuffing': {
     title: 'Credential Stuffing',
+    cwe: 'CWE-307',
+    vaultWeakness: ['Improper Authentication - Generic', 'Improper Restriction of Authentication Attempts'],
     summary: 'An attacker automates login attempts using username/password pairs leaked from other breaches, betting that people reuse passwords across sites.',
     howItWorks: [
       'A large list of real username/password pairs from a previous, unrelated breach is obtained.',
@@ -233,6 +311,8 @@ export const TECHNIQUES = {
   },
   'brute-force': {
     title: 'Brute Force',
+    cwe: 'CWE-307',
+    vaultWeakness: ['Improper Restriction of Authentication Attempts', 'Improper Authentication - Generic'],
     summary: 'An attacker systematically tries many password (or other secret) guesses against an endpoint until one works.',
     howItWorks: [
       'An endpoint accepts repeated authentication attempts with no meaningful limit.',
@@ -248,6 +328,8 @@ export const TECHNIQUES = {
   },
   'session-attacks': {
     title: 'Session Fixation & Token Weaknesses',
+    cwe: 'CWE-384',
+    vaultWeakness: ['Insufficient Session Expiration'],
     summary: 'Weaknesses in how session identifiers are generated, transmitted, or rotated let an attacker hijack or predict another user\'s session.',
     howItWorks: [
       'A session ID is issued to identify a logged-in user for subsequent requests.',
@@ -264,6 +346,7 @@ export const TECHNIQUES = {
   },
   'password-recovery': {
     title: 'Weak Password Recovery',
+    cwe: 'CWE-640',
     summary: 'A password reset flow has a logic flaw — a guessable token, a weak security question, or a step that can be skipped — letting an attacker take over an account without knowing the password.',
     howItWorks: [
       'A user requests a password reset, and the app issues a token or code to prove identity.',
@@ -280,6 +363,7 @@ export const TECHNIQUES = {
   },
   'mfa-bypass': {
     title: 'MFA Bypass',
+    cwe: 'CWE-287',
     summary: 'A flaw in how multi-factor authentication is implemented lets an attacker complete login without actually satisfying the second factor.',
     howItWorks: [
       'A login flow checks a password, then separately checks an MFA code.',
@@ -295,6 +379,7 @@ export const TECHNIQUES = {
   },
   'jwt-attacks': {
     title: 'JWT Tampering',
+    cwe: 'CWE-347',
     summary: 'Weaknesses in how a JSON Web Token is validated let an attacker forge or modify a token\'s claims — such as their user ID or role — and have it accepted as legitimate.',
     howItWorks: [
       'A server issues a signed JWT after login and trusts its contents on later requests.',
@@ -308,10 +393,17 @@ export const TECHNIQUES = {
       {name: 'Weak signing secret', description: 'A short or guessable HMAC secret that can be brute-forced offline, letting the attacker sign their own tokens.'},
       {name: 'Token replay', description: 'Reusing a captured valid token beyond its intended lifetime because the server doesn\'t properly check expiry or revocation.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "const decoded = jwt.decode(token); // no verification at all\nif (decoded.role === 'admin') { /* ... */ }",
+      fixed: "const decoded = jwt.verify(token, SECRET, { algorithms: ['HS256'] });\nif (decoded.role === 'admin') { /* ... */ }",
+    },
     defenses: ['Explicitly allowlist the expected signing algorithm — never trust the algorithm named in the token itself', 'Use strong, sufficiently long signing secrets (or asymmetric keys) and rotate them periodically', 'Set short expiries and implement real revocation for sensitive tokens', 'Use a well-maintained JWT library and keep it updated — most of these flaws were library-level bugs, now fixed'],
   },
   'cryptographic-failures': {
     title: 'Cryptographic Failures',
+    cwe: 'CWE-327',
+    vaultWeakness: ['Cryptographic Issues - Generic', 'Cleartext Storage of Sensitive Information', 'Cleartext Transmission of Sensitive Information', 'Insecure Storage of Sensitive Information', 'Improper Certificate Validation'],
     summary: 'Sensitive data is exposed because encryption is missing, weak, or implemented incorrectly — not because of a clever attack on the math itself, but because of how crypto was (mis)used.',
     howItWorks: [
       'Sensitive data (passwords, tokens, PII) needs protection at rest or in transit.',
@@ -324,10 +416,16 @@ export const TECHNIQUES = {
       {name: 'Missing encryption at rest', description: 'Sensitive fields stored in plaintext in the database.'},
       {name: 'Downgrade attacks', description: 'Forcing a connection to fall back to an older, weaker protocol version or cipher suite that\'s already broken.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "const hash = crypto.createHash('md5').update(password).digest('hex');",
+      fixed: "const hash = await bcrypt.hash(password, 12);",
+    },
     defenses: ['Use modern, purpose-built algorithms: bcrypt/Argon2 for passwords, AES-GCM for data encryption', 'Never hardcode keys — use a secrets manager', 'Enforce TLS everywhere and disable legacy protocol/cipher fallbacks', 'Encrypt sensitive fields at rest, not just in transit'],
   },
   'mass-assignment': {
     title: 'Mass Assignment',
+    cwe: 'CWE-915',
     summary: 'An API binds incoming request data directly to an internal object\'s fields, so an attacker can set fields they were never meant to control — like their own role or account balance.',
     howItWorks: [
       'An endpoint accepts a JSON body and automatically maps its fields onto a database model or object (a common framework convenience).',
@@ -339,10 +437,17 @@ export const TECHNIQUES = {
       {name: 'Overposting', description: 'Adding hidden/undocumented fields to a request body that the client-side form never exposes.'},
       {name: 'Excessive data exposure (the read-side mirror)', description: 'The related problem of an API *returning* more fields than intended, letting a client see data it shouldn\'t.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "app.post('/users/:id', (req, res) => {\n  User.findByIdAndUpdate(req.params.id, req.body);\n});",
+      fixed: "app.post('/users/:id', (req, res) => {\n  const { name, email } = req.body; // explicit allowlist\n  User.findByIdAndUpdate(req.params.id, { name, email });\n});",
+    },
     defenses: ['Use an explicit allowlist of bindable fields per endpoint — never bind the whole request body to a model', 'Apply the same allowlist discipline to response serialization, not just input', 'Review framework "convenience" auto-binding features specifically for this risk'],
   },
   'security-misconfiguration': {
     title: 'Security Misconfiguration',
+    cwe: 'CWE-16',
+    vaultWeakness: ['Misconfiguration', 'Information Exposure Through Directory Listing'],
     summary: 'A system is left in an insecure state — default settings, unnecessary features, exposed files, or overly detailed error messages — not because of a code flaw, but because of how it\'s configured and deployed.',
     howItWorks: [
       'A service is deployed with defaults that prioritize ease-of-setup over security (default admin passwords, sample apps left installed, verbose debug output).',
@@ -360,6 +465,7 @@ export const TECHNIQUES = {
   },
   'vulnerable-components': {
     title: 'Vulnerable and Outdated Components',
+    cwe: 'CWE-1104',
     summary: 'An application uses a library, framework, or plugin with a known, publicly disclosed vulnerability, and hasn\'t patched it.',
     howItWorks: [
       'A project depends on third-party code — directly or transitively through other dependencies.',
@@ -376,6 +482,7 @@ export const TECHNIQUES = {
   },
   'supply-chain': {
     title: 'Software Supply Chain Attacks',
+    cwe: 'CWE-1357',
     summary: 'Instead of attacking an application\'s own code, an attacker compromises something it depends on — a package, a build pipeline, or an update mechanism — so the malicious code arrives trusted, through the front door.',
     howItWorks: [
       'A project relies on external packages, a CI/CD pipeline, or an auto-update mechanism it implicitly trusts.',
@@ -393,6 +500,8 @@ export const TECHNIQUES = {
   },
   'insecure-design': {
     title: 'Insecure Design',
+    cwe: 'CWE-657',
+    vaultWeakness: ['Violation of Secure Design Principles'],
     summary: 'A security weakness that exists because of how a feature was designed in the first place — not a coding bug, but a missing control that should have been part of the architecture from the start.',
     howItWorks: [
       'A feature is built to satisfy a business requirement without a threat model asking "how could this be abused?"',
@@ -409,6 +518,7 @@ export const TECHNIQUES = {
   },
   'business-logic-abuse': {
     title: 'Business Logic Abuse',
+    vaultWeakness: ['Business Logic Errors'],
     summary: 'An attacker automates a legitimate feature at a scale or speed no human user would operate at, extracting value the business never intended to give away — without exploiting any traditional technical bug.',
     howItWorks: [
       'A business workflow exists for legitimate use (buying a limited item, creating an account, applying a promo code).',
@@ -425,6 +535,8 @@ export const TECHNIQUES = {
   },
   'rate-limiting-dos': {
     title: 'Lack of Rate Limiting / Resource Exhaustion',
+    cwe: 'CWE-770',
+    vaultWeakness: ['Uncontrolled Resource Consumption', 'Allocation of Resources Without Limits or Throttling'],
     summary: 'An endpoint has no meaningful limit on request volume, payload size, or expensive operations, letting an attacker degrade or deny service to legitimate users.',
     howItWorks: [
       'An endpoint performs some amount of work per request — a database query, a file operation, a computation.',
@@ -457,6 +569,7 @@ export const TECHNIQUES = {
   },
   'logging-monitoring-failures': {
     title: 'Security Logging and Monitoring Failures',
+    cwe: 'CWE-778',
     summary: 'Security-relevant events aren\'t logged, or logs exist but nobody watches or alerts on them, so breaches and abuse go undetected — often for a long time.',
     howItWorks: [
       'Sensitive actions (logins, failed auth attempts, privilege changes, data access) occur without generating a log entry, or logs exist but are never reviewed.',
@@ -473,6 +586,7 @@ export const TECHNIQUES = {
   },
   'prototype-pollution': {
     title: 'Prototype Pollution',
+    cwe: 'CWE-1321',
     summary: 'In JavaScript, an attacker injects properties onto a shared base object (Object.prototype), affecting every object in the application that inherits from it — sometimes leading to logic bypass or code execution.',
     howItWorks: [
       'A JavaScript app merges or assigns user-controlled data into an object using a recursive merge/clone utility.',
@@ -484,10 +598,17 @@ export const TECHNIQUES = {
       {name: 'Client-side pollution', description: 'Corrupting shared state in the browser, potentially enabling a secondary XSS.'},
       {name: 'Server-side pollution (Node.js)', description: 'The more severe case — polluting the prototype in a Node.js process can affect every request the server handles, and in some cases leads to remote code execution.'},
     ],
+    code: {
+      language: 'js',
+      vulnerable: "function merge(target, source) {\n  for (const key in source) {\n    if (typeof source[key] === 'object') merge(target[key], source[key]);\n    else target[key] = source[key];\n  }\n}",
+      fixed: "function merge(target, source) {\n  for (const key in source) {\n    if (key === '__proto__' || key === 'constructor') continue; // block dangerous keys\n    if (typeof source[key] === 'object') merge(target[key], source[key]);\n    else target[key] = source[key];\n  }\n}",
+    },
     defenses: ['Use `Object.create(null)` or `Map` for objects built from user input, instead of plain object literals', 'Freeze `Object.prototype` in sensitive contexts', 'Use merge/clone libraries with known protections against `__proto__` keys, and keep them updated', 'Validate and sanitize keys in any recursive merge of user-controlled data'],
   },
   'exception-handling': {
     title: 'Mishandling of Exceptional Conditions',
+    cwe: 'CWE-755',
+    vaultWeakness: ['Information Exposure Through an Error Message'],
     summary: 'Errors, edge cases, and unexpected states aren\'t handled safely — leaking internal details, or worse, leaving the application in an insecure "fail-open" state instead of safely denying access.',
     howItWorks: [
       'An unexpected condition occurs — a malformed input, a downstream service timing out, an unhandled edge case in business logic.',
