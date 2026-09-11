@@ -7,6 +7,8 @@ import styles from './styles.module.css';
 const TRACKS = [
   {id: 'web', label: 'Web Application'},
   {id: 'api', label: 'API Security'},
+  {id: 'mobile', label: 'Mobile'},
+  {id: 'smart-contract', label: 'Smart Contract'},
 ];
 
 function editionKeysForTrack(track) {
