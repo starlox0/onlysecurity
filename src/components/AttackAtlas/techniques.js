@@ -1194,3 +1194,6 @@ export function getTechniqueForLabel(label) {
   const id = ALIASES[label];
   return id ? {id, ...TECHNIQUES[id]} : null;
 }
+export function getTechniqueById(id) {
+  return TECHNIQUES[id] ? {id, ...TECHNIQUES[id]} : null;
+}
