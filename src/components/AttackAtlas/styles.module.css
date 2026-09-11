@@ -580,3 +580,180 @@
   color: var(--os-accent-green);
   font-weight: 700;
 }
+
+/* --- TTP Globe --- */
+.globeTrackTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.globeTrackTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.globeTrackTab:hover {
+  border-color: var(--os-accent-green);
+  color: var(--os-text);
+}
+
+.globeTrackTab[data-active='true'] {
+  background: var(--os-accent-green);
+  border-color: var(--os-accent-green);
+  color: #06120a;
+}
+
+.globeYearTabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.globeYearTab {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.globeYearTab[data-active='true'] {
+  border-color: var(--os-accent-blue);
+  color: var(--os-accent-blue);
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.globeLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.globeContainer {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(63, 185, 80, 0.12), transparent 60%), var(--os-surface);
+  border: 1px solid var(--os-border);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+.globeContainer:active {
+  cursor: grabbing;
+}
+
+.globeSphereOutline {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 1px dashed var(--os-border);
+  pointer-events: none;
+}
+
+.globeNode {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 2px solid var(--os-bg);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #06120a;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+
+.globeNode[data-color='red'] { background: var(--os-accent-red); }
+.globeNode[data-color='blue'] { background: var(--os-accent-blue); }
+.globeNode[data-color='amber'] { background: var(--os-accent-amber); }
+.globeNode[data-color='green'] { background: var(--os-accent-green); }
+
+.globeNode[data-active='true'] {
+  box-shadow: 0 0 0 3px var(--os-text);
+}
+
+.globeHint {
+  position: absolute;
+  bottom: 0.8rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--os-text-muted);
+  margin: 0;
+  pointer-events: none;
+}
+
+.globeDetail {
+  min-height: 260px;
+  padding: 1.3rem 1.4rem;
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  background: var(--os-surface);
+}
+
+.globeDetailEmpty {
+  font-size: 0.9rem;
+  color: var(--os-text-muted);
+}
+
+.globeDetailTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--os-text);
+  margin: 0 0 0.7rem;
+}
+
+.globeDetailDescription {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--os-text-muted);
+  margin: 0 0 1.2rem;
+}
+
+.globeNoTtps {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--os-text-muted);
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .globeNode {
+    transition: none;
+  }
+}
+
+@media screen and (max-width: 800px) {
+  .globeLayout {
+    grid-template-columns: 1fr;
+  }
+  .globeContainer {
+    margin: 0 auto;
+  }
+}
