@@ -52,6 +52,91 @@ function rotatePoint({x, y, z}, yaw, pitch) {
   return {x: x1, y: y2, z: z2};
 }
 
+function project(point) {
+  return {x: 50 + point.x * 42, y: 50 - point.y * 42};
+}
+
+// Latitude rings (fixed y, circle in the XZ plane) and longitude meridians
+// (fixed angle, arc from pole to pole) traced in unrotated unit-sphere
+// space — rotated and projected fresh every frame, same as the category
+// nodes, so the wireframe reads as attached to the same rotating surface.
+const LATITUDES = [-0.66, -0.33, 0, 0.33, 0.66];
+const LONGITUDE_COUNT = 6;
+const RING_STEPS = 40;
+
+function buildLatitudeRings() {
+  return LATITUDES.map((y) => {
+    const r = Math.sqrt(Math.max(0, 1 - y * y));
+    const pts = [];
+    for (let i = 0; i <= RING_STEPS; i++) {
+      const a = (i / RING_STEPS) * Math.PI * 2;
+      pts.push({x: Math.cos(a) * r, y, z: Math.sin(a) * r});
+    }
+    return pts;
+  });
+}
+
+function buildLongitudeMeridians() {
+  const meridians = [];
+  for (let m = 0; m < LONGITUDE_COUNT; m++) {
+    const lon = (m / LONGITUDE_COUNT) * Math.PI * 2;
+    const pts = [];
+    for (let i = 0; i <= RING_STEPS; i++) {
+      const phi = (i / RING_STEPS) * Math.PI - Math.PI / 2; // -90deg..90deg
+      const r = Math.cos(phi);
+      pts.push({x: Math.cos(lon) * r, y: Math.sin(phi), z: Math.sin(lon) * r});
+    }
+    meridians.push(pts);
+  }
+  return meridians;
+}
+
+const LATITUDE_RINGS = buildLatitudeRings();
+const LONGITUDE_MERIDIANS = buildLongitudeMeridians();
+// Only draw a grid segment where both its endpoints face reasonably
+// toward the viewer — this is what makes it read as a solid, opaque
+// sphere with visible surface lines, rather than a see-through wireframe.
+const FRONT_THRESHOLD = -0.05;
+
+function buildGridPaths(yaw, pitch) {
+  const paths = [];
+  for (const ring of [...LATITUDE_RINGS, ...LONGITUDE_MERIDIANS]) {
+    let current = '';
+    for (const pt of ring) {
+      const rotated = rotatePoint(pt, yaw, pitch);
+      if (rotated.z < FRONT_THRESHOLD) {
+        if (current) {
+          paths.push(current);
+          current = '';
+        }
+        continue;
+      }
+      const p = project(rotated);
+      current += current ? ` L ${p.x} ${p.y}` : `M ${p.x} ${p.y}`;
+    }
+    if (current) paths.push(current);
+  }
+  return paths;
+}
+
+// A small, stable starfield — generated once (not re-randomized every
+// render) using a simple seeded sequence so it doesn't jitter as the
+// globe rotates.
+function buildStars(count) {
+  let seed = 42;
+  const rand = () => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+  return Array.from({length: count}, () => ({
+    x: rand() * 100,
+    y: rand() * 100,
+    r: 0.3 + rand() * 0.9,
+    o: 0.2 + rand() * 0.6,
+  }));
+}
+const STARS = buildStars(50);
+
 export default function TtpGlobe() {
   const dataUrl = useBaseUrl('/data/attack-matrix.json');
   const [attackData, setAttackData] = useState(null);
@@ -123,14 +208,36 @@ export default function TtpGlobe() {
     const depthFactor = (rotated.z + 1) / 2; // 0 (back) .. 1 (front)
     return {
       category: cat,
-      x: rotated.x,
-      y: rotated.y,
+      screen: project(rotated),
       depthFactor,
       scale: 0.55 + 0.45 * depthFactor,
       opacity: 0.3 + 0.7 * depthFactor,
       zIndex: Math.round(depthFactor * 100),
     };
   });
+
+  const gridPaths = useMemo(
+    () => buildGridPaths(rotation.current.yaw, rotation.current.pitch),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rotation is a ref; the render-forcing tick above is what drives this recompute
+    [rotation.current.yaw, rotation.current.pitch, edition.categories.length],
+  );
+
+  // Real, derived connections: two categories are linked on the globe
+  // only if they genuinely share at least one mapped ATT&CK technique —
+  // same underlying data as the detail panel below, not a separate
+  // decorative graph.
+  const connections = useMemo(() => {
+    const ttpSets = edition.categories.map((cat) => new Set(getRelatedAttackIds(cat)));
+    const pairs = [];
+    for (let i = 0; i < ttpSets.length; i++) {
+      for (let j = i + 1; j < ttpSets.length; j++) {
+        let shared = 0;
+        for (const id of ttpSets[i]) if (ttpSets[j].has(id)) shared++;
+        if (shared > 0) pairs.push({a: i, b: j, shared});
+      }
+    }
+    return pairs;
+  }, [edition]);
 
   const selectedCategory = selectedCode ? edition.categories.find((c) => c.code === selectedCode) : null;
   const relatedTtps = selectedCategory ? getRelatedAttackIds(selectedCategory) : [];
@@ -179,32 +286,70 @@ export default function TtpGlobe() {
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}>
-          <div className={styles.globeSphereOutline} />
-          {projectedNodes
-            .slice()
-            .sort((a, b) => a.zIndex - b.zIndex)
-            .map(({category, x, y, scale, opacity, zIndex}) => {
-              const theme = THEMES[category.theme];
-              return (
-                <button
-                  key={category.code}
-                  type="button"
-                  className={styles.globeNode}
-                  data-color={theme.color}
-                  data-active={selectedCode === category.code}
-                  style={{
-                    left: `${50 + x * 42}%`,
-                    top: `${50 - y * 42}%`,
-                    transform: `translate(-50%, -50%) scale(${scale})`,
-                    opacity,
-                    zIndex,
-                  }}
-                  onClick={() => setSelectedCode(category.code)}
-                  title={category.name}>
-                  {category.code}
-                </button>
-              );
-            })}
+          <svg className={styles.globeStarfield} viewBox="0 0 100 100" aria-hidden="true">
+            {STARS.map((s, i) => (
+              <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="currentColor" opacity={s.o} />
+            ))}
+          </svg>
+
+          <div className={styles.globeSphere}>
+            <svg className={styles.globeGrid} viewBox="0 0 100 100" aria-hidden="true">
+              {gridPaths.map((d, i) => (
+                <path key={i} d={d} fill="none" stroke="currentColor" strokeWidth="0.3" />
+              ))}
+              {connections.map(({a, b, shared}) => {
+                const nodeA = projectedNodes[a];
+                const nodeB = projectedNodes[b];
+                const minDepth = Math.min(nodeA.depthFactor, nodeB.depthFactor);
+                if (minDepth < 0.32) return null; // hide arcs that dip too far around the back
+                const mx = (nodeA.screen.x + nodeB.screen.x) / 2;
+                const my = (nodeA.screen.y + nodeB.screen.y) / 2;
+                // Push the control point away from center so the arc bows
+                // outward, like a lifted great-circle line rather than a
+                // flat chord straight through the sphere.
+                const away = Math.hypot(mx - 50, my - 50) || 1;
+                const bow = 1 + shared * 0.15;
+                const cx = 50 + ((mx - 50) / away) * (away + 6 * bow);
+                const cy = 50 + ((my - 50) / away) * (away + 6 * bow);
+                return (
+                  <path
+                    key={`${a}-${b}`}
+                    d={`M ${nodeA.screen.x} ${nodeA.screen.y} Q ${cx} ${cy} ${nodeB.screen.x} ${nodeB.screen.y}`}
+                    fill="none"
+                    className={styles.connectionArc}
+                    style={{opacity: 0.15 + minDepth * 0.45}}
+                  />
+                );
+              })}
+            </svg>
+
+            {projectedNodes
+              .slice()
+              .sort((a, b) => a.zIndex - b.zIndex)
+              .map(({category, screen, scale, opacity, zIndex}) => {
+                const theme = THEMES[category.theme];
+                return (
+                  <button
+                    key={category.code}
+                    type="button"
+                    className={styles.globeNode}
+                    data-color={theme.color}
+                    data-active={selectedCode === category.code}
+                    style={{
+                      left: `${screen.x}%`,
+                      top: `${screen.y}%`,
+                      transform: `translate(-50%, -50%) scale(${scale})`,
+                      opacity,
+                      zIndex,
+                    }}
+                    onClick={() => setSelectedCode(category.code)}
+                    title={category.name}>
+                    {category.code}
+                  </button>
+                );
+              })}
+          </div>
+
           <p className={styles.globeHint}>Drag to rotate</p>
         </div>
 
