@@ -1,23 +1,25 @@
 import React, {useEffect, useRef} from 'react';
 import Link from '@docusaurus/Link';
-import {getTechniqueForLabel} from './techniques';
+import {getTechniqueForLabel, getTechniqueById} from './techniques';
 import styles from './styles.module.css';
 
-export default function TechniqueModal({label, onClose}) {
+export default function TechniqueModal({label, techniqueId, onClose}) {
   const dialogRef = useRef(null);
-  const technique = label ? getTechniqueForLabel(label) : null;
+  const isOpen = Boolean(label || techniqueId);
+  const technique = techniqueId ? getTechniqueById(techniqueId) : label ? getTechniqueForLabel(label) : null;
+  const displayTitle = technique ? technique.title : label;
 
   useEffect(() => {
-    if (!label) return undefined;
+    if (!isOpen) return undefined;
     function handleKey(e) {
       if (e.key === 'Escape') onClose();
     }
     document.addEventListener('keydown', handleKey);
     dialogRef.current?.focus();
     return () => document.removeEventListener('keydown', handleKey);
-  }, [label, onClose]);
+  }, [isOpen, onClose]);
 
-  if (!label) return null;
+  if (!isOpen) return null;
 
   return (
     <div className={styles.modalOverlay} onMouseDown={onClose}>
@@ -26,7 +28,7 @@ export default function TechniqueModal({label, onClose}) {
         className={styles.modalPanel}
         role="dialog"
         aria-modal="true"
-        aria-label={technique ? technique.title : label}
+        aria-label={displayTitle}
         tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}>
         <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Close">
@@ -35,7 +37,7 @@ export default function TechniqueModal({label, onClose}) {
 
         {!technique ? (
           <div className={styles.modalBody}>
-            <h2 className={styles.modalTitle}>{label}</h2>
+            <h2 className={styles.modalTitle}>{displayTitle}</h2>
             <p className={styles.modalFallback}>
               A detailed write-up for this specific technique isn't ready yet — check back soon.
             </p>
