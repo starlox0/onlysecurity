@@ -32,3 +32,36 @@
   color: var(--os-text-muted);
   margin: 0;
 }
+
+.sectionDivider {
+  max-width: 720px;
+  margin: 4rem auto 2.5rem;
+  text-align: center;
+  padding-top: 3rem;
+  border-top: 1px solid var(--os-border);
+}
+
+.sectionEyebrow {
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--os-accent-green);
+  margin-bottom: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 800;
+  margin: 0 0 0.9rem;
+  color: var(--os-text);
+}
+
+.sectionSubtitle {
+  font-size: 0.96rem;
+  line-height: 1.6;
+  color: var(--os-text-muted);
+  margin: 0;
+}
