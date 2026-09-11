@@ -651,25 +651,56 @@
   aspect-ratio: 1;
   width: 100%;
   max-width: 420px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(63, 185, 80, 0.12), transparent 60%), var(--os-surface);
-  border: 1px solid var(--os-border);
   cursor: grab;
   touch-action: none;
   user-select: none;
-  overflow: hidden;
 }
 
 .globeContainer:active {
   cursor: grabbing;
 }
 
-.globeSphereOutline {
+.globeStarfield {
   position: absolute;
-  inset: 6%;
-  border-radius: 50%;
-  border: 1px dashed var(--os-border);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--os-text-muted);
   pointer-events: none;
+}
+
+.globeSphere {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  overflow: hidden;
+  /* Lit-sphere shading: a bright highlight where the "light" hits,
+     darkening toward the limb — plus a soft outer atmosphere glow and an
+     inset shadow for limb-darkening, so it reads as a solid lit ball
+     rather than a flat tinted circle. */
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.10), transparent 42%),
+    radial-gradient(circle at 60% 68%, rgba(63, 185, 80, 0.16), transparent 55%),
+    radial-gradient(circle at 50% 50%, var(--os-surface-2) 0%, var(--os-surface) 55%, var(--os-bg) 100%);
+  box-shadow:
+    inset -14px -14px 40px rgba(0, 0, 0, 0.55),
+    inset 8px 8px 24px rgba(255, 255, 255, 0.04),
+    0 0 45px 4px rgba(63, 185, 80, 0.18);
+  border: 1px solid var(--os-border);
+}
+
+.globeGrid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--os-border);
+  pointer-events: none;
+}
+
+.connectionArc {
+  stroke: var(--os-accent-blue);
+  stroke-width: 0.35;
 }
 
 .globeNode {
@@ -686,6 +717,7 @@
   font-weight: 800;
   color: #06120a;
   cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
   transition: box-shadow 0.15s ease;
 }
 
@@ -695,12 +727,12 @@
 .globeNode[data-color='green'] { background: var(--os-accent-green); }
 
 .globeNode[data-active='true'] {
-  box-shadow: 0 0 0 3px var(--os-text);
+  box-shadow: 0 0 0 3px var(--os-text), 0 3px 10px rgba(0, 0, 0, 0.5);
 }
 
 .globeHint {
   position: absolute;
-  bottom: 0.8rem;
+  bottom: -1.6rem;
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.7rem;
