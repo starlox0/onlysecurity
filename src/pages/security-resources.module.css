@@ -36,3 +36,49 @@
 .subtitle a {
   color: var(--os-accent-blue);
 }
+
+.tabToggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin-top: 1.5rem;
+  padding: 0.35rem;
+  border: 1px solid var(--os-border);
+  border-radius: 999px;
+  background: var(--os-surface);
+}
+
+.tabButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.55rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--os-text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tabButton:hover {
+  color: var(--os-text);
+}
+
+.tabButton[data-active='true'] {
+  background: var(--os-accent-green);
+  color: #06120a;
+}
+
+@media screen and (max-width: 480px) {
+  .tabToggle {
+    width: 100%;
+    justify-content: center;
+  }
+  .tabButton {
+    flex: 1;
+    justify-content: center;
+  }
+}
