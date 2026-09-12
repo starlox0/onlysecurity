@@ -1,5 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {TOOLS, TOOL_CATEGORIES, getToolImage, getCategory} from './data';
+import BugBountyToolkit from './BugBountyToolkit';
 import styles from './styles.module.css';
 
 const ACCENTS = ['green', 'blue', 'amber', 'red'];
@@ -66,6 +67,7 @@ function ToolCard({tool}) {
 }
 
 export default function SecurityTools() {
+  const [mode, setMode] = useState('domain'); // 'domain' | 'bugbounty'
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('ALL');
 
@@ -100,54 +102,81 @@ export default function SecurityTools() {
 
   return (
     <div>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder='Try "network pentest", "AD", "cloud", "mobile", or a tool name...'
-        className={styles.searchInput}
-        aria-label="Search security tools"
-      />
-
-      <div className={styles.categoryChips}>
-        {TOOL_CATEGORIES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className={styles.categoryChip}
-            data-active={activeCategory === c.id}
-            onClick={() => selectCategory(c.id)}>
-            <span aria-hidden="true">{c.icon}</span> {c.label}
-          </button>
-        ))}
+      <div className={styles.bbModeToggle} role="tablist" aria-label="Choose a tools view">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'domain'}
+          className={styles.bbModeButton}
+          data-active={mode === 'domain'}
+          onClick={() => setMode('domain')}>
+          🗂️ By Domain
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'bugbounty'}
+          className={styles.bbModeButton}
+          data-active={mode === 'bugbounty'}
+          onClick={() => setMode('bugbounty')}>
+          🎯 Bug Bounty Toolkit
+        </button>
       </div>
 
-      <p className={styles.resultCount}>
-        {filtered.length} tool{filtered.length === 1 ? '' : 's'}
-        {activeCategory !== 'ALL' && ` in ${getCategory(activeCategory).label}`}
-        {query && ` matching "${query}"`}
-      </p>
+      {mode === 'bugbounty' ? (
+        <BugBountyToolkit />
+      ) : (
+        <>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder='Try "network pentest", "AD", "cloud", "mobile", or a tool name...'
+            className={styles.searchInput}
+            aria-label="Search security tools"
+          />
 
-      {filtered.length === 0 && (
-        <div className={styles.emptyState}>
-          <p className={styles.emptyStateTitle}>No tools match that search.</p>
-          <p className={styles.emptyStateBody}>Try a broader term, or clear the category filter.</p>
-        </div>
-      )}
-
-      {grouped.map(([category, tools]) => (
-        <section key={category.id} className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            <span aria-hidden="true">{category.icon}</span> {category.label}{' '}
-            <span className={styles.sectionCount}>({tools.length})</span>
-          </h2>
-          <div className={styles.toolGrid}>
-            {tools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} />
+          <div className={styles.categoryChips}>
+            {TOOL_CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={styles.categoryChip}
+                data-active={activeCategory === c.id}
+                onClick={() => selectCategory(c.id)}>
+                <span aria-hidden="true">{c.icon}</span> {c.label}
+              </button>
             ))}
           </div>
-        </section>
-      ))}
+
+          <p className={styles.resultCount}>
+            {filtered.length} tool{filtered.length === 1 ? '' : 's'}
+            {activeCategory !== 'ALL' && ` in ${getCategory(activeCategory).label}`}
+            {query && ` matching "${query}"`}
+          </p>
+
+          {filtered.length === 0 && (
+            <div className={styles.emptyState}>
+              <p className={styles.emptyStateTitle}>No tools match that search.</p>
+              <p className={styles.emptyStateBody}>Try a broader term, or clear the category filter.</p>
+            </div>
+          )}
+
+          {grouped.map(([category, tools]) => (
+            <section key={category.id} className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <span aria-hidden="true">{category.icon}</span> {category.label}{' '}
+                <span className={styles.sectionCount}>({tools.length})</span>
+              </h2>
+              <div className={styles.toolGrid}>
+                {tools.map((tool) => (
+                  <ToolCard key={tool.id} tool={tool} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </>
+      )}
     </div>
   );
 }
