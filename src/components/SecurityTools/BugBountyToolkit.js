@@ -69,11 +69,7 @@ export default function BugBountyToolkit() {
   return (
     <div>
       <p className={styles.bbIntro}>
-        {countBBTools()} tools, transcribed in full from{' '}
-        <a href="https://github.com/vavkamil/awesome-bugbounty-tools" target="_blank" rel="noopener noreferrer">
-          vavkamil/awesome-bugbounty-tools
-        </a>
-        , organized under that project's own section structure.
+        {countBBTools()} tools.
       </p>
 
       <input
