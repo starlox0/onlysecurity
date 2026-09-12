@@ -199,3 +199,163 @@
     transition: none;
   }
 }
+
+/* --- Bug Bounty Toolkit --- */
+.bbModeToggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  padding: 0.35rem;
+  border: 1px solid var(--os-border);
+  border-radius: 999px;
+  background: var(--os-surface);
+}
+
+.bbModeButton {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.55rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--os-text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.bbModeButton:hover {
+  color: var(--os-text);
+}
+
+.bbModeButton[data-active='true'] {
+  background: var(--os-accent-green);
+  color: #06120a;
+}
+
+.bbIntro {
+  font-size: 0.86rem;
+  color: var(--os-text-muted);
+  margin: 0 0 1.2rem;
+}
+
+.bbIntro a {
+  color: var(--os-accent-blue);
+}
+
+.bbSectionTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.bbSectionTab {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.5rem 1.1rem;
+  border-radius: 6px;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface);
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.bbSectionTab:hover {
+  border-color: var(--os-accent-blue);
+  color: var(--os-text);
+}
+
+.bbSectionTab[data-active='true'] {
+  background: var(--os-accent-blue);
+  border-color: var(--os-accent-blue);
+  color: #06120a;
+}
+
+.bbChipCount {
+  font-family: var(--ifm-font-family-monospace);
+  opacity: 0.75;
+}
+
+/* Dense row list — appropriate at ~380 tools, unlike the image-card grid
+   used for the smaller by-domain directory. */
+.bbList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.bbRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-surface);
+  text-decoration: none;
+  color: var(--os-text);
+  transition: border-color 0.15s ease;
+}
+
+.bbRow:hover,
+.bbRow:focus-visible {
+  border-color: var(--os-accent-green);
+  text-decoration: none;
+  color: var(--os-text);
+}
+
+.bbRowLogo {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--os-surface-2);
+}
+
+.bbRowLogoFallback {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 6px;
+  background: var(--os-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.bbRowBody {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.bbRowName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--os-text);
+  flex-shrink: 0;
+}
+
+.bbRowDescription {
+  font-size: 0.8rem;
+  color: var(--os-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media screen and (max-width: 600px) {
+  .bbRowBody {
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .bbRowDescription {
+    white-space: normal;
+  }
+}
