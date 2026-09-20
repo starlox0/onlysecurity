@@ -142,6 +142,11 @@ const config = {
           to: "/byte-forge",
           label: "Byte Forge",
         },
+        // docusaurus.config.js — Other dropdown items array
+       { 
+         to: "/ctf", 
+         label: "CTF" 
+       },
             ],
       },
 
