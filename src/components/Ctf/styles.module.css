@@ -1,0 +1,392 @@
+.emptyNote {
+  font-size: 0.9rem;
+  color: var(--os-text-muted);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+/* --- Auth panel --- */
+.authPanel {
+  max-width: 380px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid var(--os-border);
+  border-radius: 10px;
+  background: var(--os-surface);
+}
+
+.authModeTabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.2rem;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: var(--os-surface-2);
+}
+
+.authModeTab {
+  flex: 1;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.5rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.authModeTab[data-active='true'] {
+  background: var(--os-accent-green);
+  color: #06120a;
+}
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.authLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--os-text-muted);
+}
+
+.authInput {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-bg);
+  color: var(--os-text);
+  font-size: 0.9rem;
+}
+
+.authInput:focus {
+  outline: none;
+  border-color: var(--os-accent-green);
+}
+
+.authError {
+  font-size: 0.82rem;
+  color: var(--os-accent-red);
+  margin: 0;
+}
+
+.authSubmit {
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 700;
+  padding: 0.65rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--os-accent-green);
+  color: #06120a;
+  cursor: pointer;
+}
+
+.authSubmit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* --- Status bar / tabs --- */
+.statusBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.8rem 1.1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+  font-size: 0.88rem;
+  color: var(--os-text-muted);
+}
+
+.statusBar strong {
+  color: var(--os-accent-green);
+}
+
+.logoutButton {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 0.35rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface-2);
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.logoutButton:hover {
+  border-color: var(--os-accent-red);
+  color: var(--os-accent-red);
+}
+
+.ctfTabs {
+  display: inline-flex;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  padding: 0.35rem;
+  border: 1px solid var(--os-border);
+  border-radius: 999px;
+  background: var(--os-surface);
+}
+
+.ctfTab {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.ctfTab[data-active='true'] {
+  background: var(--os-accent-green);
+  color: #06120a;
+}
+
+/* --- Challenge list --- */
+.categorySection {
+  margin-bottom: 2rem;
+}
+
+.categoryTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--os-text);
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--os-border);
+}
+
+.challengeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.challengeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--os-border);
+  border-radius: 8px;
+  background: var(--os-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.challengeCard:hover {
+  border-color: var(--os-accent-green);
+  transform: translateY(-2px);
+}
+
+.challengeCard[data-solved='true'] {
+  border-color: var(--os-accent-green);
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.challengeCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.challengeCardTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--os-text);
+}
+
+.solvedCheck {
+  color: var(--os-accent-green);
+  font-weight: 800;
+}
+
+.challengeCardPoints {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.76rem;
+  color: var(--os-text-muted);
+}
+
+/* --- Challenge modal --- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 1rem;
+  z-index: 300;
+  overflow-y: auto;
+}
+
+.modalPanel {
+  width: 100%;
+  max-width: 520px;
+  background: var(--os-surface);
+  border: 1px solid var(--os-border);
+  border-radius: 12px;
+  padding: 1.8rem;
+  position: relative;
+}
+
+.modalClose {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--os-border);
+  background: var(--os-surface-2);
+  color: var(--os-text-muted);
+  cursor: pointer;
+}
+
+.modalCategory {
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--os-accent-blue);
+  margin-bottom: 0.5rem;
+}
+
+.modalTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--os-text);
+  margin: 0 0 0.4rem;
+}
+
+.modalPoints {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8rem;
+  color: var(--os-text-muted);
+}
+
+.modalDescription {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--os-text-muted);
+  white-space: pre-wrap;
+  margin: 1.1rem 0;
+}
+
+.modalDescription code {
+  background: var(--os-surface-2);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.modalFileLink {
+  display: inline-block;
+  font-size: 0.85rem;
+  color: var(--os-accent-green);
+  margin-bottom: 1rem;
+}
+
+.modalSolvedNote {
+  font-size: 0.88rem;
+  color: var(--os-accent-green);
+  font-weight: 700;
+}
+
+.flagForm {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.flagInput {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--os-border);
+  border-radius: 6px;
+  background: var(--os-bg);
+  color: var(--os-text);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.88rem;
+}
+
+.flagInput:focus {
+  outline: none;
+  border-color: var(--os-accent-green);
+}
+
+.flagSubmit {
+  font-family: var(--ifm-font-family-monospace);
+  font-weight: 700;
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  border: none;
+  background: var(--os-accent-green);
+  color: #06120a;
+  cursor: pointer;
+}
+
+.flagSubmit:disabled {
+  opacity: 0.6;
+}
+
+.flagStatus {
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.flagStatus[data-tone='success'] {
+  color: var(--os-accent-green);
+}
+
+.flagStatus[data-tone='error'] {
+  color: var(--os-accent-red);
+}
+
+/* --- Scoreboard --- */
+.scoreTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.scoreTable th {
+  text-align: left;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--os-text-muted);
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--os-border);
+}
+
+.scoreTable td {
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--os-border);
+  color: var(--os-text);
+}
+
+.scoreTable tr[data-me='true'] td {
+  background: rgba(63, 185, 80, 0.08);
+  font-weight: 700;
+}
