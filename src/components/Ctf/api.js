@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'https://onlysecurity-ctf-backend.vercel.app/';
+export const API_BASE_URL = 'https://onlysecurity-ctf-backend.vercel.app';
 
 const TOKEN_KEY = 'os-ctf-token';
 const USERNAME_KEY = 'os-ctf-username';
