@@ -1,0 +1,116 @@
+---
+sidebar_position: 9
+title: "Authentication & Session Attacks"
+description: "Cookies, JWTs, login bypass, 2FA bypass, OAuth/SAML misuse, and the password-reset bugs that undo an otherwise-solid login system."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Authentication & Session Attacks
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~13 min`
+
+An application can be free of every bug in the earlier pages and still be completely broken if **"who is this user, really?"** isn't answered correctly at every step. This page covers the most common ways that question gets answered wrong.
+
+---
+
+## Cookies and Sessions
+
+After login, most apps track identity with a **session token** stored in a cookie. The security of the entire system often comes down to a handful of cookie attributes:
+
+| Attribute | What it should be | Why |
+|---|---|---|
+| `HttpOnly` | Set | Prevents JavaScript (including an XSS payload) from reading the cookie via `document.cookie`. |
+| `Secure` | Set | Ensures the cookie is only ever sent over HTTPS, not plaintext HTTP. |
+| `SameSite` | `Lax` or `Strict` | Limits the CSRF risk covered in the previous page. |
+| Token value | Long, random, unpredictable | A guessable session ID can simply be enumerated by an attacker. |
+
+A missing `HttpOnly` flag is a common amplifier: it doesn't cause XSS, but it turns an otherwise-contained XSS bug directly into full session hijacking.
+
+---
+
+## JWT (JSON Web Token) Attacks
+
+JWTs are a self-contained alternative to server-side sessions — the token itself carries the claims (user ID, role, expiry) and is cryptographically signed so the server can trust it without a database lookup. Several classic implementation mistakes break that trust:
+
+- **`alg: none`** — some libraries, if not configured strictly, will accept a token whose header declares `"alg": "none"` and has **no signature at all**, letting an attacker hand-craft any claims they want.
+- **Algorithm confusion (RS256 → HS256)** — if a server is configured to verify using a *public* key for RS256 tokens, but a poorly written verifier accepts HS256 too, an attacker can sign a forged token using the public key as an HMAC secret (since public keys are, by definition, public) and the server will mistakenly validate it as legitimate.
+- **Weak/guessable signing secrets** — an HS256 secret that's short, a default value, or leaked in a public repo can simply be brute-forced or looked up, letting anyone forge valid tokens.
+
+```text
+Header:  { "alg": "HS256" }
+Payload: { "user": "alice", "role": "user" }
+Signature: HMAC-SHA256(header + "." + payload, secret)
+```
+
+If an attacker learns `secret`, they can set `"role": "admin"` and re-sign — the server has no way to distinguish a forged token from a real one once the secret is known.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+The core lesson of JWT attacks is: **a signature only protects you if the verification code actually checks the algorithm it expects and keeps the signing secret truly secret.** JWTs are not inherently more secure than traditional sessions — they just move the trust problem from "can an attacker guess a session ID" to "can an attacker forge or steal a signature."
+
+</Admonition>
+
+---
+
+## Login Bypass & Account Takeover
+
+Beyond injection-based login bypass (covered on the SQL injection page), logic-level login flaws are common:
+
+- **Improper response checking** — a client-side check like `if (response.success)` can sometimes be bypassed by manipulating the response the server sends, if the server doesn't *also* enforce the check.
+- **Username enumeration** — a login or "forgot password" form that responds differently for "user doesn't exist" vs. "wrong password" lets an attacker build a list of valid accounts to target.
+- **Credential stuffing** — reusing leaked username/password pairs from other breaches; not a bug in the app's logic, but a reason rate limiting and MFA matter.
+
+### OAuth Misconfiguration → Account Takeover
+
+"Login with Google/Facebook" flows (OAuth) introduce their own failure modes — the most common being an application that trusts an email address returned by the identity provider **without verifying it was actually verified by that provider**, or a `redirect_uri` validation that's too loose, letting an attacker redirect the OAuth authorization code to a server they control and steal it.
+
+### SAML Attacks
+
+Enterprise single sign-on via SAML exchanges signed XML assertions. Because SAML is XML, it inherits XXE risk (see the earlier page) — and separately, weak signature validation (e.g. checking that *a* signature exists, but not that it matches the asserted identity, or accepting an unsigned assertion) can let an attacker forge an assertion claiming to be any user, including an administrator.
+
+---
+
+## Two-Factor Authentication (2FA) Bypass
+
+2FA is meant to stop an attacker who already has a password. Common implementation bugs undo that guarantee:
+
+- **No rate limiting on the OTP code** — a 6-digit code is only ~1 million possibilities; without rate limiting, it can simply be brute-forced.
+- **Logic flaw in the verification flow** — some implementations check "is 2FA enabled for this account" and "is the code correct" as separate steps that can be reordered or skipped by directly requesting a post-2FA endpoint.
+- **Backup codes / "remember this device" cookies** that aren't bound tightly enough to the original session, letting a stolen cookie skip 2FA entirely on a new device.
+
+---
+
+## Registration & Password-Reset Bugs
+
+- **Registration vulnerabilities** — a signup flow that doesn't verify email ownership before granting access can let an attacker register as `admin@company.com` and access privileged features tied to that domain.
+- **Password reset poisoning** — a reset link built using the `Host` header the attacker controls (e.g. `https://ATTACKER-CONTROLLED-HOST/reset?token=...`) can trick a victim into leaking their own valid reset token to the attacker's server.
+- **Predictable reset tokens** — if the token isn't long and cryptographically random, it can be guessed or brute-forced within its validity window.
+
+---
+
+## How This All Gets Fixed
+
+| Area | Primary Fix |
+|---|---|
+| Cookies | Always set `HttpOnly`, `Secure`, and an appropriate `SameSite` value. |
+| JWTs | Pin the expected algorithm explicitly in verification code (never trust the token's own `alg` header); use long, randomly generated secrets; rotate them if ever exposed. |
+| Login logic | Enforce every check server-side; return identical responses for "wrong password" and "no such user." |
+| OAuth/SAML | Strictly validate `redirect_uri` against an allowlist; verify the identity provider actually confirmed email ownership; validate SAML signatures against the specific asserted identity, not just "a signature is present." |
+| 2FA | Rate-limit verification attempts; bind session state so post-2FA endpoints can't be reached by skipping the check. |
+| Password reset | Use long, random, single-use, time-limited tokens; build reset links from a server-configured domain, never the `Host` header. |
+
+---
+
+## Key Takeaways
+
+- Cookie flags (`HttpOnly`, `Secure`, `SameSite`) are small settings with outsized impact on session security.
+- JWT security depends entirely on strict algorithm pinning and secret secrecy — the signature is only as trustworthy as the verification code.
+- OAuth and SAML add convenience but import their own, often more subtle, identity-verification failure modes.
+- 2FA and password-reset flows need the *same* rigor as the primary login — they are frequently the weaker link.
+
+---
+
+## Next
+
+Even with airtight authentication, an app can still let a logged-in user do things they shouldn't: **[Access Control & Business Logic Flaws](./09-access-control-and-business-logic)**.

@@ -1,0 +1,99 @@
+---
+sidebar_position: 4
+title: "Template Injection (SSTI & CSTI)"
+description: "What happens when a templating engine evaluates user input as a template instead of plain text — server-side and client-side."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Template Injection (SSTI & CSTI)
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~8 min`
+
+Modern web frameworks render pages with template engines (Jinja2, Twig, Freemarker, Handlebars, AngularJS). These engines support their own mini-language — loops, conditionals, and expression evaluation inside `{{ }}` or `${ }` delimiters. Template injection happens when **user input is inserted into the template itself**, rather than into a variable the template displays.
+
+---
+
+## The Critical Distinction
+
+```text
+Safe:   render("Hello, {{ name }}", name = user_input)
+Unsafe: render("Hello, " + user_input)
+```
+
+In the safe version, `user_input` is *data* passed into a fixed template — the engine will display it, even escape it, but never execute it as template syntax. In the unsafe version, `user_input` becomes **part of the template source itself**, so if it contains template syntax, the engine evaluates it.
+
+```text
+User submits as their "name": {{7*7}}
+
+Safe version renders:   Hello, {{7*7}}
+Unsafe version renders:  Hello, 49
+```
+
+That `49` is the "hello world" of SSTI — confirming the engine evaluated the expression rather than just printing it.
+
+---
+
+## Server-Side Template Injection (SSTI)
+
+Because the template engine runs on the server with the server's permissions, a confirmed SSTI is often a direct path to **remote code execution**. Template languages frequently expose enough of the underlying runtime (object introspection, filters, "safe" helper functions with side effects) that an attacker can escalate from "print 49" to "run an OS command" through documented engine features — no additional vulnerability required.
+
+```text
+Confirm: {{7*7}}              -->  49   (evaluated, not printed literally)
+Escalate: explore what objects/methods the engine exposes
+Weaponize: reach a method that executes code or reads files
+```
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+SSTI feels intimidating because the escalation payloads look like arcane one-liners specific to each template engine. But the *concept* is simple: you're not injecting into a sandbox that merely displays text — you're injecting into a **programming language interpreter** that happens to also render HTML. Once you know which engine is in use, the rest is methodology (what does this engine expose?), not magic.
+
+</Admonition>
+
+---
+
+## Client-Side Template Injection (CSTI)
+
+The same idea, but the template engine runs **in the victim's browser** instead of on the server — common in older AngularJS applications, which compile `{{ }}` expressions client-side. A successful CSTI payload executes inside the victim's browser session, which usually means it behaves like a particularly powerful form of XSS (covered in the next page) rather than remote code execution on a server.
+
+```text
+Comment field accepts: {{constructor.constructor('alert(1)')()}}
+```
+
+If the framework evaluates that expression client-side, it runs arbitrary JavaScript in whoever views the comment — often **bypassing XSS filters that only block `<script>` tags**, since the payload contains no HTML tags at all.
+
+---
+
+## Detecting Template Injection
+
+| Step | What to try |
+|---|---|
+| Polyglot probe | Submit a string containing syntax from several engines at once, e.g. `${7*7}{{7*7}}<%= 7*7 %>`, and see which one(s) evaluate. |
+| Confirm the engine | A `49` appearing where `{{7*7}}` was shows Jinja2/Twig-style syntax; `${7*7}` evaluating points to a different family (e.g. Freemarker, JSP EL). |
+| Error-based fingerprinting | An unhandled template error often names the engine and version directly in a stack trace. |
+
+---
+
+## How This Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Never build a template string from user input** | The one rule that matters — user input should only ever be a *variable value*, never part of the template source. |
+| **Sandboxed template environments** | Some engines offer a restricted mode that disables dangerous object access; use it, but don't treat it as a complete guarantee. |
+| **Logic-less templates** | Engines designed around "display only, no expression evaluation" (e.g. Mustache in strict mode) remove the attack surface entirely for most use cases. |
+| **Content Security Policy** | For CSTI specifically, a strict CSP limits what injected script can actually do even if evaluation occurs. |
+
+---
+
+## Key Takeaways
+
+- SSTI occurs when user input becomes part of the *template*, not just a value the template displays.
+- A confirmed SSTI frequently escalates to remote code execution because template engines expose runtime internals.
+- CSTI is the browser-side equivalent, usually behaving like an XSS bypass rather than RCE.
+- Polyglot probes (`${7*7}{{7*7}}`) are the standard way to both detect injection and fingerprint the engine in one request.
+
+---
+
+## Next
+
+Template injection, SQL injection, and command injection all end with user input *executing*. The next page covers what happens when user input instead ends up **inside a data format the application trusts too much**: **[XML, XXE & Data-Format Attacks](./04-xml-and-data-format-attacks)**.

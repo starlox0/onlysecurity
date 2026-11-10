@@ -1,0 +1,98 @@
+---
+sidebar_position: 15
+title: "Timing Attacks & Denial of Service"
+description: "How the time an operation takes can leak secrets, and how a single crafted input can cost a server far more than it costs the attacker to send."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Timing Attacks & Denial of Service
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~8 min`
+
+This section's recurring theme — differences in server behavior reveal information an attacker shouldn't have — gets its purest expression here. No payload "does" anything visible; the vulnerability is entirely in **how long** or **how expensive** an operation turns out to be.
+
+---
+
+## Timing Attacks
+
+If a comparison function returns as soon as it finds the first mismatched character, checking a secret against a guess takes **microscopically longer** the more leading characters the guess gets right.
+
+```text
+Compare "secretABC" vs guess "a........." --> fails at character 1 (fast)
+Compare "secretABC" vs guess "s........." --> fails at character 2 (slightly slower)
+Compare "secretABC" vs guess "se........" --> fails at character 3 (slightly slower still)
+```
+
+By measuring response times across thousands of requests and statistically isolating the signal from network noise, an attacker can recover a secret **one character at a time**, without ever seeing the secret directly — a technique that has been used in practice against API key comparisons, password checks, and HMAC signature validation that used a naive, non-constant-time `==` comparison.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+This is the same "differential thinking" from the methodology page, taken to its logical extreme: instead of comparing *response content*, the attacker compares *response time* across thousands of samples. It requires statistics and patience rather than a clever payload — which is exactly why it's easy to overlook during a quick manual test.
+
+</Admonition>
+
+---
+
+## Regular Expression Denial of Service (ReDoS)
+
+Some regular expression patterns have **catastrophic backtracking** behavior — for certain crafted inputs, the regex engine's runtime grows exponentially with input length instead of linearly.
+
+```text
+Pattern:  (a+)+$
+Input:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!"
+```
+
+A pattern like this, applied to a long string that *almost* matches but ultimately fails, can force the regex engine to try an enormous number of ways to group the repeated characters before giving up — turning a tiny, cheap-to-send input into a request that pegs a CPU core for seconds, minutes, or longer. If that regex runs on a request-handling thread, a handful of such requests can exhaust an entire server's capacity.
+
+```text
+Attacker sends one small string (a few dozen bytes)
+       |
+       v
+Vulnerable regex takes exponentially longer to evaluate as length grows
+       |
+       v
+A single request consumes disproportionate CPU time
+       |
+       v
+Enough concurrent requests exhaust server capacity for everyone
+```
+
+---
+
+## Application-Layer Denial of Service
+
+More broadly, any endpoint where a small, cheap-to-send request triggers a **disproportionately expensive** server-side operation is a potential DoS vector — not just regex. Examples include:
+
+- An endpoint that generates a large PDF/report from a user-controlled parameter with no size limit.
+- A search feature that performs an expensive, unindexed database query directly from user input.
+- A "zip bomb" style upload — a tiny compressed file that expands to gigabytes once decompressed, if the server processes it without a decompression size limit.
+- Recursive or deeply nested JSON/XML input that costs far more to parse than its byte size suggests (related to the "billion laughs" entity expansion mentioned on the XML page).
+
+The underlying pattern is always an **asymmetry**: the attacker's cost to send the request is tiny compared to the defender's cost to process it.
+
+---
+
+## How These All Get Fixed
+
+| Vulnerability | Primary Fix |
+|---|---|
+| Timing attacks | Use constant-time comparison functions for secrets (most languages provide one specifically for this, e.g. `crypto.timingSafeEqual` or equivalent) instead of a standard `==`/`.equals()`. |
+| ReDoS | Avoid regex patterns with nested, ambiguous repetition; use regex engines or libraries with built-in backtracking limits; set execution timeouts on any regex evaluating untrusted input. |
+| Application-layer DoS | Enforce size/complexity limits on anything derived from user input — request bodies, decompressed archive size, query complexity, recursion depth — before expensive processing begins. |
+| General resilience | Rate limiting, request timeouts, and resource quotas per request limit how much damage any single asymmetric request can do, even if a specific bug slips through. |
+
+---
+
+## Key Takeaways
+
+- Timing attacks extract secrets through statistical analysis of response latency, not response content — constant-time comparisons are the fix.
+- ReDoS exploits catastrophic backtracking in poorly written regex patterns, turning a tiny input into a CPU-exhausting one.
+- Application-layer DoS generalizes the same idea: look for any place a cheap request triggers an expensive operation.
+- Resource limits (size, recursion depth, timeouts) are the universal defense across this entire category.
+
+---
+
+## Next
+
+The final page in this section rounds up the remaining, smaller-but-still-common bug classes that don't neatly fit the categories above: **[Misc & Emerging Web Attacks](./15-misc-and-emerging-web-attacks)**.

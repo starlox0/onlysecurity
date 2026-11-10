@@ -1,0 +1,129 @@
+---
+sidebar_position: 13
+title: "HTTP Protocol-Level Attacks"
+description: "Request smuggling, response splitting, WebSocket and gRPC-over-web issues — what happens when the infrastructure in front of an app parses HTTP differently than the app itself."
+---
+
+import Admonition from '@theme/Admonition';
+
+# HTTP Protocol-Level Attacks
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~11 min`
+
+Most production web traffic passes through at least one intermediary — a load balancer, a CDN, a reverse proxy — before reaching the application server. This page is about what happens when the **front-end** and **back-end** disagree about where one HTTP request ends and the next one begins.
+
+---
+
+## HTTP Request Smuggling
+
+A request's length can be declared two different ways: the `Content-Length` header, or `Transfer-Encoding: chunked`. The HTTP specification says if both are present, one should take priority — but **not every piece of software agrees on which one**, especially across the front-end proxy and back-end server in a chain.
+
+```text
+Front-end proxy reads:  Content-Length (believes request ends at byte 50)
+Back-end server reads:  Transfer-Encoding: chunked (believes request ends elsewhere)
+       |
+       v
+The two disagree about where this request ends and the next one begins
+       |
+       v
+Leftover bytes from the attacker's request get interpreted as
+the START of the NEXT, unrelated user's request
+```
+
+This is dangerous specifically *because* it's shared infrastructure: the attacker effectively smuggles a hidden request that gets spliced onto the front of whatever the next legitimate visitor sends — potentially hijacking their session, injecting responses into their connection, or bypassing front-end security controls (like a WAF) that only inspected the "outer" request.
+
+```text
+Classic variants:
+  CL.TE — front-end trusts Content-Length, back-end trusts Transfer-Encoding
+  TE.CL — front-end trusts Transfer-Encoding, back-end trusts Content-Length
+  TE.TE — both trust Transfer-Encoding, but one can be tricked into ignoring it
+```
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Request smuggling is one of the more advanced topics in this section, but the underlying idea is approachable: **two systems that are supposed to agree on "where does this message end" sometimes don't, and the gap between their interpretations is attacker-controlled space.** This exact theme — parser disagreement — reappears constantly in security research across many protocols, not just HTTP.
+
+</Admonition>
+
+---
+
+## HTTP Response Smuggling / Desync
+
+The mirror image of request smuggling: by manipulating how a *response* is framed, an attacker can cause a shared connection to misinterpret where one response ends and the next begins, effectively splitting one response into pieces that get delivered to the wrong party on a connection-reuse (keep-alive) setup.
+
+---
+
+## HTTP Connection Contamination
+
+Related to both of the above: if a proxy reuses the same back-end connection across multiple different front-end clients' requests (common for performance), and a smuggling-style desync occurs, **one user's response can be delivered to a completely different user** sharing that pooled connection — a serious confidentiality failure with no injection payload required beyond the malformed request itself.
+
+---
+
+## CRLF Injection
+
+A more basic, older relative of these bugs: if user input is placed into a raw HTTP header or log line without filtering carriage-return/line-feed characters (`\r\n`), an attacker can inject what looks like additional headers or even an entirely separate HTTP response.
+
+```text
+Intended header:
+  Location: /profile?name=alice
+
+Attacker-controlled name: alice%0d%0aSet-Cookie:%20session=attacker
+
+Resulting headers:
+  Location: /profile?name=alice
+  Set-Cookie: session=attacker
+```
+
+The injected `\r\n` characters forged a brand-new header the application never intended to send — potentially planting a cookie, redirecting elsewhere, or (combined with response smuggling) splitting the response entirely.
+
+---
+
+## Abusing Hop-by-Hop Headers
+
+HTTP distinguishes **end-to-end** headers (meant for the final recipient) from **hop-by-hop** headers (meant only for the immediate connection, like `Connection` and `Keep-Alive`, and stripped by each proxy along the way). An attacker can sometimes list a *security-relevant* header (like an `Authorization` or custom internal auth header) inside the `Connection` header's value, tricking a compliant proxy into stripping it before the request reaches the next hop — potentially bypassing an authentication check that the next hop was relying on a prior hop to enforce.
+
+---
+
+## H2C Smuggling & HTTP/2 Denial of Service
+
+Modern infrastructure adds new variants of the same theme:
+
+- **H2C smuggling** — abusing HTTP/2 cleartext upgrade negotiation at a front-end proxy to establish a connection that bypasses the proxy's own inspection for subsequent requests on that same connection.
+- **HTTP/2 protocol-level denial of service** — certain HTTP/2 features (like rapid stream resets) can be abused to force a server to do far more work per attacker byte than a normal request would, exhausting resources faster than traditional rate limiting expects.
+
+---
+
+## WebSocket & gRPC-over-Web Attacks
+
+WebSockets and gRPC-Web both tunnel non-HTTP(-looking) traffic through an initial HTTP handshake, and both commonly **forget to apply the same security checks** that protect regular HTTP endpoints:
+
+- A WebSocket handshake that doesn't validate the `Origin` header reintroduces a CSRF-like cross-site risk, since a malicious page can open a WebSocket connection to the victim's authenticated session.
+- Messages sent over an established WebSocket connection often bypass the same input validation middleware that regular REST endpoints go through, because developers think of "the HTTP layer" as already handled once the handshake completes.
+- gRPC-Web proxies translate between HTTP/1.1-friendly JSON/text and the underlying gRPC/Protobuf format — a translation layer that, like any protocol-conversion boundary, is a natural place for parsing disagreements to hide.
+
+---
+
+## How These All Get Fixed
+
+| Vulnerability | Primary Fix |
+|---|---|
+| Request/response smuggling | Standardize front-end and back-end on HTTP/2 end-to-end where possible (HTTP/2 framing is far less ambiguous than HTTP/1.1's dual length headers); otherwise, ensure every component in the chain rejects requests with conflicting `Content-Length`/`Transfer-Encoding` instead of guessing. |
+| CRLF injection | Strictly validate/encode any user input placed into headers; use header-setting APIs that reject embedded CR/LF rather than building raw header strings. |
+| Hop-by-hop abuse | Don't allow security-critical headers to be listed as hop-by-hop candidates; validate at the layer that actually enforces the check. |
+| H2C smuggling / HTTP/2 DoS | Keep proxy software patched and configured per vendor guidance for HTTP/2-specific hardening. |
+| WebSocket/gRPC-Web gaps | Validate `Origin` on every WebSocket handshake; run the same input validation on WebSocket messages and gRPC-Web calls as on equivalent REST endpoints — don't treat the transport as a free pass. |
+
+---
+
+## Key Takeaways
+
+- Request/response smuggling exploit disagreements between front-end and back-end systems about where an HTTP message ends.
+- CRLF injection is the simplest version of "attacker-controlled bytes become protocol structure" applied to raw headers.
+- Hop-by-hop header abuse can strip security headers a downstream system was relying on.
+- Newer protocols layered on top of HTTP (WebSocket, gRPC-Web, HTTP/2) inherit old risks (CSRF-like origin issues, missing validation) whenever teams assume "the transport already handled security."
+
+---
+
+## Next
+
+A quieter class of bug hiding in shared infrastructure: what happens when a cache can't tell one user's response from another's: **[Caching & Infrastructure Abuse](./13-caching-and-infrastructure-abuse)**.

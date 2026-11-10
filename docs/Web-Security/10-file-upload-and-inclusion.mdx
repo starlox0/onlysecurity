@@ -1,0 +1,133 @@
+---
+sidebar_position: 11
+title: "File Upload & File Inclusion"
+description: "How an avatar uploader becomes remote code execution, and how path traversal lets an application read or include files it never intended to."
+---
+
+import Admonition from '@theme/Admonition';
+
+# File Upload & File Inclusion
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~10 min`
+
+Features that touch the filesystem — uploading a profile picture, generating a PDF, including a localized template — are some of the richest sources of serious vulnerabilities, because the attack surface spans client-side validation, server-side storage, and whatever process eventually *reads* the file back.
+
+---
+
+## Unrestricted File Upload
+
+The core question for any upload feature: **what stops a user from uploading a file that isn't what the form expects, and what happens to that file afterward?**
+
+A classic chain looks like this:
+
+```text
+1. App only checks the file extension client-side (easily bypassed with a proxy)
+       |
+       v
+2. Server accepts a file named shell.php disguised with a fake image MIME type
+       |
+       v
+3. File is saved inside a web-accessible directory
+       |
+       v
+4. Attacker requests the file directly: https://target.com/uploads/shell.php
+       |
+       v
+5. The web server executes it as a script, not an image
+```
+
+Each step is a separate control that, if any one of them is solid, breaks the chain. Common bypass techniques attackers try against weak implementations:
+
+| Bypass | What it exploits |
+|---|---|
+| Double extensions (`shell.php.jpg`) | Server strips the last extension, leaving an executable one; or only the first extension is checked. |
+| Null byte tricks (`shell.php%00.jpg`) | Older/unpatched parsers can truncate the filename at the null byte, keeping only the executable extension. |
+| Content-Type spoofing | Only the declared MIME type is checked, not the file's actual content. |
+| Alternate executable extensions (`.phtml`, `.php5`, `.asp;.jpg`) | The server's configuration executes more extensions than the developer accounted for when writing the blocklist. |
+| Polyglot files | A single file that is simultaneously valid as (for example) a GIF *and* a PHP script, passing an image-header check while still being executable. |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Notice that none of these bypasses involve "hacking" in the dramatic sense — they all exploit a gap between what the **validation logic checks** and what the **serving/execution logic actually does**. This is the single most important lesson of file-upload security: validate based on what will happen to the file, not just its apparent type.
+
+</Admonition>
+
+---
+
+## How Upload Vulnerabilities Get Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Store uploads outside the web root** | Even if a malicious file is accepted, the web server can't execute it directly because it's never served as a script. |
+| **Re-encode/re-generate the file** | Re-saving an uploaded image through an image-processing library (not just copying the bytes) strips anything that isn't genuinely valid image data. |
+| **Randomize stored filenames and strip extensions** | Removes the attacker's ability to choose both the location and the executable-sounding name. |
+| **Validate by content, not just declared type** | Check actual file signatures/magic bytes, and restrict to an allowlist of genuinely expected types. |
+| **Disable script execution in the upload directory** | A web-server-level configuration (e.g. disabling PHP handlers in `/uploads/`) that blocks the final step of the chain even if everything upstream fails. |
+
+---
+
+## File Inclusion (LFI / RFI)
+
+A related but distinct bug: instead of uploading a malicious file, the attacker manipulates a parameter that tells the server **which file to include/load/render** — often for templating, localization ("load `lang/en.php`"), or theming.
+
+```text
+Intended: GET /page?template=home.php
+Attacker: GET /page?template=../../../../etc/passwd
+```
+
+If the application concatenates that parameter directly into a file-include call without restriction, path traversal (`../`) lets the attacker walk outside the intended directory and read (Local File Inclusion) — or in the worst case, if an attacker can get the server to fetch a *remote* URL as the "file" (Remote File Inclusion), **execute** arbitrary code hosted on an attacker-controlled server.
+
+```text
+File include call built from user input
+       |
+       v
+../../../.. walks up the directory tree
+       |
+       v
+Reaches a sensitive file outside the intended folder
+       |
+       v
+Server reads (LFI) or executes (RFI) it
+```
+
+### LFI → RCE Escalation
+
+A read-only LFI can often be escalated to code execution through creative use of files the attacker can influence the contents of — for example, "poisoning" a web server's own log file by sending a request with PHP code in the `User-Agent` header, then using the LFI to include that log file, causing the server to execute the planted code.
+
+---
+
+## Client-Side Path Traversal
+
+A related concept appears purely in the browser: a client-side router or script that builds a URL/path from user-controllable input (like a hash fragment) without sanitizing `../` sequences can be tricked into loading unexpected client-side resources or routes — the same traversal idea, just operating entirely within front-end JavaScript rather than a server filesystem call.
+
+---
+
+## Reflected File Download
+
+A more niche trick: if an application reflects user input into a response **and** that response is served with a `Content-Disposition` header suggesting it's a downloadable file (e.g. a JSON API that also sets a filename), an attacker can craft a URL whose reflected parameter looks like a valid, dangerous script — tricking a victim into downloading and running what looks like an official file from the trusted domain.
+
+---
+
+## How File Inclusion Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Never build include paths from raw user input** | Map user input to a fixed allowlist of known template/file identifiers instead of a literal path. |
+| **Canonicalize and validate paths server-side** | Resolve the final path and confirm it's still inside the intended directory before using it. |
+| **Least-privilege file permissions** | Limit what the web server process can read at all, reducing the impact even if traversal occurs. |
+| **Avoid reflecting user input into download-triggering responses** | Keeps reflected file download from being possible in the first place. |
+
+---
+
+## Key Takeaways
+
+- Upload security is about the full chain — validation, storage location, and execution behavior — not just checking a file extension.
+- Path traversal (`../`) is the mechanism behind LFI; RFI is the far more dangerous variant where a *remote* resource gets executed.
+- A read-only LFI can sometimes be escalated to code execution by "poisoning" a file the attacker can influence (like a log).
+- The client-side version of path traversal applies the same `../` idea to front-end routing logic.
+
+---
+
+## Next
+
+Files aren't the only place untrusted data gets reconstructed into something dangerous. The next page covers what happens when an application **deserializes** data it shouldn't trust: **[Deserialization & Supply-Chain Attacks](./11-deserialization-and-supply-chain)**.

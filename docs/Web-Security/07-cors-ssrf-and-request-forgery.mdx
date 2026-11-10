@@ -1,0 +1,106 @@
+---
+sidebar_position: 8
+title: "CORS, SSRF & Request Forgery"
+description: "Misconfigured cross-origin policies, and what happens when a server can be tricked into making requests an attacker controls."
+---
+
+import Admonition from '@theme/Admonition';
+
+# CORS, SSRF & Request Forgery
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~10 min`
+
+This page covers two very different bugs that both revolve around **who gets to make a request, and where that request is allowed to go**.
+
+---
+
+## CORS Misconfiguration
+
+The Same-Origin Policy is a core browser security rule: by default, JavaScript on `evil.com` cannot read the response of a request made to `bank.example.com`. **Cross-Origin Resource Sharing (CORS)** is the mechanism that lets a server deliberately *relax* that rule for specific origins, via response headers:
+
+```text
+Access-Control-Allow-Origin: https://partner.example.com
+Access-Control-Allow-Credentials: true
+```
+
+The vulnerability appears when a server gets too generous with this — most commonly, **reflecting whatever `Origin` header the browser sent, combined with allowing credentials**:
+
+```text
+Request:   Origin: https://evil.com
+Response:  Access-Control-Allow-Origin: https://evil.com
+           Access-Control-Allow-Credentials: true
+```
+
+That combination tells the browser "any site may read responses from this API, *including the victim's authenticated session cookies*." Now a page on `evil.com` can make an authenticated request to the API from the victim's browser and actually **read the response** — unlike CSRF, which can only trigger actions blindly.
+
+<Admonition type="warning" title="The dangerous combination">
+
+`Access-Control-Allow-Origin: *` is usually safe on its own for public, unauthenticated APIs. It becomes a serious vulnerability specifically when paired with `Access-Control-Allow-Credentials: true` on an endpoint that returns sensitive, session-specific data — browsers actually refuse to combine a wildcard origin with credentials, which is why the *reflect-the-Origin-header* pattern above exists: it's a workaround developers reach for that recreates the same risk.
+
+</Admonition>
+
+---
+
+## Server-Side Request Forgery (SSRF)
+
+SSRF happens when an application takes user input and uses it to make an **HTTP request from the server itself** — fetching a URL to generate a thumbnail, validate a webhook, import a file from a link, and so on — without restricting where that request can go.
+
+```text
+Intended use:
+  POST /import-avatar  { "url": "https://cdn.example.com/photo.jpg" }
+
+Attacker-controlled url instead:
+  POST /import-avatar  { "url": "http://169.254.169.254/latest/meta-data/iam/security-credentials/" }
+```
+
+Because the request originates **from the server**, it can reach places the attacker could never reach directly:
+
+- **Cloud metadata endpoints** (`169.254.169.254`) — often returning temporary cloud credentials with real permissions.
+- **Internal-only services** — admin panels, databases, or microservices with no authentication because they "trust" anything on the internal network.
+- **`localhost` on the server itself** — sometimes exposing a debug endpoint or management interface never meant to be internet-facing.
+
+```text
+Attacker  -->  Vulnerable server  -->  Internal network / metadata service
+  (can't reach directly)   (trusted, can reach anything it's allowed to)
+```
+
+### Blind SSRF
+
+Just like blind injection, the server doesn't always echo the response back. A blind SSRF is confirmed by pointing the vulnerable parameter at an attacker-controlled listener and watching for an incoming connection — proving the server made the request even though the attacker never sees the response body.
+
+---
+
+## Webhook Security
+
+Webhooks are SSRF's "legitimate" cousin: the application is *designed* to make outbound requests to a URL the user (or another tenant) supplies, in order to notify them of events. Because this is intentional functionality, the SSRF protections above (blocking internal IP ranges, metadata addresses) must be built in deliberately — "it's a feature" doesn't make the same internal-network exposure any less dangerous.
+
+---
+
+## How These Get Fixed
+
+| Vulnerability | Primary Fix |
+|---|---|
+| CORS misconfiguration | Maintain an explicit allowlist of trusted origins; never reflect an arbitrary `Origin` header, and never combine a wildcard with credentialed requests. |
+| SSRF | Validate and restrict destination URLs with an allowlist (not a blocklist — blocklists miss redirects, DNS rebinding, and alternate IP encodings); block requests to private/internal IP ranges and cloud metadata addresses at the network layer as a second line of defense. |
+| Webhook-specific SSRF | Apply the same destination restrictions, plus re-validate the destination on every redirect the outbound request follows (not just the first hop). |
+
+<Admonition type="info" title="Pro tip">
+
+A common SSRF bypass defeats a naive "block private IPs" filter by using a URL that *resolves* to an internal IP only after the filter checks it — a classic DNS rebinding attack, or simply an alternate IP representation (decimal, octal, or IPv6-mapped) the filter's regex didn't anticipate. Allowlisting exact expected destinations is far more robust than trying to blocklist "everything bad."
+
+</Admonition>
+
+---
+
+## Key Takeaways
+
+- CORS misconfiguration becomes dangerous specifically when a reflected `Origin` is combined with `Allow-Credentials: true` on sensitive endpoints.
+- SSRF turns a trusted server into a proxy an attacker can aim at internal infrastructure, including cloud metadata services.
+- Blind SSRF is confirmed via an out-of-band callback, the same way blind injection is confirmed via timing.
+- Blocklisting IP ranges is fragile; allowlisting expected destinations, and re-checking every redirect, is the robust fix.
+
+---
+
+## Next
+
+Both bugs above live at the network/browser-policy layer. The next page moves to a different trust boundary entirely — **[Authentication & Session Attacks](./08-authentication-and-session-attacks)**.

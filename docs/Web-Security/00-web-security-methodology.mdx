@@ -1,0 +1,133 @@
+---
+sidebar_position: 1
+title: "How to Think Like a Web Pentester"
+description: "A methodology for approaching any web application: mapping attack surface, picking tools, and reading the responses that matter."
+---
+
+import Admonition from '@theme/Admonition';
+
+# How to Think Like a Web Pentester
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~10 min`
+
+Every other page in this section teaches a specific bug class — SQL injection, XSS, SSRF, and so on. This page teaches the thing that actually matters first: **how to look at a web app so you notice where those bugs might live.**
+
+Freshers tend to jump straight to "let me try `' OR 1=1--`" on the first input box they see. Professionals spend most of their time *before* that moment, building a map of the application. That map is what turns guessing into method.
+
+---
+
+## 1. Map the Attack Surface
+
+Before attacking anything, answer these questions about the target:
+
+| Question | Why it matters |
+|---|---|
+| What technology is it built with? | A PHP app, a Java Spring app, and a Node/Express app fail in different ways. |
+| What does the app let a user *input*? | Forms, URL params, headers, cookies, file uploads, JSON bodies, WebSocket messages. |
+| What does the app let a user *do*? | Every action (reset password, upload avatar, invite a teammate) is a feature — and every feature is a potential vulnerability. |
+| Where does input eventually get *used*? | A database query, a shell command, an HTML page, a file path, a template engine. |
+
+That last row is the real trick. Almost every vulnerability in this section follows the same shape:
+
+```text
+Untrusted input  -->  Trusted "sink" that assumes input is safe  -->  Unexpected behavior
+```
+
+An SQL injection is user input reaching a database query. An XSS is user input reaching an HTML renderer. An SSRF is user input reaching an HTTP client. **Learn to spot the sinks, and the vulnerability classes start finding themselves.**
+
+<Admonition type="tip" title="Freshers' shortcut">
+
+Whenever you see a feature, ask: "what does this feature *read*, and what does it *write*?" A profile picture upload reads a file and writes it to disk (file upload risks). A "share this report" button reads an ID and writes a URL (IDOR risks). This one habit will do more for you than memorizing payloads.
+
+</Admonition>
+
+---
+
+## 2. Recon Before Exploitation
+
+A professional engagement almost always starts the same way:
+
+1. **Spider/crawl the app** to find every endpoint, not just the ones linked from the homepage.
+2. **Enumerate technology** — response headers, cookie names, error pages, and JS bundle filenames often leak the framework and version.
+3. **Diff authenticated vs. unauthenticated views** — many bugs only appear once you compare what a logged-in admin sees against what a logged-out visitor sees.
+4. **Collect every place input is accepted**, including ones humans don't normally see: hidden form fields, `X-Forwarded-*` headers, JSON fields the UI doesn't render, multipart filenames.
+
+```text
+Recon
+  |
+  v
+Attack surface map (endpoints, params, roles)
+  |
+  v
+Hypothesis per sink ("this field probably reaches a query")
+  |
+  v
+Targeted testing
+  |
+  v
+Confirm + chain for impact
+```
+
+---
+
+## 3. The Core Toolbox
+
+| Tool | Role |
+|---|---|
+| An intercepting proxy (e.g. Burp Suite, OWASP ZAP) | See and replay every request your browser makes. This is non-negotiable — you cannot test what you cannot see. |
+| `curl` / `httpie` | Fast, scriptable, reproducible requests outside the browser. |
+| A content-discovery tool (e.g. `ffuf`, `gobuster`) | Find endpoints and files that aren't linked anywhere. |
+| Browser DevTools | Network tab, console, and storage inspector for client-side behavior. |
+| A good notes system | You will test dozens of parameters; write down what you tried and what came back, or you'll repeat yourself. |
+
+<Admonition type="info" title="Why an intercepting proxy matters so much">
+
+Most of the vulnerability classes in this section are only reachable by changing a request *after* your browser already built it — adding a header, breaking JSON intentionally, submitting a value the UI would normally block client-side. A proxy is what lets you do that. If you only ever test through the browser's own form fields, you are testing the *developer's* assumptions, not the server's actual behavior.
+
+</Admonition>
+
+---
+
+## 4. Reading Responses Like a Pentester
+
+The same response can mean different things depending on what you sent. Build the habit of comparing:
+
+- **Status code** — did `500` appear where you'd expect `200` or `400`? A stack trace is a gift.
+- **Response time** — a request that suddenly takes 5 seconds longer is a classic signal for blind/time-based injection.
+- **Response length** — even a few bytes of difference between a "true" and "false" condition can confirm a blind vulnerability.
+- **Headers** — `Set-Cookie`, `Location`, caching headers, and CORS headers often reveal more than the body.
+
+```text
+Baseline request   -->  200 OK, 4,512 bytes, 180ms
+Modified request   -->  200 OK, 4,516 bytes, 180ms   (interesting! 4 bytes different)
+Modified request 2 -->  200 OK, 4,512 bytes, 5,180ms (interesting! 5s slower)
+```
+
+This differential thinking — "what changed, and why" — is the single most transferable skill across every topic in this section.
+
+---
+
+## 5. A Simple Mental Checklist
+
+Use this before diving into any page that follows:
+
+- [ ] Have I listed every input the app accepts, not just the obvious ones?
+- [ ] For each input, where does it most likely end up (query, command, template, HTML, filesystem, another server)?
+- [ ] Have I tested as both an authenticated and unauthenticated user?
+- [ ] Have I tried the same input in the URL, in a header, and in the body?
+- [ ] Am I recording a baseline response before I start changing things?
+
+---
+
+## Key Takeaways
+
+- Vulnerability hunting is mostly about finding **sinks** where untrusted input meets a trusted operation.
+- Recon and attack-surface mapping come *before* payloads, not after.
+- An intercepting proxy is the foundation tool for nearly everything in this section.
+- Reading subtle differences in status, timing, and length is how blind and logic-level bugs get found.
+
+---
+
+## Next
+
+With a method in hand, start with the most common class of web bug by impact: **[SQL & NoSQL Injection](./01-sql-and-nosql-injection)**.

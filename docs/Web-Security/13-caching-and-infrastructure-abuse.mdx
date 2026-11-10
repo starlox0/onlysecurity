@@ -1,0 +1,117 @@
+---
+sidebar_position: 14
+title: "Caching & Infrastructure Abuse"
+description: "Web cache deception and poisoning, subdomain takeover, and why shared infrastructure components need their own security mindset."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Caching & Infrastructure Abuse
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~8 min`
+
+Caches exist to make applications faster by serving a saved response instead of recomputing it. That's exactly what makes a cache bug so dangerous — a single mistake can serve **one user's private data to every other visitor**, often silently and at scale.
+
+---
+
+## Web Cache Poisoning
+
+A cache usually keys its stored responses on the request URL — but many applications let **headers** (like `X-Forwarded-Host`) influence the response body (for example, building a canonical link or a script `src` from that header) without those headers being part of the cache key.
+
+```text
+Attacker's request:
+  GET /page HTTP/1.1
+  Host: real-site.com
+  X-Forwarded-Host: evil.com
+
+Server renders a response that embeds X-Forwarded-Host somewhere (e.g. a <script src>)
+       |
+       v
+Cache stores this *poisoned* response, keyed only on the URL /page
+       |
+       v
+Every subsequent visitor to /page — for potentially hours — receives
+the poisoned response pointing at evil.com, with no attacker interaction needed
+```
+
+The attacker only needs to poison the cache **once**; every real visitor afterward is served the malicious response automatically until the cache entry expires — turning a single crafted request into mass impact.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Cache poisoning is a great example of why "what influences the response" matters as much as "what's in the URL." If a header, a cookie, or any other input changes what gets rendered, but the cache doesn't know that input exists, the cache will happily serve one request's dangerous output to everyone else who asks for the same URL.
+
+</Admonition>
+
+---
+
+## Web Cache Deception
+
+The inverse problem: tricking a cache into storing a response that **was never meant to be cached at all**, typically a logged-in user's private page. This often exploits path-matching quirks — a cache configured to cache anything ending in `.css` or `.jpg` might also match a crafted URL like `/account/settings/nonexistent.css`, if the backend ignores the fake extension and serves the real private page anyway.
+
+```text
+Victim requests (while logged in): /account/settings/fake.css
+       |
+       v
+Backend ignores the fake extension, serves the real private settings page
+       |
+       v
+Cache sees the .css-looking path and stores the response as "cacheable, public"
+       |
+       v
+Attacker requests the same URL and receives the victim's cached private page
+```
+
+To pull this off, the attacker needs the victim to visit the crafted URL (e.g. via a link), after which the victim's own private response is cached and becomes readable by the attacker.
+
+---
+
+## Domain & Subdomain Takeover
+
+Many organizations point a subdomain (`blog.company.com`) at a third-party service (a cloud storage bucket, a SaaS platform, a PaaS app). If that service instance is later **deleted or deprovisioned** without removing the corresponding DNS record, the subdomain still resolves — pointing at infrastructure that no longer belongs to the organization, and that an attacker can often claim for themselves on the same third-party platform.
+
+```text
+DNS: blog.company.com  -->  CNAME  -->  somehost.cloudprovider.com
+
+Cloud resource "somehost" is deleted, but the DNS record is left behind
+       |
+       v
+Attacker registers "somehost" on the same cloud provider
+       |
+       v
+blog.company.com now serves content the attacker controls,
+under a domain the victim's users still trust
+```
+
+This is especially damaging because the takeover inherits the **trust of the parent domain** — cookies scoped to `*.company.com`, embedded content trusted because of its origin, and phishing pages that look completely legitimate in the address bar.
+
+---
+
+## Decentralized Applications (dApps)
+
+Applications built on blockchain/smart-contract backends introduce a different risk surface: the front-end web code is often conventional (and inherits every bug in this section), but it also interacts with smart contracts that, once deployed, are **extremely difficult or impossible to patch**. A web-security-adjacent mistake here — like a front-end that doesn't validate transaction parameters before asking a wallet to sign them, or that fetches contract addresses from a source an attacker can influence — can trick a user into unknowingly approving a malicious transaction.
+
+---
+
+## How These All Get Fixed
+
+| Vulnerability | Primary Fix |
+|---|---|
+| Cache poisoning | Include every input that affects the response (relevant headers, not just the URL) in the cache key — or simply don't let unkeyed inputs influence cacheable output at all. |
+| Cache deception | Configure caching rules based on the backend's actual response (content type, cache-control headers it explicitly sets) rather than guessing from the URL's apparent file extension. |
+| Subdomain takeover | Remove DNS records immediately when decommissioning any service; periodically audit DNS records against actually-provisioned infrastructure. |
+| dApp front-end risk | Validate and display transaction details clearly before requesting a wallet signature; fetch contract addresses only from trusted, pinned sources. |
+
+---
+
+## Key Takeaways
+
+- Cache poisoning turns one crafted request into mass impact because the poisoned response is served to every subsequent visitor automatically.
+- Cache deception tricks the cache into storing something private as if it were public and shareable.
+- Subdomain takeover inherits the parent domain's trust, making it a uniquely effective phishing and cookie-theft vector.
+- Decentralized app front-ends still carry every conventional web bug, plus new risk where wallet-signed transactions are involved.
+
+---
+
+## Next
+
+A quieter, often-overlooked category: bugs that don't change *what* happens, only *how long it takes* or *how much it costs* the server: **[Timing Attacks & Denial of Service](./14-timing-and-dos-attacks)**.

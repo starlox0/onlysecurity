@@ -1,0 +1,106 @@
+---
+sidebar_position: 12
+title: "Deserialization & Supply-Chain Attacks"
+description: "Why turning serialized data back into objects is dangerous, and how dependency confusion attacks a project's build pipeline instead of its running code."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Deserialization & Supply-Chain Attacks
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~8 min`
+
+So far, every vulnerability has been about untrusted data reaching a sink *inside a running application*. This page covers two bugs that reach further: one turns raw bytes directly back into live objects, and the other attacks the application before it even runs, during the build itself.
+
+---
+
+## Insecure Deserialization
+
+**Serialization** converts an in-memory object into a storable/transmittable format (a byte stream, often language-specific, like Java's `ObjectInputStream` format or Python's `pickle`). **Deserialization** reverses that — and in several popular languages, deserializing untrusted data doesn't just restore simple data, it can **trigger code execution as a side effect of reconstructing an object.**
+
+```text
+Attacker crafts a serialized byte stream representing a *carefully chosen* object graph
+       |
+       v
+Application deserializes it, trusting it came from itself
+       |
+       v
+Reconstructing the object triggers a method with a dangerous side effect
+       |
+       v
+Remote code execution, often without any "obvious" injection point at all
+```
+
+This is one of the most counter-intuitive vulnerability classes to learn, because there's no string concatenation and no visible input field — the vulnerable "input" is often an opaque, encoded blob sitting in a cookie or hidden form field that looks like random noise.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+You don't need to be able to hand-craft these "gadget chain" payloads yourself to understand the risk. The lesson to internalize is simpler: **never deserialize data from an untrusted source using a format whose deserializer can execute arbitrary code as a side effect.** If you see an opaque, high-entropy blob in a cookie or hidden field on an unfamiliar tech stack, that's worth a closer look — it might just be base64, or it might be a serialized object.
+
+</Admonition>
+
+---
+
+## Where It Shows Up
+
+- **Session tokens** stored as serialized objects instead of plain IDs or signed JWTs.
+- **"Remember me" cookies** that encode an entire user object.
+- **Caching layers** that serialize complex application state to disk or a cache server, later deserialized without re-validation.
+- **Inter-service messages** (queues, RPC) where one internal service deserializes a message built by another — dangerous if an attacker can influence the message's contents.
+
+---
+
+## How Deserialization Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Avoid native deserialization of untrusted data entirely** | Prefer plain data formats (JSON with a strict schema) over formats that can reconstruct arbitrary object graphs. |
+| **Signing/encryption with integrity checks** | If a serialized blob must be sent to the client and back, sign it so any tampering invalidates it before deserialization even begins. |
+| **Allowlisting deserializable types** | Some languages/libraries let you restrict deserialization to a known-safe set of classes, removing the "dangerous object graph" attack surface. |
+| **Least-privilege process isolation** | Limits the blast radius if deserialization-based code execution does occur. |
+
+---
+
+## Dependency Confusion
+
+A completely different kind of trust is exploited here: not user input at runtime, but **the build process's package manager resolution logic**. Many organizations use private, internally-named packages (e.g. `@company/internal-utils`) alongside public ones from npm, PyPI, or similar registries. If the build tooling checks the public registry for a package of that same name and finds a *higher version number* there, some configurations will install the public (attacker-published) package instead of the intended private one.
+
+```text
+Internal package: @company/internal-utils@1.2.0  (private registry)
+Attacker publishes: @company/internal-utils@9.9.9 (public registry, same name)
+       |
+       v
+Build tool, misconfigured to check public registry priority/version,
+installs the attacker's package instead
+       |
+       v
+Attacker's code now runs inside the company's build pipeline or application
+```
+
+This is a **supply-chain attack** — it compromises the software before it's even deployed, by exploiting how dependencies are resolved rather than any bug in the application's own code.
+
+---
+
+## How Dependency Confusion Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Scoped packages with reserved namespaces** | Claiming your organization's scope on public registries prevents an attacker from publishing under the same name. |
+| **Explicit registry configuration per package** | Pin internal package names to the private registry *only*, so the public registry is never consulted for them. |
+| **Lockfiles with integrity hashes** | Ensure the exact expected package (and version) is installed, not merely "a package with this name." |
+| **Monitoring for unexpected public packages matching internal names** | Early warning if someone has registered a lookalike package. |
+
+---
+
+## Key Takeaways
+
+- Insecure deserialization can achieve remote code execution with no visible "injection point" — the danger is in reconstructing attacker-chosen object graphs.
+- Opaque, high-entropy blobs in cookies or hidden fields are worth investigating as potential serialized data.
+- Dependency confusion exploits package-manager resolution logic, compromising an application during the build rather than at runtime.
+- Both bugs share a theme with everything earlier in this section: **trusting a format's "convenience" features (object reconstruction, flexible registry resolution) without verifying the source.**
+
+---
+
+## Next
+
+Several of the bugs so far assumed a single, well-behaved HTTP request. The next page covers what happens when the HTTP protocol itself — proxies, load balancers, and parsers — gets confused: **[HTTP Protocol-Level Attacks](./12-http-protocol-attacks)**.

@@ -1,0 +1,125 @@
+---
+sidebar_position: 2
+title: "SQL & NoSQL Injection"
+description: "How untrusted input reaches a database query, how to detect and exploit it safely in a lab, and how real applications prevent it."
+---
+
+import Admonition from '@theme/Admonition';
+
+# SQL & NoSQL Injection
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~12 min`
+
+Injection has topped the OWASP Top 10 for over a decade for a simple reason: it is **devastatingly effective** and **shockingly easy to introduce** by accident. This page covers classic SQL injection, its blind variants, NoSQL injection, and the ORM-layer mistakes that reintroduce the same bug in "modern" stacks.
+
+---
+
+## The Core Idea
+
+A web app builds a database query using data a user controls. If that data is pasted directly into the query string instead of being treated as pure data, the attacker can change the *structure* of the query, not just its value.
+
+```text
+Intended query:
+  SELECT * FROM users WHERE username = 'alice' AND password = 'secret';
+
+Attacker-controlled username field: alice' --
+
+Resulting query:
+  SELECT * FROM users WHERE username = 'alice' --' AND password = 'secret';
+```
+
+The `--` starts an SQL comment, so everything after it — including the password check — is ignored. The attacker is logged in as `alice` without knowing the password.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+You don't need to memorize SQL syntax tricks to understand *why* this works. The lesson is: **any time user input is concatenated into a command interpreter's syntax, the user can inject their own syntax.** This exact pattern reappears in command injection, LDAP injection, and XPath injection later in this section — SQL is just the most famous example.
+
+</Admonition>
+
+---
+
+## Finding It: The Classic Signals
+
+| Test | What it tells you |
+|---|---|
+| Add a single quote `'` to a parameter | A database error or broken page suggests the input reaches a query unescaped. |
+| Add `' OR '1'='1` | If it changes the result set (e.g. logs you in, shows all records), the input affects the `WHERE` clause. |
+| Add `'--` or `'#` | If the rest of the query gets "commented out" successfully, you've confirmed control over query structure. |
+| Time-based: `' OR SLEEP(5)--` | If the response is delayed by ~5 seconds, you've confirmed injection even with **no visible output at all** — this is "blind" SQLi. |
+
+```text
+Baseline:          200 OK, ~150ms
+' OR SLEEP(5)--  : 200 OK, ~5150ms   <-- the database actually executed your code
+```
+
+That timing difference, with *zero* visible change in the page, is how blind SQL injection is detected and exploited in the real world — one true/false question at a time, often automated with a tool like `sqlmap`.
+
+---
+
+## Types of SQL Injection
+
+- **In-band / classic** — the result appears directly in the response (an error, or extra rows in a table).
+- **Blind boolean-based** — the response differs subtly (page length, a present/absent element) depending on whether your injected condition is true or false.
+- **Blind time-based** — no visible difference at all, but the server's response time reveals true/false, as shown above.
+- **Out-of-band** — the database is told to make a *separate* network request (e.g. a DNS lookup) back to an attacker-controlled server, useful when neither the response body nor timing leaks anything.
+
+---
+
+## NoSQL Injection
+
+Switching the database to MongoDB, CouchDB, or similar doesn't remove the bug class — it just changes the syntax. NoSQL queries are often built from JSON, and operators like `$ne` (not equal) or `$gt` (greater than) can be smuggled in through parameters that a backend parses loosely.
+
+```json
+// Intended login check (pseudocode):
+{ "username": "alice", "password": "secret123" }
+
+// Attacker sends, instead of a plain string:
+{ "username": "alice", "password": { "$ne": null } }
+```
+
+If the backend passes that object straight into the query, it translates to "find a user named alice where the password is **not equal to null**" — which is true for any account that has a password set at all. Login bypassed, no password guessed.
+
+<Admonition type="warning" title="Where this sneaks in">
+
+This usually happens when a framework automatically parses a request body (form-encoded *or* JSON) into nested objects without validating the shape first. A parameter that's supposed to be a plain string arrives as an object instead, and the query layer trusts it.
+
+</Admonition>
+
+---
+
+## ORM Injection — "But I Use an ORM, I'm Safe"
+
+Object-Relational Mappers (Sequelize, Django ORM, Hibernate, Entity Framework) are designed to prevent SQL injection by parameterizing queries automatically. The bug reappears when developers **drop back down to raw query strings** for "just this one complex query" and concatenate user input into it — the exact same mistake, now hiding inside a tool that was supposed to prevent it. ORMs can also expose their own injection-style issues through operator objects (similar to the NoSQL example above) if they accept raw filter objects from user input.
+
+---
+
+## How This Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Parameterized queries / prepared statements** | The query structure is fixed before user data is ever attached — user input can never change the SQL grammar, only the values. |
+| **Least-privilege database accounts** | Even if injection occurs, a read-only or scoped account limits the blast radius. |
+| **Strict input typing/schemas** | Reject a password field that arrives as a JSON object instead of a string — this alone kills the NoSQL example above. |
+| **ORMs used *as intended*** | Avoid raw query escape hatches; when unavoidable, parameterize those too. |
+
+<Admonition type="info" title="Pro tip">
+
+When reviewing code (not just black-box testing), search the codebase for string concatenation or f-strings feeding into a query function (`.query()`, `.raw()`, `.execute()`), and for anywhere a raw `req.body` or `req.query` object is passed into a database filter without a schema validator in front of it. These two searches catch the overwhelming majority of real-world SQL/NoSQL injection bugs.
+
+</Admonition>
+
+---
+
+## Key Takeaways
+
+- SQL injection happens when input changes a query's **structure**, not just its value.
+- Blind injection (boolean and time-based) proves the bug exists even with no visible output — timing and response-length differences are the signal.
+- NoSQL injection is the same idea wearing JSON instead of SQL syntax.
+- ORMs prevent this *only* when developers don't bypass them with raw queries.
+- Parameterized queries are the real fix — input validation and WAFs are useful second layers, not substitutes.
+
+---
+
+## Next
+
+The same "untrusted input reaches a command interpreter" pattern, applied to the operating system itself: **[Command & Code Injection](./02-command-and-code-injection)**.

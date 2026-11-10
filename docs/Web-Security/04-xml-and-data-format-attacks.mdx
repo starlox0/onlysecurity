@@ -1,0 +1,99 @@
+---
+sidebar_position: 5
+title: "XML, XXE & Data-Format Attacks"
+description: "XML External Entity injection, XSLT and SOAP attacks, and why parsing untrusted data formats with default settings is dangerous."
+---
+
+import Admonition from '@theme/Admonition';
+
+# XML, XXE & Data-Format Attacks
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~9 min`
+
+Any time an application parses a structured data format — XML, YAML, or SOAP — it's trusting a parser to turn text into data safely. Several once-standard parser features turn out to be dangerous when the input comes from an attacker.
+
+---
+
+## XML External Entity (XXE) Injection
+
+XML supports **entities** — reusable placeholders, a bit like variables, defined in a `DOCTYPE` declaration. Critically, XML also supports **external** entities, which can point at a file path or a URL.
+
+```xml
+<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<user>
+  <name>&xxe;</name>
+</user>
+```
+
+If an application parses this XML with external entity resolution enabled (historically the **default** in many XML parsers) and then displays or returns the `<name>` field, the attacker receives the contents of `/etc/passwd` instead of a name.
+
+```text
+Attacker submits XML with a SYSTEM entity pointing at a local file
+       |
+       v
+Parser resolves the entity (reads the file) because the feature is enabled
+       |
+       v
+File contents are substituted into the document, often reflected back to the attacker
+```
+
+### Why This Is So Dangerous
+
+XXE isn't limited to reading files. The same mechanism can be pointed at:
+
+- **Internal network addresses** — turning the vulnerable server into an SSRF proxy (`SYSTEM "http://169.254.169.254/latest/meta-data/"` against a cloud metadata endpoint, for example).
+- **"Billion laughs" style entities** — entities that reference each other recursively, expanding exponentially in memory and causing a denial of service.
+- **Out-of-band exfiltration** — when the result isn't reflected directly, an entity can be built to leak file contents via an outbound DNS or HTTP request to an attacker-controlled server instead.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+You will rarely need to hand-write payloads like the one above from scratch — the shape is almost always the same: a `DOCTYPE` with a `SYSTEM` entity pointing somewhere interesting. What matters is recognizing *where* XML parsing happens in an app (file uploads that accept `.xml`, `.docx`/`.xlsx` — which are ZIPs full of XML — SOAP endpoints, SAML responses) because those are the places this bug hides.
+
+</Admonition>
+
+---
+
+## XSLT Server-Side Injection
+
+XSLT (Extensible Stylesheet Language Transformations) is used to transform XML documents and, like SSTI, exposes a surprisingly powerful mini-language — some XSLT processors can read files or even execute code through processor-specific extension functions. If an application accepts attacker-controlled XSLT (directly, or indirectly through a parameter that gets merged into a stylesheet), the result can range from file disclosure to remote code execution, following the same "the interpreter is more powerful than the developer assumed" theme as SSTI.
+
+---
+
+## SOAP / JAX-WS Attacks
+
+SOAP web services wrap XML in a specific envelope structure for request/response messaging. Because SOAP is XML, **every XXE risk above applies directly to SOAP endpoints** unless explicitly disabled. A second, more specific issue shows up in some Java JAX-WS implementations where thread-local authentication context can leak or be bypassed due to how the framework reuses handler threads across requests — a reminder that "enterprise" protocols are not automatically safer than REST/JSON ones; they just hide the same classes of bugs behind more ceremony.
+
+---
+
+## JSON / YAML Parsing Risks
+
+JSON itself doesn't support entities the way XML does, so classic XXE doesn't apply — but **YAML does support type-tagging and even object instantiation** in some parser configurations. A YAML parser that isn't restricted to "safe load" mode can, depending on the language and library, deserialize a crafted document into arbitrary objects — which overlaps heavily with the deserialization attacks covered later in this section. The lesson generalizes: **any parser with "convenience" features beyond pure data decoding (entities, type tags, object hydration) is a potential sink**, regardless of whether the format is XML, YAML, or something else.
+
+---
+
+## How This Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **Disable external entity resolution** | Nearly every modern XML library lets you turn this off explicitly (e.g. disabling `DOCTYPE` processing entirely); doing so removes XXE as a possibility regardless of input. |
+| **Use "safe load" parsers for YAML** | Restricts parsing to plain data types, removing the object-instantiation attack surface. |
+| **Least-privilege for parsing processes** | If a parser absolutely must resolve external resources, run it in a context that can't reach sensitive files or internal network addresses. |
+| **Validate against a strict schema** | Reject documents with unexpected structures (like an unexpected `DOCTYPE`) before full parsing occurs. |
+
+---
+
+## Key Takeaways
+
+- XXE abuses optional XML parser features (external entities) that most applications never intended to expose to attackers.
+- XXE can lead to file disclosure, SSRF, and denial of service — not just "reading XML weirdly."
+- `.docx`, `.xlsx`, SAML, and SOAP are all XML under the hood, so they all inherit XXE risk unless the parser is hardened.
+- XSLT and unsafe YAML loading generalize the same lesson: powerful format features are a liability when attacker input reaches them.
+
+---
+
+## Next
+
+Move from server-side data parsing to the browser: **[XSS — Cross-Site Scripting](./05-xss-cross-site-scripting)**.

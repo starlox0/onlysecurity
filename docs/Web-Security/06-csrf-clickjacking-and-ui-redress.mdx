@@ -1,0 +1,115 @@
+---
+sidebar_position: 7
+title: "CSRF, Clickjacking & UI Redress"
+description: "How browsers' automatic cookie-sending turns into a weapon, and how attackers trick users into clicking things they can't see."
+---
+
+import Admonition from '@theme/Admonition';
+
+# CSRF, Clickjacking & UI Redress
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~9 min`
+
+These bugs don't require injecting code anywhere. Instead, they abuse a basic browser behavior — cookies get sent automatically with every request to a site, regardless of which page initiated that request — and human behavior: people click things.
+
+---
+
+## Cross-Site Request Forgery (CSRF)
+
+Browsers attach a site's cookies to **every** request sent to that site, even if the request was triggered by a completely different website the user happens to have open in another tab. CSRF abuses this: an attacker-controlled page silently submits a request to the target site, and the victim's browser happily attaches their real session cookie.
+
+```html
+<!-- Hosted on evil.com, visited by a logged-in victim -->
+<img src="https://bank.example.com/transfer?to=attacker&amount=1000" />
+```
+
+If `bank.example.com` only checks "does a valid session cookie exist?" — and does nothing to confirm the request actually came from the bank's own page — the transfer goes through using the victim's authenticated session, without the victim ever intending to make it.
+
+```text
+Victim logged into bank.example.com (has a valid session cookie)
+       |
+       v
+Victim visits evil.com in another tab
+       |
+       v
+evil.com's page triggers a request to bank.example.com
+       |
+       v
+Browser attaches the victim's real cookie automatically
+       |
+       v
+bank.example.com processes the request as if the victim intended it
+```
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+CSRF is often confused with XSS because both can result in "an attacker made my account do something." The difference: **XSS requires the attacker's code to run on the vulnerable site itself. CSRF requires nothing of the sort — the malicious page can live anywhere, because the browser's cookie-attaching behavior does all the work.** This is also why CSRF *cannot* steal data directly (you can't read the response from a cross-origin request without further bugs) — it can only trigger state-changing actions.
+
+</Admonition>
+
+---
+
+## How CSRF Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **CSRF tokens** | A random, unpredictable value embedded in forms and required on submission — an attacker's forged request has no way to know or guess this value. |
+| **`SameSite` cookies** | Setting a cookie's `SameSite` attribute to `Lax` or `Strict` tells the browser not to send it on cross-site requests at all, stopping most CSRF at the browser level. |
+| **Checking the `Origin`/`Referer` header** | A state-changing request whose `Origin` doesn't match the expected site is almost certainly forged. |
+| **Requiring re-authentication for sensitive actions** | Password changes, fund transfers, and similar high-impact actions often require re-entering a password, which a forged request cannot supply. |
+
+---
+
+## Clickjacking
+
+Clickjacking tricks a victim into clicking something they can see, while actually clicking something else entirely — a legitimate page from another site, rendered invisibly on top (or underneath, with clever CSS) of an attacker's decoy content.
+
+```html
+<style>
+  iframe { opacity: 0.0; position: absolute; top: 0; left: 0; width: 500px; height: 500px; }
+  .decoy { position: absolute; top: 0; left: 0; }
+</style>
+<div class="decoy">Click here to claim your free prize!</div>
+<iframe src="https://victim-site.com/account/delete"></iframe>
+```
+
+The victim thinks they're clicking "claim your prize," but their click actually lands on an invisible, precisely positioned iframe containing the real site's "delete account" button.
+
+```text
+Visible to user:    [ Click here to claim your prize! ]
+Actually underneath: [ real "Delete Account" button, opacity: 0 ]
+                       |
+                       v
+                 Click lands on the real button
+```
+
+### Related UI Redress Tricks
+
+- **Reverse Tab-Nabbing** — a link opened with `target="_blank"` but without `rel="noopener"` lets the newly opened page use `window.opener` to silently redirect the *original* tab to a phishing page while the victim is focused on the new tab.
+- **Iframe Traps** — similar to clickjacking but focused on trapping navigation or persistent overlays rather than a single misdirected click.
+
+---
+
+## How Clickjacking Gets Fixed
+
+| Defense | Why it works |
+|---|---|
+| **`X-Frame-Options` header** | `DENY` or `SAMEORIGIN` tells browsers to refuse rendering the page inside a frame at all. |
+| **CSP `frame-ancestors` directive** | The modern, more flexible replacement for `X-Frame-Options`, specifying exactly which origins may frame the page. |
+| **Frame-busting JavaScript** | An older, weaker defense (`if (top !== self) top.location = self.location`) that can often be bypassed — headers are the reliable fix. |
+| **`rel="noopener"` on external links** | Prevents the reverse tab-nabbing trick by cutting off the new tab's access to `window.opener`. |
+
+---
+
+## Key Takeaways
+
+- CSRF exploits the browser's automatic cookie-attachment, not a code-injection bug — it can only trigger actions, not read responses.
+- `SameSite` cookies plus CSRF tokens together are the standard modern defense.
+- Clickjacking tricks the *human*, not the browser's security model — framing protections (`X-Frame-Options` / CSP `frame-ancestors`) are the fix.
+- Reverse tab-nabbing is a reminder that `target="_blank"` without `rel="noopener"` has security consequences, not just UX ones.
+
+---
+
+## Next
+
+Both bugs above abuse trust between sites. The next page covers what happens when a server makes requests **on behalf of a user to places it shouldn't**, and how cross-origin policies get bypassed: **[CORS, SSRF & Request Forgery](./07-cors-ssrf-and-request-forgery)**.

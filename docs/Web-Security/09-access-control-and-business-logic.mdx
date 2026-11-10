@@ -1,0 +1,125 @@
+---
+sidebar_position: 10
+title: "Access Control & Business Logic Flaws"
+description: "IDOR, mass assignment, race conditions, rate-limit bypass, and the business-logic bugs that no scanner can find for you."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Access Control & Business Logic Flaws
+
+`Fundamentals` · `Web Application Security` · `Reading time: ~11 min`
+
+This family of bugs has no payload to paste. The code runs exactly as written — the *logic itself* is wrong. These are often the hardest bugs to find with automated tools and the easiest to find by simply understanding what the application is supposed to prevent.
+
+---
+
+## Insecure Direct Object Reference (IDOR)
+
+IDOR happens when an application uses a user-supplied identifier to fetch a resource, but only checks "does this ID exist?" instead of "does this ID belong to *this* user?"
+
+```text
+GET /api/invoices/1042      <-- your own invoice, works fine
+GET /api/invoices/1043      <-- someone else's invoice... also works?
+```
+
+If changing the number in the URL reveals another user's data, the authorization check is missing or incomplete — the application authenticated the user, but never **authorized** that specific action against that specific object.
+
+```text
+Authentication: "Who are you?"        --> Confirmed: you are alice
+Authorization:  "Can alice see 1043?" --> Never actually checked
+```
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+IDOR is arguably the single highest-value bug class to learn first: it requires no special payload knowledge, it's extremely common in real applications, and the entire test is "change an ID, see what happens." It's the clearest proof that **security bugs are often about missing logic, not malformed input.**
+
+</Admonition>
+
+---
+
+## Mass Assignment
+
+Many frameworks offer a convenient shortcut: take an incoming JSON body and automatically map its fields onto a database model. This becomes a vulnerability when the model has fields the user should **never** be allowed to set directly — like `role` or `isAdmin` — but the framework maps them anyway because nothing told it not to.
+
+```json
+// Intended request body:
+{ "name": "Alice", "email": "alice@example.com" }
+
+// Attacker adds an extra field:
+{ "name": "Alice", "email": "alice@example.com", "role": "admin" }
+```
+
+If the backend blindly assigns every field in the body onto the user model, the attacker just granted themselves admin privileges through a signup form.
+
+---
+
+## Business Logic Vulnerabilities
+
+These are bugs specific to what the *application* does, not to any underlying technology — which is exactly why generic scanners miss them. Examples:
+
+- **Negative quantities** — an e-commerce cart that accepts `quantity: -5` and *adds* money to the attacker's balance when the "total" calculation doesn't expect a negative number.
+- **Coupon/discount stacking** — applying the same one-time coupon code multiple times because the "already used" check happens client-side, or checks the wrong field.
+- **Skipping a required step** — directly calling step 3 of a multi-step checkout API without ever completing (or paying for) steps 1 and 2, if the server trusts the client to enforce ordering.
+- **Price manipulation** — a checkout flow that re-sends the item price from the client instead of re-looking it up server-side, letting an attacker simply edit the price in the request.
+
+<Admonition type="warning" title="Bypassing payment flows">
+
+A recurring real-world pattern: a payment is "confirmed" client-side (a redirect back from a payment processor, a webhook the app trusts without verifying its signature), and the application marks an order as paid based on that unverified signal alone. An attacker who understands the flow can sometimes trigger the "success" step directly, skipping payment entirely. The fix is always the same: **the server must independently verify payment status with the payment processor itself**, never trust a client-supplied "I paid" signal.
+
+</Admonition>
+
+---
+
+## Race Conditions
+
+Some logic checks ("do you have enough balance for this withdrawal?") and the action that follows ("deduct the balance") aren't truly atomic. If an attacker fires many requests at the exact same instant, multiple requests can all pass the check *before any of them has applied its effect* — letting a single $100 balance be withdrawn five times in parallel before the balance ever updates.
+
+```text
+Request A: check balance ($100) -> OK -> (in progress) deduct $100
+Request B: check balance ($100) -> OK -> (in progress) deduct $100  <-- same $100, checked twice
+Request C: check balance ($100) -> OK -> (in progress) deduct $100
+```
+
+If all three checks happen before any deduction completes, the attacker withdraws $300 from a $100 balance.
+
+---
+
+## Rate-Limit Bypass & Parameter Pollution
+
+- **Rate-limit bypass** — rate limiting keyed only on IP address can often be defeated by rotating `X-Forwarded-For` header values, since many backends trust that header as the "real" client IP without verifying it came from a trusted proxy.
+- **HTTP Parameter Pollution** — sending the same parameter twice (`?user=alice&user=bob`) can cause different application layers (a WAF vs. the application server) to each pick a *different* one of the duplicate values, letting an attacker smuggle a value past a filter that only inspected the first occurrence.
+
+---
+
+## 401/403 Bypass Tricks
+
+Access-control checks are sometimes implemented inconsistently across an app's internal routing layers — a reverse proxy, the application framework, and an API gateway might each parse a URL slightly differently. Classic bypass attempts include adding a trailing slash, changing the HTTP method, URL-encoding path characters, or adding a harmless-looking prefix/suffix — each testing whether *one* layer's access check can be made to disagree with another layer's routing decision.
+
+---
+
+## How This All Gets Fixed
+
+| Vulnerability | Primary Fix |
+|---|---|
+| IDOR | Check ownership/permission on every object access, not just that the object exists. |
+| Mass assignment | Use an explicit allowlist of fields a given endpoint may set — never map a raw request body onto a full model. |
+| Business logic flaws | Enforce *all* critical invariants (price, step order, payment status) server-side; never trust client-supplied state for anything financially or security relevant. |
+| Race conditions | Use database-level atomic operations (transactions, row locks, atomic decrements) for check-then-act sequences involving balances or limited resources. |
+| Rate-limit bypass | Key limits on authenticated identity where possible, not just IP; only trust `X-Forwarded-For` from a known, trusted proxy. |
+| 401/403 bypass | Enforce access control at the layer closest to the actual resource, consistently, rather than relying on an outer layer (proxy/WAF) to catch everything. |
+
+---
+
+## Key Takeaways
+
+- IDOR and mass assignment are both "the server trusted the client more than it should have" bugs — the fix is always explicit, server-side checks.
+- Business logic flaws require understanding the *feature*, not a generic payload — read the workflow like a product manager, then think like an attacker.
+- Race conditions turn "check, then act" sequences into exploitable gaps when they aren't atomic.
+- Access-control bypass tricks exploit disagreements between different layers (proxy, framework, app) of the same system.
+
+---
+
+## Next
+
+A very specific, very common sink for business logic bugs: what happens when users can upload files, or when the server includes files based on user input: **[File Upload & File Inclusion](./10-file-upload-and-inclusion)**.
