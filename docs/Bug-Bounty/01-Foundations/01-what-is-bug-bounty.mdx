@@ -1,0 +1,174 @@
+---
+sidebar_position: 1
+title: "What Bug Bounty Really Is"
+description: "Bug bounty vs VDP vs pentest, how programs and payouts work, scope and safe harbor, the legal and ethical rules, and what the job actually feels like day to day."
+---
+
+import Admonition from '@theme/Admonition';
+
+# What Bug Bounty Really Is
+
+`Bug Bounty` · `Stage 1 — Foundations` · `Level: L0 → L1` · `Reading time: ~11 min`
+
+## The Deal in One Sentence
+
+A company publishes a **program** that says: *"You may test these specific assets, under these rules; if you find a qualifying vulnerability and report it to us privately, we'll reward you."*
+
+```text
+Company publishes program (scope + rules + rewards)
+          │
+          ▼
+Hunter tests in-scope assets  ──►  finds a vulnerability
+          │
+          ▼
+Private report  ──►  Triage (is it valid? in scope? duplicate?)
+          │
+          ▼
+Company fixes it  ──►  Reward (money, swag, points, or thanks)
+          │
+          ▼
+Optional public disclosure (if the program allows it)
+```
+
+You're paid for **results, not hours**. A valid critical found in 20 minutes pays the same as one found in 20 days — and 20 days with no valid finding pays nothing. That single fact shapes everything about how successful hunters work.
+
+---
+
+## Three Things People Confuse
+
+| | **Bug Bounty Program (BBP)** | **Vulnerability Disclosure Program (VDP)** | **Penetration Test** |
+|---|---|---|---|
+| Who tests | Anyone who joins (public) or invited hunters (private) | Anyone | A hired, contracted team |
+| Payment | Per valid bug, by severity | Usually none — thanks, points, swag | Fixed fee for the engagement |
+| Duplicates | Only the first reporter is rewarded | Same | Not applicable |
+| Coverage | Wherever hunters choose to look | Same | A defined scope, tested systematically |
+| Good for beginners? | Yes, but competitive | **Yes — great for first findings and reputation** | Requires employment/contract |
+
+<Admonition type="tip" title="Beginner lane">
+
+Don't ignore VDPs. They have less competition, they still teach you real-world hunting, and valid reports there build the **reputation and signal** that get you invited to private paid programs.
+
+</Admonition>
+
+---
+
+## Public vs Private Programs
+
+- **Public programs** are visible to everyone on the platform. More hunters → more duplicates, especially on easy bugs.
+- **Private programs** are invite-only. Platforms invite hunters based on track record (valid reports, reputation, signal/accuracy). Fewer hunters → better odds.
+- **Live hacking events** are time-boxed, invite-only competitions, often in person, with boosted rewards — usually for consistent, high-performing hunters.
+
+Your early goal isn't to get rich on public programs. It's to build a track record that gets you into private ones.
+
+---
+
+## Anatomy of a Program Policy
+
+Read the whole policy before you send a single request. The important parts:
+
+| Section | What to look for |
+|---|---|
+| **In scope** | Exact domains, wildcards (`*.example.com`), apps, API hosts, mobile app IDs, source repos |
+| **Out of scope** | Domains and assets you must not touch — often third-party services, corporate sites, acquisitions |
+| **Out-of-scope vulnerabilities** | Bug types they won't pay for — commonly self-XSS, missing headers, clickjacking on non-sensitive pages, rate limiting without impact, best-practice issues |
+| **Rules of engagement** | Request-rate limits, required headers (e.g. a hunter identifier), required test-account email patterns, banned tools or techniques |
+| **Rewards table** | Payout ranges per severity, sometimes per asset tier |
+| **Severity method** | CVSS, the platform's taxonomy (for example Bugcrowd's VRT), or the company's own rating |
+| **Disclosure policy** | Whether and when you may publish a write-up |
+| **Safe harbor** | The company's commitment not to pursue legal action for good-faith testing within the rules |
+
+<Admonition type="warning" title="Scope is a legal boundary">
+
+"It's a subdomain of their main domain" does **not** make something in scope. If it isn't listed, don't test it. When unsure, ask the program through the platform before testing.
+
+</Admonition>
+
+---
+
+## Safe Harbor and the Law
+
+Unauthorised access to computer systems is a crime in most countries (for example under the US Computer Fraud and Abuse Act, the UK Computer Misuse Act, or India's IT Act). A bug bounty program is what turns your testing into **authorised** testing — but only within its scope and rules.
+
+**Safe harbor** language commits the company to treat good-faith research under the policy as authorised and not to take legal action. Many programs adopt standard safe-harbor wording from initiatives such as disclose.io. Prefer programs that include it.
+
+You lose that protection if you:
+
+- test out-of-scope assets,
+- access, download or keep more user data than needed to prove impact,
+- degrade service (DoS, heavy automated scanning against rules),
+- use social engineering or physical attacks unless explicitly allowed,
+- disclose publicly before the program permits it,
+- try to extort ("pay me or I publish") — that's a crime, not a bounty.
+
+---
+
+## How Severity and Rewards Work
+
+Rewards scale with **impact**, not with how clever the technique was.
+
+| Severity | Typical shape of impact |
+|---|---|
+| **Critical** | Remote code execution, full account takeover of any user without interaction, mass data exposure, admin takeover |
+| **High** | Account takeover with some interaction, IDOR exposing sensitive data, stored XSS on sensitive pages, SSRF to internal services |
+| **Medium** | CSRF on meaningful actions, reflected XSS, limited data exposure, IDOR on less sensitive data |
+| **Low** | Minor information disclosure, open redirect without chain, low-impact misconfigurations |
+| **Informative / N/A** | Valid observation but no real security impact, or explicitly excluded |
+
+Programs usually rate with **CVSS** (v3.1 or v4.0) or a platform taxonomy such as **Bugcrowd's Vulnerability Rating Taxonomy (VRT)**, then map severity to their reward table.
+
+<Admonition type="info" title="Pro lane">
+
+Two bugs of the same class can land at completely different severities. An IDOR on a "favourite colour" field is low; the same IDOR on bank statements is high or critical. Always ask "what can an attacker *actually do* with this, to *whom*, at *what scale*?" — and say it clearly in the report.
+
+</Admonition>
+
+---
+
+## Duplicates: The Rule That Shapes Strategy
+
+Only the **first valid report** of an issue gets rewarded. Later reports are closed as **duplicates** (sometimes with a small reputation bonus, never the bounty).
+
+That's why:
+
+- easy bugs on popular public programs are almost always duplicates,
+- **depth** (understanding one app better than anyone) beats **breadth** (spraying payloads everywhere) for most hunters,
+- **new features, new assets and acquisitions** are valuable — nobody has looked at them yet.
+
+---
+
+## What the Work Actually Feels Like
+
+| Myth | Reality |
+|---|---|
+| "Run a scanner, collect money." | Scanner-found bugs are usually found by hundreds of other people first. |
+| "Hackers type fast in dark rooms." | Most time is spent *reading*: requests, JavaScript, documentation, other people's write-ups. |
+| "One big bug and you're set." | Income is lumpy. Weeks of nothing, then several findings at once. |
+| "You need to be a genius." | You need patience, curiosity, note-taking and persistence. |
+
+A typical session: pick a feature, read every request it makes in your proxy, form hypotheses ("what if this ID belonged to someone else?"), test them one by one, take notes, move on. Repeat.
+
+---
+
+## Ethics in Practice
+
+- Use **your own accounts** (create two or more) for testing.
+- If you accidentally access real user data, stop, don't keep it, and mention it in your report.
+- Don't run high-volume automation unless the program allows it.
+- Don't chase a bug into other users' data "to show more impact." Prove it with your own accounts.
+- Respect embargoes and disclosure timelines.
+- Be professional with triagers, even when you disagree.
+
+---
+
+## Key Takeaways
+
+- Bug bounty pays for valid, first-reported, in-scope vulnerabilities — results, not effort.
+- VDPs and private programs are the beginner's best friends.
+- The program policy is your contract: scope, rules, excluded bug types and safe harbor.
+- Severity follows real-world impact. Duplicates follow speed and depth.
+
+---
+
+## Next
+
+**[Skills Roadmap: What to Learn, in What Order](./02-skills-roadmap.mdx)**

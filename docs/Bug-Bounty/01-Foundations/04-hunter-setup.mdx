@@ -1,0 +1,213 @@
+---
+sidebar_position: 4
+title: "Hunter Setup: Your Workstation and Toolkit"
+description: "Setting up an intercepting proxy, browser profiles, essential extensions, a recon VPS, Go/Python tools, wordlists and a note-taking system — everything you need before testing."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Hunter Setup: Your Workstation and Toolkit
+
+`Bug Bounty` · `Stage 1 — Foundations` · `Level: L0 → L3` · `Reading time: ~12 min`
+
+A good setup isn't about owning the most tools. It's about seeing **every request**, being able to **replay and modify** it quickly, and **never losing track** of what you've tested.
+
+---
+
+## The Core: An Intercepting Proxy
+
+| Proxy | Notes |
+|---|---|
+| **Burp Suite Community** | Free; Proxy, Repeater, Decoder, Comparer; Intruder is rate-limited in the free edition |
+| **Burp Suite Professional** | Paid; scanner, unthrottled Intruder, Collaborator (out-of-band testing), saved projects — the professional standard |
+| **Caido** | Modern, lightweight alternative with a free tier; popular with hunters |
+| **OWASP ZAP / ZAP** | Free and open-source (now independent from OWASP); good for automated scanning |
+
+### Proxy setup checklist
+
+- [ ] Install the proxy's CA certificate in your testing browser so HTTPS can be intercepted.
+- [ ] Use a **dedicated browser profile** for hunting (no personal accounts, no unrelated extensions).
+- [ ] Set **scope** in the proxy so history only shows target traffic.
+- [ ] Turn off interception by default; just record history, and use Repeater to modify.
+- [ ] Learn the shortcuts for "send to Repeater" and "send to Intruder/Automate" — you'll use them hundreds of times a day.
+
+---
+
+## Browser Setup
+
+| Item | Why |
+|---|---|
+| Separate browser profiles (or containers) per test account | Stay logged in as Attacker and Victim simultaneously |
+| A proxy-switching extension (e.g. FoxyProxy) | Switch proxying on and off quickly |
+| A tech-fingerprinting extension (e.g. Wappalyzer) | See the framework, CDN and libraries at a glance |
+| DevTools fluency | Breakpoints in JavaScript, local overrides, network throttling |
+
+<Admonition type="tip" title="Beginner lane: the two-account habit">
+
+Always create **at least two accounts** on any target — "Attacker" and "Victim" — ideally in separate browser profiles. For apps with roles, also create an admin/owner and a low-privilege member. Access control testing (the most common paid bug class) is impossible without them.
+
+</Admonition>
+
+---
+
+## Essential Burp Extensions
+
+| Extension | Use |
+|---|---|
+| **Autorize** | Replays every request with a low-privilege session automatically — the fastest way to find IDOR and broken access control |
+| **Param Miner** | Discovers hidden parameters and headers; useful for cache poisoning |
+| **Logger++** | Advanced, searchable request logging |
+| **Turbo Intruder** | High-speed and race-condition testing via scripts |
+| **JWT Editor** | Decode, modify and re-sign JWTs |
+| **Hackvertor** | Encoding/decoding transformations inside requests |
+| **InQL** | GraphQL schema discovery and query generation |
+| **Collaborator Everywhere** | Injects out-of-band payloads into headers to find blind SSRF and similar |
+| **JS Miner / JS Link Finder** | Pull endpoints and secrets out of JavaScript |
+| **Active Scan++** | Extends the Pro scanner with extra checks |
+
+---
+
+## A Recon Machine (VPS)
+
+Recon tools are network-heavy and long-running. Many hunters use a small cloud VPS:
+
+- runs overnight without your laptop,
+- faster, more stable network,
+- keeps scan traffic off your home IP.
+
+<Admonition type="warning" title="Respect rate limits">
+
+Programs often state maximum request rates. Heavy scanning from a VPS can break rules or harm services — configure rate limits in your tools (`-rate-limit`, `-rl`, `-t` threads) and follow each program's rules.
+
+</Admonition>
+
+---
+
+## Installing the Core Toolchain
+
+<Tabs>
+<TabItem value="go" label="Go tools" default>
+
+Most modern recon tools are written in Go. Install Go, add `$HOME/go/bin` to your `PATH`, then:
+
+```bash
+go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
+go install -v github.com/projectdiscovery/katana/cmd/katana@latest
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+go install -v github.com/projectdiscovery/alterx/cmd/alterx@latest
+go install -v github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest
+go install -v github.com/projectdiscovery/notify/cmd/notify@latest
+go install -v github.com/tomnomnom/assetfinder@latest
+go install -v github.com/tomnomnom/waybackurls@latest
+go install -v github.com/tomnomnom/anew@latest
+go install -v github.com/tomnomnom/unfurl@latest
+go install -v github.com/tomnomnom/qsreplace@latest
+go install -v github.com/lc/gau/v2/cmd/gau@latest
+go install -v github.com/ffuf/ffuf/v2@latest
+go install -v github.com/hahwul/dalfox/v2@latest
+go install -v github.com/d3mondev/puredns/v2@latest
+```
+
+`naabu` needs `libpcap` installed (for example `sudo apt install libpcap-dev`); `puredns` needs `massdns`.
+
+</TabItem>
+<TabItem value="py" label="Python tools">
+
+```bash
+pipx install arjun          # hidden parameter discovery
+pipx install sqlmap         # SQL injection confirmation/exploitation
+pipx install uro            # de-duplicate URL lists
+```
+
+Using `pipx` keeps each tool in its own environment and avoids dependency conflicts.
+
+</TabItem>
+<TabItem value="other" label="Other">
+
+```bash
+# Content discovery (Rust)
+cargo install feroxbuster
+
+# Secrets scanning
+go install github.com/zricethezav/gitleaks/v8@latest
+# TruffleHog: install the release binary from its GitHub releases page (or Homebrew)
+
+# Screenshots of many hosts
+go install github.com/sensepost/gowitness@latest
+```
+
+</TabItem>
+</Tabs>
+
+<Admonition type="info" title="Pro lane">
+
+Tools change quickly — new major versions rename flags and add features. Pin versions in your scripts, keep a `setup.sh` you can rerun on a fresh VPS, and update `nuclei` templates regularly (`nuclei -update-templates`).
+
+</Admonition>
+
+---
+
+## Wordlists
+
+| Wordlist | Use |
+|---|---|
+| **SecLists** | The standard collection: directories, files, parameters, usernames, fuzzing payloads |
+| **Assetnote Wordlists** | Built from real-world data — excellent for API routes, technologies and subdomains |
+| **OneListForAll** | A large merged list for content discovery |
+| **Your own lists** | Words collected from the target itself (JS, docs, URLs) often work best |
+| **Fresh DNS resolvers** | Validated public resolver lists for mass DNS resolution |
+
+---
+
+## Notes: Your Most Underrated Tool
+
+Good notes stop you re-testing the same thing, and turn into reports and write-ups later. Use whatever you'll actually maintain — Obsidian, Notion, CherryTree, Joplin, or plain Markdown in a git repo.
+
+A simple per-program structure:
+
+```text
+programs/
+└── example-saas/
+    ├── scope.md            # in/out of scope, rules, rate limits, test account rules
+    ├── recon/              # tool output (subdomains, live hosts, URLs, JS)
+    ├── app-map.md          # features, roles, endpoints, interesting parameters
+    ├── tested.md           # what you tested, with result (✓ safe / ✗ bug / ? revisit)
+    ├── ideas.md            # hypotheses to try later
+    └── reports/            # drafts and submitted reports
+```
+
+<Admonition type="tip" title="Beginner lane">
+
+Keep an **`ideas.md`** file. Whenever something feels odd ("why does this endpoint return my email?"), write it down even if you can't exploit it yet. A surprising number of findings come from revisiting old ideas once you've learnt a new technique.
+
+</Admonition>
+
+---
+
+## Operational Hygiene
+
+- Use **email aliases** for test accounts (many programs require a specific format, e.g. `yourname+test1@wearehackerone.com` or the platform's provided alias).
+- Store tokens and passwords for test accounts in a password manager.
+- Never use real payment cards unless the program provides test cards or explicitly allows it.
+- Keep your OS, browser and tools updated — you're downloading and running a lot of third-party code.
+- Back up your notes.
+
+---
+
+## Key Takeaways
+
+- An intercepting proxy, two browser profiles and two test accounts are the minimum setup.
+- Autorize, Param Miner, Logger++ and Turbo Intruder cover most professional Burp workflows.
+- A VPS with Go-based recon tools and good wordlists powers recon.
+- Structured notes are a competitive advantage, not admin work.
+
+---
+
+## Next
+
+**[Stage 2 · Recon Mindset & Scope Mapping](../02-Recon/01-recon-mindset-and-scope.mdx)**
