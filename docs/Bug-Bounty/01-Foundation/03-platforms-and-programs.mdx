@@ -1,0 +1,131 @@
+---
+sidebar_position: 3
+title: "Platforms & Choosing Your First Program"
+description: "The major bug bounty platforms and self-hosted programs, how reputation and invites work, and a practical method for picking programs and targets you can actually win on."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Platforms & Choosing Your First Program
+
+`Bug Bounty` · `Stage 1 — Foundations` · `Level: L0 → L3` · `Reading time: ~11 min`
+
+Picking **where** to hunt matters almost as much as **how** you hunt. The wrong program — tiny scope, thousands of hunters, slow payouts — can make a good hunter look like a bad one.
+
+---
+
+## The Main Platforms
+
+| Platform | Known for |
+|---|---|
+| **HackerOne** | The largest platform; many big-brand public and private programs; public "Hacktivity" feed of disclosed reports |
+| **Bugcrowd** | Large platform; uses the open **Vulnerability Rating Taxonomy (VRT)** for severity; many private programs |
+| **Intigriti** | Strong European presence; regular community challenges |
+| **YesWeHack** | European platform with many public-sector and EU programs |
+| **Immunefi** | Web3 and smart contracts; some of the largest individual payouts in the industry |
+| **HackenProof** | Web3-focused plus traditional programs |
+| **Synack** | Vetted, invite-only researcher network with an application process |
+
+### Self-hosted programs
+
+Many large companies run their own programs outside platforms — for example **Google** (Vulnerability Reward Program), **Microsoft** (MSRC), **Apple** (Apple Security Bounty), **Meta**, and many others. These often have huge scopes and well-documented rules, and some publish their own write-up and research guides.
+
+<Admonition type="tip" title="Beginner lane">
+
+You don't need to be on every platform. Start on **one or two**, learn their interface and rules, and build reputation there. Reputation and signal on a platform are what unlock private invites.
+
+</Admonition>
+
+---
+
+## How Reputation and Invites Work
+
+Platforms track your history. Exact formulas differ, but the ideas are the same everywhere:
+
+| Metric | What it measures | How to improve it |
+|---|---|---|
+| **Reputation / points** | Total value of your valid findings over time | Find valid bugs, especially higher severities |
+| **Signal / accuracy** | The proportion of your reports that are valid | Don't submit out-of-scope, excluded or unverified reports |
+| **Impact** | Average severity of your valid reports | Escalate and chain before reporting |
+
+Low-quality reports (N/A, spam, out of scope) **lower** your signal and can cost you invites or even get you restricted. One verified, well-written medium beats five speculative "possible" reports.
+
+---
+
+## Reading a Program Like a Hunter
+
+Before choosing a program, look at:
+
+| Signal | Good sign | Warning sign |
+|---|---|---|
+| **Scope size** | Wildcards (`*.example.com`), many apps, APIs, mobile apps | One static marketing site |
+| **Response efficiency** | Fast first response and triage times (shown on many platforms) | Reports open for months |
+| **Reward table** | Clear ranges, decent lows and mediums | Only criticals pay meaningfully |
+| **Resolved reports** | Steady flow of resolved reports | Hundreds of hunters, very few resolutions |
+| **Launch date** | Recently launched or recently expanded scope | Years old, heavily picked over |
+| **Product complexity** | Many features, roles, integrations, payments | Few features, little user interaction |
+| **Disclosure** | Disclosed reports to learn from | No information at all |
+
+---
+
+## Wide vs Deep: Two Valid Strategies
+
+```text
+WIDE (recon-heavy)                        DEEP (app-heavy)
+───────────────────────────               ───────────────────────────
+Huge wildcard scopes                      One complex application
+Find forgotten hosts and assets           Understand every feature and role
+Misconfigs, takeovers, exposed panels     IDOR, logic, auth, chained bugs
+Benefits from automation                  Benefits from patience and notes
+Competes on speed                         Competes on understanding
+```
+
+<Admonition type="info" title="Pro lane">
+
+Most professionals combine both: wide recon to **find** the interesting, less-tested corners of a target, then deep manual testing **inside** those corners. A forgotten internal tool on an obscure subdomain, tested deeply, is where many critical findings come from.
+
+</Admonition>
+
+---
+
+## Choosing Your First Program — a Practical Method
+
+1. **Filter for scope:** look for wildcard domains or several web apps and APIs.
+2. **Filter for activity:** prefer programs with good response times and regular resolved reports.
+3. **Prefer products you understand:** if you've used the product (a SaaS tool, an e-commerce site), you already know its features.
+4. **Prefer complexity:** user roles, teams/organisations, invitations, file uploads, payments, integrations — each is a bug surface.
+5. **Commit:** spend at least **2–4 weeks** on one program before judging it. Hopping between programs every day keeps you at surface level, where all the duplicates are.
+
+### Good first-target features
+
+- Organisations/teams with multiple roles (admin, member, viewer) → access control bugs.
+- Invitations and sharing → IDOR, privilege escalation, account takeover.
+- Profile and settings → IDOR, mass assignment, CSRF, XSS.
+- Exports, reports and PDF generation → IDOR, SSRF, injection.
+- Integrations and webhooks → SSRF.
+- Billing and coupons → business logic, race conditions.
+
+---
+
+## Keep Your Own Program Tracker
+
+| Program | Platform | Scope notes | Started | Hours | Reports (valid/dup/NA) | Next idea |
+|---|---|---|---|---|---|---|
+| Example SaaS | HackerOne | `*.example.com`, API, Android | 2026-11-01 | 14 | 1 / 2 / 0 | Test team-invite flow with 3 roles |
+
+Tracking hours versus results shows you which programs are worth your time — and which strategies work for *you*.
+
+---
+
+## Key Takeaways
+
+- Start on one or two platforms; protect your signal from day one.
+- Choose programs with big scope, good response times and complex features.
+- Pick wide, deep, or a mix — but commit to a program long enough to understand it.
+- Track your time and results so your strategy improves with data, not mood.
+
+---
+
+## Next
+
+**[Hunter Setup: Your Workstation and Toolkit](./04-hunter-setup.mdx)**
