@@ -1,0 +1,151 @@
+---
+sidebar_position: 1
+title: "Automation Pipelines"
+description: "Building continuous recon and monitoring that alerts you to new assets first — without becoming noisy, breaking program rules, or drowning in false positives."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Automation Pipelines
+
+`Bug Bounty` · `Stage 4 — Level Up` · `Level: L3 → L5` · `Reading time: ~12 min`
+
+Automation isn't about running a scanner and collecting money — those bugs are already duplicated. Automation's real value is **being first**: knowing the moment a program adds a subdomain, ships a new JavaScript file, or exposes a new endpoint, so you can test brand-new code before anyone else.
+
+```text
+Continuous recon  ──►  diff against yesterday  ──►  alert on what's NEW  ──►  you test it first
+```
+
+---
+
+## Principle: Automate Discovery, Hunt Manually
+
+| Automate | Keep manual |
+|---|---|
+| Finding assets (subdomains, hosts, ports) | Understanding the application |
+| Detecting *change* (new hosts, new JS, new endpoints) | Forming hypotheses |
+| Known-CVE/misconfig detection (Nuclei, carefully) | Logic, access control, chaining |
+| Collecting URLs, parameters, JS | Deciding what's worth testing |
+| Notifications | Verifying and reporting |
+
+<Admonition type="warning" title="Automation must respect the rules">
+
+Mass automation can break programs' rate limits, degrade services, and flood them with low-quality scanner reports. Throttle everything, honour each program's rules, never run intrusive scans against production without permission, and never submit raw scanner output as a report.
+
+</Admonition>
+
+---
+
+## The Monitoring Pipeline
+
+The highest-value automation watches for **change**. `anew` only prints lines that are new to a file; `notify` sends them to Slack/Discord/Telegram.
+
+```bash
+#!/usr/bin/env bash
+# monitor.sh — run on a schedule (cron) per program
+set -euo pipefail
+d=$1; cd "monitor/$d"
+
+# 1. New subdomains
+subfinder -d "$d" -all -silent \
+  | grep -vFf ../../scope/out-of-scope.txt \
+  | anew subs.txt \
+  | notify -silent -id subs
+
+# 2. New live hosts / changed status or title
+httpx -l subs.txt -silent -sc -title -td \
+  | anew hosts.txt \
+  | notify -silent -id hosts
+
+# 3. New endpoints from crawling + archives
+( katana -list hosts-urls.txt -jc -silent; cat hosts-urls.txt | gau ) 2>/dev/null \
+  | uro | anew urls.txt | notify -silent -id urls
+
+# 4. New JavaScript files (then diff their endpoints separately)
+grep -Ei '\.js(\?|$)' urls.txt | anew js.txt | notify -silent -id js
+```
+
+Schedule it conservatively (daily is plenty for most programs) and per-program so alerts are attributable.
+
+<Admonition type="tip" title="Beginner lane">
+
+Start tiny: a daily `subfinder | anew subs.txt | notify`. The first time you get pinged about a brand-new subdomain and find a bug on it before anyone else, you'll understand why monitoring beats one-off recon.
+
+</Admonition>
+
+---
+
+## Watching JavaScript for New Endpoints
+
+New features appear in JS before they're announced. Diff extracted endpoints over time:
+
+```bash
+# For each known JS file, extract endpoints and alert on new ones
+while read -r url; do
+  curl -s "$url" | grep -oE '"/[a-zA-Z0-9_./-]{2,}"' | tr -d '"'
+done < js.txt | sort -u | anew js-endpoints.txt | notify -silent -id js-endpoints
+```
+
+A new `/api/...` path showing up here is one of the strongest "go look now" signals in bug bounty.
+
+---
+
+## Safe, Useful Nuclei Usage
+
+Nuclei is template-based detection. Used well, it flags exposures and known CVEs; used badly, it's noise and rule-breaking.
+
+```bash
+nuclei -update-templates
+nuclei -l hosts.txt -silent \
+  -severity medium,high,critical \
+  -rate-limit 20 -c 25 \
+  -exclude-tags intrusive,dos,fuzz \
+  -o nuclei.txt
+```
+
+- Prefer **detection** over intrusive templates.
+- Keep rate limits low on production.
+- **Always manually verify** a Nuclei hit before reporting — false positives are common, and raw hits are duplicates.
+
+---
+
+## A Sane Architecture
+
+```text
+Cheap VPS (always on)
+  ├── cron: per-program monitor.sh        (daily)
+  ├── results/<program>/  (subs, hosts, urls, js, endpoints)  -> git-tracked for history
+  ├── notify -> your private Slack/Discord/Telegram channel
+  └── you: review alerts, pick targets, hunt manually from your laptop
+```
+
+Keeping results in a git repo gives you free history and diffs ("what changed this week?").
+
+<Admonition type="info" title="Pro lane: frameworks, but understand them">
+
+Mature hunters often build on frameworks like **BBRF** (scope/asset database), **reconftw** or **reNgine** (orchestrated recon), and ProjectDiscovery's **Cloud/Chaos** data. They're powerful, but don't run a framework you don't understand against production — you own every request it sends. Build your own small pipeline first so you know exactly what's happening.
+
+</Admonition>
+
+---
+
+## What Not to Automate
+
+- **Submitting reports.** Never auto-file scanner output. It tanks your signal and floods programs.
+- **Exploitation against production.** Detection only; verify and exploit manually, minimally.
+- **Anything the program prohibits.** Some ban automated scanning entirely — read the rules per program.
+
+---
+
+## Key Takeaways
+
+- Automate discovery and change-detection; hunt manually.
+- Monitoring for *new* assets and endpoints is the highest-value automation — it makes you first.
+- Throttle everything, respect program rules, and never submit raw scanner output.
+- Build a small pipeline you understand before adopting big frameworks.
+
+---
+
+## Next
+
+**[Chaining & Impact](./02-chaining-and-impact.mdx)**

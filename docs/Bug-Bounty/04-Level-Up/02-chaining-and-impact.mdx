@@ -1,0 +1,125 @@
+---
+sidebar_position: 2
+title: "Chaining & Impact"
+description: "How to combine low-severity findings into high-impact exploits, how to demonstrate and argue impact, and the classic chains that turn 'informative' into 'critical'."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Chaining & Impact
+
+`Bug Bounty` · `Stage 4 — Level Up` · `Level: L3 → L5` · `Reading time: ~11 min`
+
+The difference between a hunter who earns pocket money and one who earns a living is usually **impact**. The same raw finding can be "informative" or "critical" depending on what you chain it into and how clearly you demonstrate what an attacker could actually do.
+
+```text
+Low bug  +  Low bug  +  Low bug   ──►   One high/critical chain
+(open redirect) (info leak) (CSRF)      (account takeover)
+```
+
+---
+
+## Why Chaining Pays
+
+- A single open redirect: often **low** or N/A.
+- Open redirect used to steal an OAuth `code`: **account takeover** — high/critical.
+
+Programs pay for the **outcome**, not the ingredients. Your job is to find the outcome the ingredients enable.
+
+---
+
+## The Impact Ladder
+
+For any finding, push it up this ladder before reporting:
+
+```text
+"Something is odd"                      (not yet a report)
+  ↓ what can I read/change with it?
+"I can see/do X on my own account"      (low–medium)
+  ↓ can it affect another user?
+"I can do X to another user"            (medium–high)
+  ↓ without their interaction? at scale? to admins?
+"I can do X to any user, unauthenticated, at scale"   (critical)
+```
+
+Always ask: **to whom, without what interaction, at what scale, affecting what data/money?**
+
+---
+
+## Classic Chains
+
+| Chain | Result |
+|---|---|
+| IDOR on "change email" → trigger password reset | Account takeover |
+| Host-header injection → reset link to attacker host | Account takeover |
+| Open redirect → steal OAuth `code`/token | Account takeover |
+| Self-XSS + login/logout CSRF → force-login victim into your account, then your XSS runs in their context | XSS on victim → ATO |
+| Stored XSS in user content → fires in admin panel | Admin compromise |
+| Mass assignment `emailVerified:true` → skip verification → claim pre-registered account | Takeover |
+| SSRF → cloud metadata → temporary credentials | Cloud/internal compromise |
+| CORS misconfig (reflected origin + credentials) → read API responses cross-origin | Data theft |
+| Subdomain takeover on `*.target.com` → cookie scoped to parent → session theft | ATO / data theft |
+| Rate-limit bypass → brute-force OTP → 2FA bypass | Auth bypass |
+| Blind SSRF + redirect trick → reach internal service | Internal access |
+| LFI → log poisoning → RCE | Server compromise |
+
+<Admonition type="tip" title="Beginner lane">
+
+Keep a running list of your "weak" findings on a target in `ideas.md` (open redirects, info leaks, CSRFs, self-XSS, low IDORs). Before moving on, spend 30 minutes asking "can any two of these combine?" Many first high-severity reports come from connecting two things you already found.
+
+</Admonition>
+
+---
+
+## Turning Self-XSS Into Real XSS
+
+Self-XSS (you can only inject into your own view) is normally worthless — but it becomes real if you can make a **victim's browser run as you**:
+
+- **Login/Logout CSRF:** if login lacks CSRF protection, an attacker page can silently log the victim into the *attacker's* account, where the self-XSS payload is stored, which then runs in the victim's browser — and can pivot.
+- Combined with a flaw that moves data between accounts, self-XSS can reach the victim's real session.
+
+Report the *chain's* impact, not the self-XSS in isolation.
+
+---
+
+## Demonstrating Impact Without Harm
+
+Impact must be **shown**, but safely:
+
+- Use **two accounts you own** to prove cross-user impact.
+- For "any user at scale," demonstrate the mechanism on your own objects and **explain** (don't execute) how it generalises.
+- Record a short video or step-by-step request log of the full chain.
+- Never touch real users' data to "prove more impact" — describing the obvious generalisation is enough and expected.
+
+<Admonition type="warning" title="More impact is not a licence to go further">
+
+Once you've proven a vulnerability lets you reach other users' data, **stop**. Pulling real records "to show scale" can void safe harbor and harm people. Triagers understand that an IDOR with sequential IDs affects everyone — you don't need to prove it by accessing everyone.
+
+</Admonition>
+
+---
+
+## Arguing Severity in the Report
+
+Make the triager's job easy:
+
+1. **State the outcome first:** "Any user's account can be fully taken over without interaction."
+2. **Map the chain:** step 1 → step 2 → step 3, each with the exact request.
+3. **Name the impact dimensions:** who (any user), interaction (none), scale (all accounts), data (PII + funds).
+4. **Suggest a CVSS vector** if the program uses CVSS, with brief justification.
+5. **Pre-empt downgrades:** if part of the chain might be seen as low, explain why the *combination* is high.
+
+---
+
+## Key Takeaways
+
+- Programs pay for outcomes; chain weak findings into real impact before reporting.
+- Push every finding up the impact ladder: to whom, what interaction, what scale, what data.
+- Self-XSS, open redirects, CSRF and info leaks are powerful chain ingredients.
+- Demonstrate impact with your own accounts, then stop — don't harm real users to "prove scale."
+
+---
+
+## Next
+
+**[Source Code & CVE Hunting](./03-source-code-and-cve-hunting.mdx)**

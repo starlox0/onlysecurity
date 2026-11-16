@@ -1,0 +1,107 @@
+---
+sidebar_position: 4
+title: "Using AI Without Becoming Noise"
+description: "Where AI genuinely helps a bug bounty hunter in 2026, the industry-wide 'AI slop' report problem, and how to use AI to find real bugs without destroying your signal or a program's inbox."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Using AI Without Becoming Noise
+
+`Bug Bounty` · `Stage 4 — Level Up` · `Level: L2 → L5` · `Reading time: ~9 min`
+
+AI tools can make a hunter meaningfully faster — and have simultaneously created the single biggest quality crisis bug bounty has ever had. Using AI well, in 2026, means getting the speed-up **without** becoming part of the problem.
+
+---
+
+## The "AI Slop" Problem (Know the Landscape)
+
+Through late 2025 and into 2026, programs and open-source projects were flooded with AI-generated reports that *look* plausible but describe bugs that don't exist.
+
+- HackerOne reported submissions up roughly **76%** year-over-year into early 2026, while the share describing real vulnerabilities stayed around **25%**.
+- Bugcrowd saw its inbox grow several-fold during one stretch in early 2026.
+- **curl** said fewer than 5% of its 2025 reports were legitimate, tightened intake, and warned repeat low-quality reporters would be banned.
+- Several projects (parts of the Linux kernel ecosystem, Django, and others) now **require a working exploit or reproduction script** and reject reports without one.
+- The IBB and some programs **paused or restructured** intake under the load.
+
+The result: programs are building **automated filters** and treating accounts that submit AI slop as noise sources. Your **signal** (valid-report ratio) has never mattered more.
+
+<Admonition type="warning" title="The rule that protects your reputation">
+
+**Never submit a finding you have not personally reproduced and understood.** If you can't explain the exact request, the exact response, and why it's a security issue — without the AI — it isn't ready. One hallucinated report can cost you a platform's trust that took months to build.
+
+</Admonition>
+
+---
+
+## Where AI Genuinely Helps
+
+Used as an assistant to *your* judgement, AI is a real force multiplier:
+
+| Task | How AI helps | You still must |
+|---|---|---|
+| **Understanding code** | Summarise an unfamiliar codebase, explain a function, spot suspicious patterns | Verify the logic and the data flow yourself |
+| **Reading large JS bundles** | Summarise, find endpoints, explain minified logic | Confirm endpoints exist and test them |
+| **Learning** | Explain a new bug class, a protocol, a framework's quirks | Cross-check against primary sources |
+| **Writing PoCs** | Draft a CSRF page, a race-condition script, a parser | Test it actually works before relying on it |
+| **Report drafting** | Tighten wording, structure a chain clearly | Ensure every technical claim is true |
+| **Recon glue** | Write parsing/automation scripts | Read the script before running it |
+| **Regex & payloads** | Generate candidate payloads/encodings for a context | Verify which actually work |
+| **Triage of your own findings** | Sanity-check severity reasoning | Make the final call |
+
+---
+
+## Where AI Hurts You
+
+- **Inventing vulnerabilities:** models will confidently describe bugs that aren't there. This is the source of slop.
+- **Fabricated details:** made-up function names, non-existent parameters, plausible-but-wrong request/response pairs.
+- **False confidence:** a fluent report *reads* true. Fluency is not correctness.
+- **Over-automation:** firing AI-generated payloads at scale creates noise and rule violations.
+- **Duplication:** everyone's AI suggests the same obvious things on the same targets.
+
+<Admonition type="info" title="Pro lane: AI as a research accelerator, not an oracle">
+
+The hunters getting value from AI in 2026 use it to **go faster on the understanding-heavy parts** — reading code, mapping large apps, drafting tooling — and keep **verification entirely human**. Some use AI agents for recon triage and summarisation. The winners treat AI output as a *hypothesis generator*, never as a finding. "Agentic" validation is now something **platforms** run on *your* report; assume it will check whether the function and endpoint you cite actually exist.
+
+</Admonition>
+
+---
+
+## A Safe AI Workflow
+
+```text
+1. AI helps you UNDERSTAND (code, app, bug class, large JS)
+        │
+2. YOU form a specific hypothesis
+        │
+3. YOU test it manually against the target
+        │
+4. YOU reproduce it reliably and understand WHY it works
+        │
+5. AI helps you WRITE it up clearly
+        │
+6. YOU verify every technical claim before submitting
+```
+
+Steps 3, 4 and 6 are non-negotiable and fully human.
+
+---
+
+## Hunting AI Features Themselves
+
+Separately from *using* AI, AI features are *targets* — see **[AI & Agentic Application Testing](../03-Hunting/09-ai-and-agentic-testing.mdx)**. There, careful, well-proven findings stand out precisely because the inbox is full of unproven AI-generated claims.
+
+---
+
+## Key Takeaways
+
+- The industry is drowning in unverified AI-generated reports; platforms now filter aggressively and value signal highly.
+- Use AI to understand code, read JS, learn, draft PoCs and tighten reports — never to decide a bug exists.
+- Reproduce and understand every finding yourself before submitting.
+- Protect your signal like the asset it is: one slop report can cost months of reputation.
+
+---
+
+## Next
+
+Stage 4 complete. Make it pay: **[Stage 5 · Writing Reports That Get Paid](../05-Reporting-and-Career/01-writing-reports-that-pay.mdx)**
