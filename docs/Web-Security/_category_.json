@@ -1,0 +1,9 @@
+{
+  "label": "Web Application Security",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "title": "Web Application Security",
+    "description": "A fresher-to-professional tour of the modern web attack surface — injection, auth flaws, client-side bugs, business logic, protocol-level tricks, and the mindset real pentesters use to find them."
+  }
+}
