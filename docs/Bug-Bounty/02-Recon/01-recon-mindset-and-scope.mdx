@@ -1,0 +1,141 @@
+---
+sidebar_position: 1
+title: "Recon Mindset & Scope Mapping"
+description: "What recon is for, horizontal vs vertical recon, mapping an organisation's assets (acquisitions, ASNs, IP ranges, cloud, reverse WHOIS), and turning a scope into a target list."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Recon Mindset & Scope Mapping
+
+`Bug Bounty` · `Stage 2 — Recon` · `Level: L1 → L4` · `Reading time: ~10 min`
+
+> Recon isn't about collecting the biggest list. It's about finding the **places nobody else is looking**.
+
+The more hunters a program has, the less valuable its obvious assets become. Recon is how you find the forgotten staging server, the new API that launched last week, or the acquired company's portal still running old code.
+
+---
+
+## Two Directions of Recon
+
+```text
+                      HORIZONTAL  ("what does this company own?")
+   ◄──────────────────────────────────────────────────────────────►
+   example.com    acquired-co.com    example-cdn.net    203.0.113.0/24
+        │
+        │  VERTICAL  ("what's inside each of those?")
+        ▼
+   api.example.com, dev.example.com, staging-api.example.com
+        │
+        ▼
+   /api/v2/, /admin/, /graphql, JS files, parameters, hidden features
+```
+
+| | Horizontal recon | Vertical recon |
+|---|---|---|
+| Question | Which root domains, IP ranges and brands belong to the target? | What hosts, services and endpoints exist under each one? |
+| When it matters | Wide scopes ("any asset owned by X") | Every scope, including single-domain ones |
+| Techniques | Acquisitions, ASNs, reverse WHOIS, certificates, analytics IDs | Subdomain enumeration, port scanning, content discovery, JS analysis |
+
+<Admonition type="warning" title="Recon finds candidates — scope decides targets">
+
+Horizontal recon often discovers assets that are **not in scope**. Write them down, but only test what the program explicitly allows. If something looks clearly owned and important but isn't listed, ask the program first.
+
+</Admonition>
+
+---
+
+## Step 1 — Read the Scope Into a Machine-Usable List
+
+Turn the policy into files your tools can use:
+
+```text
+scope/
+├── in-scope-domains.txt      # example.com, *.example.com, api.example.io
+├── in-scope-ips.txt          # if any IP ranges are listed
+├── out-of-scope.txt          # excluded hosts and patterns
+└── rules.md                  # rate limits, required headers, banned tests
+```
+
+Always filter tool output against `out-of-scope.txt` before testing anything.
+
+---
+
+## Step 2 — Horizontal Recon Techniques
+
+| Technique | What it reveals | Where to look |
+|---|---|---|
+| **Acquisitions** | Companies the target bought — often older tech, separate security teams | Company press releases, Crunchbase, Wikipedia, news |
+| **ASNs and IP ranges** | Networks registered to the organisation | `bgp.he.net`, RIR databases (ARIN, RIPE, APNIC), `asnmap` |
+| **Reverse WHOIS** | Other domains registered with the same organisation or email | Reverse WHOIS services (many paid; some limited free lookups) |
+| **Certificate transparency** | Every certificate issued for a domain — and its subdomains | `crt.sh`, Censys |
+| **Shared analytics/tag IDs** | Domains using the same analytics or tag manager ID belong together | Search engines for those IDs, builtwith-style services |
+| **Favicon hash** | Hosts serving the same favicon, often the same product | Shodan `http.favicon.hash:` searches |
+| **Cloud ranges** | Assets hosted in cloud providers | Certificates, DNS records pointing to cloud services |
+
+```bash
+# Find ASNs for an organisation, then the IP ranges for them
+asnmap -org "Example Inc" -silent
+asnmap -a AS64500 -silent
+```
+
+<Admonition type="info" title="Pro lane">
+
+Acquisitions are one of the best sources of findings on wide-scope programs: they're often integrated slowly, run different stacks, and were last tested before the acquisition. Check whether the program's scope includes acquired brands — some explicitly do after a grace period.
+
+</Admonition>
+
+---
+
+## Step 3 — Vertical Recon (Overview)
+
+For each in-scope root domain, the next pages walk through:
+
+1. **[Subdomain enumeration](./02-subdomain-enumeration.mdx)** — passive sources, brute force, permutations, resolving, probing.
+2. **[Content & endpoint discovery](./03-content-and-endpoint-discovery.mdx)** — crawling, archives, fuzzing, parameters.
+3. **[JavaScript analysis](./04-javascript-analysis.mdx)** — hidden endpoints, secrets, client-side logic.
+4. **[OSINT, dorking & leaks](./05-osint-dorking-and-leaks.mdx)** — GitHub, search engines, Shodan, public docs and leaked data.
+
+---
+
+## Step 4 — Prioritise, Don't Hoard
+
+A list of 40,000 subdomains is useless if you don't know which 20 to look at first. Prioritise hosts that look:
+
+| Signal | Why it's interesting |
+|---|---|
+| `dev`, `staging`, `test`, `uat`, `qa`, `beta`, `old`, `legacy` | Less hardened, debug features enabled |
+| `admin`, `internal`, `intranet`, `vpn`, `sso`, `jira`, `jenkins`, `grafana` | Powerful functionality, sometimes exposed by mistake |
+| `api`, `api-v1`, `gateway`, `graphql` | Direct access to business logic |
+| Unusual technologies or ports | Fewer hunters have the knowledge to test them |
+| Login pages for internal tools | Default credentials, auth bypass, known CVEs |
+| Recently appeared hosts | Brand-new, untested code |
+| Errors, default pages, "it works!" | Misconfiguration or takeover candidates |
+
+---
+
+## Step 5 — Monitor for Change
+
+Programs change constantly. New subdomains, new features and new JavaScript files appear weekly. Professionals run recon **continuously** and get notified about what's new:
+
+```bash
+# Only new subdomains get printed and appended
+subfinder -d example.com -silent | anew subs.txt | notify -silent
+```
+
+The first hunter to test a brand-new asset has a huge advantage. More on this in **[Automation Pipelines](../04-Level-Up/01-automation-pipelines.mdx)**.
+
+---
+
+## Key Takeaways
+
+- Horizontal recon finds what the company owns; vertical recon finds what's inside each asset.
+- Turn the scope into files and filter every result against out-of-scope lists.
+- Prioritise unusual, new, internal-looking and development hosts.
+- Continuous monitoring beats one-off recon on busy programs.
+
+---
+
+## Next
+
+**[Subdomain Enumeration](./02-subdomain-enumeration.mdx)**

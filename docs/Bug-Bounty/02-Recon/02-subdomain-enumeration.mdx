@@ -1,0 +1,202 @@
+---
+sidebar_position: 2
+title: "Subdomain Enumeration"
+description: "Passive sources, certificate transparency, DNS brute force, permutations, resolving and wildcard handling, live-host probing, port scanning and screenshots — a complete subdomain workflow."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Subdomain Enumeration
+
+`Bug Bounty` · `Stage 2 — Recon` · `Level: L1 → L4` · `Reading time: ~12 min`
+
+Subdomains are where forgotten, less-tested applications live. The goal is to build a **complete, resolved, probed** list of hosts — then pick the interesting ones.
+
+```text
+Passive sources ─┐
+Cert transparency┼──► merge & de-dupe ──► resolve (DNS) ──► probe (HTTP) ──► ports ──► screenshots
+Brute force ─────┤                            │
+Permutations ────┘                    remove wildcards
+```
+
+---
+
+## 1. Passive Enumeration
+
+Passive sources collect subdomains without touching the target: search engines, certificate logs, DNS datasets and threat-intelligence APIs.
+
+```bash
+subfinder -d example.com -all -silent -o subfinder.txt
+assetfinder --subs-only example.com > assetfinder.txt
+amass enum -passive -d example.com -o amass.txt
+```
+
+**Certificate transparency** directly:
+
+```bash
+curl -s "https://crt.sh/?q=%25.example.com&output=json" \
+  | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u > crtsh.txt
+```
+
+<Admonition type="tip" title="Beginner lane">
+
+Add **API keys** for subfinder's sources (its provider config file). Many sources are free but need a key — with keys configured, passive results often grow dramatically.
+
+</Admonition>
+
+Merge everything:
+
+```bash
+cat subfinder.txt assetfinder.txt amass.txt crtsh.txt | sort -u > passive.txt
+```
+
+---
+
+## 2. Active Brute Force
+
+Passive sources miss hosts that never appeared publicly. Brute forcing tries likely names against the target's DNS:
+
+```bash
+puredns bruteforce best-dns-wordlist.txt example.com -r resolvers.txt -w brute.txt
+```
+
+| Tip | Why |
+|---|---|
+| Use good wordlists (Assetnote, SecLists DNS lists) | Quality matters more than size |
+| Use fresh, validated resolvers | Bad resolvers produce false positives |
+| Brute force deeper levels too (`*.dev.example.com`) | Interesting hosts often sit two levels down |
+
+---
+
+## 3. Permutations
+
+Generate variations of known names: `api` → `api-dev`, `api2`, `dev-api`, `api-staging`…
+
+```bash
+cat passive.txt brute.txt | sort -u | alterx -silent | dnsx -silent > permutations.txt
+```
+
+<Admonition type="info" title="Pro lane">
+
+Build **target-specific wordlists** from what you've already found: environment words (`dev`, `stg`, `uat`), regions (`eu`, `us-east`), product names, and team names pulled from JavaScript and documentation. Custom permutations often find hosts no public dataset contains.
+
+</Admonition>
+
+---
+
+## 4. Resolve and Handle Wildcards
+
+Combine and resolve everything, keeping only hosts with real DNS answers:
+
+```bash
+cat passive.txt brute.txt permutations.txt | sort -u > all-subs.txt
+dnsx -l all-subs.txt -silent -a -resp -o resolved.txt
+```
+
+**Wildcard DNS** (`*.example.com` resolving to one IP) makes every random name look valid. `puredns` filters wildcards automatically; otherwise, test a random string like `nonexistent-8f3a1c.example.com` — if it resolves, treat that IP's results with suspicion.
+
+---
+
+## 5. Probe for Live Web Services
+
+```bash
+dnsx -l all-subs.txt -silent | httpx -silent -sc -title -td -ip -cname -o live.txt
+```
+
+The flags show status code, page title, detected technologies, IP and CNAME — enough to triage hundreds of hosts quickly. Look for:
+
+- unusual titles (`Jenkins`, `Grafana`, `Swagger UI`, `Index of /`, `Kibana`),
+- `401`/`403` hosts (protected = something worth protecting),
+- default pages and error pages,
+- CNAMEs to third-party services (takeover candidates — see the infrastructure Hunt Cards).
+
+---
+
+## 6. Port Scanning
+
+Web apps don't only live on 80 and 443:
+
+```bash
+naabu -list resolved-hosts.txt -top-ports 1000 -silent -o ports.txt
+httpx -l ports.txt -silent -sc -title -o live-ports.txt
+```
+
+Common interesting ports: `8080`, `8443`, `8000`, `8888`, `3000`, `5000`, `9000`, `9200` (Elasticsearch), `5601` (Kibana), `6443` (Kubernetes API), `2375` (Docker API).
+
+<Admonition type="warning" title="Port scanning and program rules">
+
+Some programs restrict or prohibit port scanning, or ask for low rates. Check the rules, and use conservative rates (`-rate`) on production infrastructure.
+
+</Admonition>
+
+---
+
+## 7. Screenshots
+
+Visually reviewing hundreds of hosts is faster than reading titles:
+
+```bash
+gowitness scan file -f live-urls.txt
+```
+
+Scroll through the gallery looking for login portals, admin panels, error pages and anything unusual.
+
+---
+
+## The Whole Pipeline
+
+<Tabs>
+<TabItem value="simple" label="Beginner version" default>
+
+```bash
+#!/usr/bin/env bash
+d=$1
+subfinder -d "$d" -all -silent | sort -u > subs.txt
+httpx -l subs.txt -silent -sc -title -td -o live.txt
+echo "[+] $(wc -l < subs.txt) subdomains, $(wc -l < live.txt) live"
+```
+
+</TabItem>
+<TabItem value="full" label="Fuller version">
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+d=$1; mkdir -p "recon/$d" && cd "recon/$d"
+
+subfinder -d "$d" -all -silent > p1.txt
+assetfinder --subs-only "$d" > p2.txt
+curl -s "https://crt.sh/?q=%25.$d&output=json" | jq -r '.[].name_value' \
+  | sed 's/\*\.//g' > p3.txt
+cat p*.txt | sort -u > passive.txt
+
+puredns bruteforce ~/wordlists/dns.txt "$d" -r ~/resolvers.txt -w brute.txt -q
+cat passive.txt brute.txt | sort -u | alterx -silent > perms-raw.txt
+puredns resolve perms-raw.txt -r ~/resolvers.txt -w perms.txt -q
+
+cat passive.txt brute.txt perms.txt | sort -u > all.txt
+grep -vFf ../../scope/out-of-scope.txt all.txt > in-scope.txt || true
+
+httpx -l in-scope.txt -silent -sc -title -td -ip -cname -o live.txt
+echo "[+] $(wc -l < in-scope.txt) in-scope subdomains, $(wc -l < live.txt) live web services"
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Key Takeaways
+
+- Combine passive sources, certificate logs, brute force and permutations.
+- Resolve with good resolvers, filter wildcards, then probe for live web services.
+- Check non-standard ports and take screenshots to triage quickly.
+- Always filter results against out-of-scope lists before testing.
+
+---
+
+## Next
+
+**[Content & Endpoint Discovery](./03-content-and-endpoint-discovery.mdx)**

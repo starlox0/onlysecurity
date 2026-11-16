@@ -1,0 +1,161 @@
+---
+sidebar_position: 4
+title: "JavaScript Analysis"
+description: "Mining JavaScript for hidden endpoints, secrets, feature flags, client-side logic and DOM sinks — including source maps, framework bundles, monitoring for changes and validating leaked keys."
+---
+
+import Admonition from '@theme/Admonition';
+
+# JavaScript Analysis
+
+`Bug Bounty` · `Stage 2 — Recon` · `Level: L1 → L5` · `Reading time: ~11 min`
+
+Modern web apps ship much of their logic to the browser. That means the **JavaScript bundle is partial source code**, handed to you for free. Many hunters' best findings start with reading it.
+
+What you can find inside:
+
+| Find | Leads to |
+|---|---|
+| API endpoints and routes the UI doesn't expose | Hidden functionality, IDOR, missing access control |
+| Admin or internal routes | Privilege escalation |
+| API keys, tokens, credentials | Information disclosure, cloud or third-party compromise |
+| Feature flags | Unreleased features — often less tested |
+| Client-side validation and business rules | Logic that the server might not enforce |
+| DOM sinks (`innerHTML`, `eval`, `location`) | DOM XSS, open redirects |
+| `postMessage` listeners | Cross-origin messaging bugs |
+| Internal hostnames, environment names | More recon targets |
+
+---
+
+## 1. Collect JavaScript Files
+
+```bash
+# From crawls and archives
+cat urls.txt | grep -Ei '\.js(\?|$)' | sort -u > js-urls.txt
+
+# Crawl specifically for JS
+katana -u https://app.example.com -jc -d 3 -silent | grep -Ei '\.js(\?|$)' | anew js-urls.txt
+
+# Keep only live files
+httpx -l js-urls.txt -silent -mc 200 -o js-live.txt
+```
+
+Download them so you can search locally and diff them later:
+
+```bash
+mkdir -p js && while read -r u; do
+  f="js/$(echo "$u" | md5sum | cut -c1-12).js"
+  curl -s "$u" -o "$f" && echo "$u $f" >> js/index.txt
+done < js-live.txt
+```
+
+---
+
+## 2. Extract Endpoints
+
+```bash
+# Quick regex for paths and URLs
+grep -rhoE "(\"|')(/[a-zA-Z0-9_./-]{2,}|https?://[^\"']+)(\"|')" js/ | tr -d "\"'" | sort -u > js-endpoints.txt
+```
+
+Purpose-built tools do this better: **LinkFinder**, **jsluice**, Burp's **JS Miner**, and `katana -jc`. Feed results back into your endpoint map and test them with your authenticated session.
+
+<Admonition type="tip" title="Beginner lane">
+
+Open the main bundle in DevTools → **Sources**, click the `{}` "pretty print" button, then search (`Ctrl+Shift+F`) for words like `api/`, `admin`, `internal`, `token`, `role`, `isAdmin`, `debug`, `feature`. You'll be surprised what's sitting there in plain text.
+
+</Admonition>
+
+---
+
+## 3. Hunt for Secrets
+
+```bash
+trufflehog filesystem js/ --only-verified
+gitleaks detect --no-git --source js/ -v
+```
+
+Common finds: cloud keys, payment-provider keys, third-party API tokens, Firebase configs, internal URLs, hard-coded passwords.
+
+<Admonition type="warning" title="Most keys in JavaScript are meant to be public">
+
+Many keys are designed to be exposed in browsers — for example publishable payment keys, some maps keys, analytics IDs, and Firebase config objects. Reporting them without proving impact gets closed as informative. **Validate** before reporting: what can this key actually do? Use a key's least-invasive read-only check, never anything that costs the company money or touches real data. The community repository **keyhacks** documents safe validation checks for many key types.
+
+</Admonition>
+
+---
+
+## 4. Source Maps — the Jackpot
+
+Bundles are minified, but if the site publishes **source maps** (`.js.map`), you can reconstruct the original source code — file structure, comments and all.
+
+```bash
+# Check whether a map is referenced or simply present
+curl -s https://app.example.com/static/main.abc123.js | tail -c 200
+curl -sI https://app.example.com/static/main.abc123.js.map
+```
+
+Tools such as `sourcemapper` or browser DevTools (which load maps automatically) rebuild the original tree. Exposed source maps are often low severity on their own, but the source code they reveal regularly leads to real bugs.
+
+---
+
+## 5. Read Framework-Specific Clues
+
+| Framework | Where to look |
+|---|---|
+| **Next.js** | `/_next/static/…/_buildManifest.js` lists all routes; `/_next/data/` JSON endpoints; API routes under `/api/` |
+| **React (CRA/Vite)** | Route definitions in the main bundle; environment variables baked in at build time (`REACT_APP_`, `VITE_`) |
+| **Angular** | `main.js` contains routes, guards (client-side access checks) and services that call APIs |
+| **Vue/Nuxt** | Router config; Nuxt's `/_nuxt/` assets and payload files |
+| **Webpack in general** | Chunk files load lazily — find the chunk list and fetch every chunk, including admin-only ones |
+
+<Admonition type="info" title="Pro lane">
+
+**Client-side route guards** (for example an Angular `canActivate` that checks `user.isAdmin`) prove that an admin area exists and show you its API calls. The guard itself is not security — so request those admin API endpoints directly with a normal user's session. Missing server-side checks here are a classic high-severity finding.
+
+</Admonition>
+
+---
+
+## 6. Find DOM Sinks and Message Handlers
+
+Search the code for dangerous sinks and the sources that feed them:
+
+```text
+Sinks:    innerHTML  outerHTML  insertAdjacentHTML  document.write  eval  setTimeout(string)
+          Function(  location=  location.href=  window.open(  srcdoc  jQuery .html(  $(…)
+Sources:  location.hash  location.search  document.referrer  window.name  postMessage data
+          localStorage  URLSearchParams
+Messages: addEventListener("message"  — then check whether event.origin is validated
+```
+
+Then trace whether attacker-controlled sources reach those sinks. DOM Invader (built into Burp's browser) automates much of this tracing.
+
+---
+
+## 7. Monitor JavaScript for Changes
+
+New features show up in JavaScript **before** they're announced or linked in the UI.
+
+```bash
+# Re-download daily, diff against yesterday's copies, alert on new endpoints
+cat js-endpoints-today.txt | anew js-endpoints-all.txt | notify -silent
+```
+
+A new endpoint appearing in a bundle is one of the strongest signals in bug bounty: brand-new, untested code.
+
+---
+
+## Key Takeaways
+
+- JavaScript bundles are partial source code — read them.
+- Extract endpoints, secrets, feature flags, client-side rules and DOM sinks.
+- Validate leaked keys safely before reporting; many are public by design.
+- Source maps and framework manifests can reveal the whole front-end codebase.
+- Monitor JavaScript over time to catch new features early.
+
+---
+
+## Next
+
+**[OSINT, Dorking & Leaks](./05-osint-dorking-and-leaks.mdx)**

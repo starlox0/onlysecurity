@@ -1,0 +1,9 @@
+{
+  "label": "Stage 2 · Recon",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "title": "Stage 2 · Recon",
+    "description": "Mapping a target's attack surface: scope, subdomains, endpoints, JavaScript, and OSINT — the work that decides where bugs are found."
+  }
+}

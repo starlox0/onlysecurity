@@ -1,0 +1,166 @@
+---
+sidebar_position: 5
+title: "OSINT, Dorking & Leaks"
+description: "Google, GitHub and Shodan dorking, public Postman workspaces, exposed cloud storage, leaked documentation and credentials — and how to handle sensitive leaks responsibly."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# OSINT, Dorking & Leaks
+
+`Bug Bounty` · `Stage 2 — Recon` · `Level: L1 → L4` · `Reading time: ~11 min`
+
+Companies leak information about themselves constantly — in code repositories, search engines, public API workspaces, support portals and misconfigured storage. OSINT (open-source intelligence) is the art of finding it.
+
+<Admonition type="warning" title="Scope and leaks">
+
+A leaked credential found on GitHub isn't a vulnerability *in* an in-scope asset by default. Check the program's policy on leaked credentials and third-party platforms. Many programs accept them when the leak gives access to in-scope systems — but **never log in with leaked real-employee credentials** unless the program explicitly permits it. Report the exposure and let the company verify.
+
+</Admonition>
+
+---
+
+## Search Engine Dorking
+
+Search operators find things that were never meant to be indexed.
+
+```text
+site:example.com -www                         # subdomains beyond www
+site:example.com ext:pdf OR ext:xlsx OR ext:docx
+site:example.com inurl:admin OR inurl:login OR inurl:dashboard
+site:example.com intitle:"index of"
+site:example.com ext:env OR ext:log OR ext:sql OR ext:bak
+site:example.com inurl:api OR inurl:swagger OR inurl:graphql
+site:example.com "error" OR "stack trace" OR "exception"
+site:*.example.com inurl:redirect= OR inurl:url= OR inurl:next=
+"example.com" site:pastebin.com OR site:trello.com OR site:atlassian.net
+```
+
+Try more than one search engine — their indexes differ.
+
+---
+
+## GitHub and Code Search
+
+Employees and contractors accidentally push internal hostnames, configs and secrets to public repositories.
+
+```text
+"example.com" password
+"example.com" api_key OR apikey OR secret OR token
+"internal.example.com"
+org:example-org filename:.env
+org:example-org "BEGIN RSA PRIVATE KEY"
+"example.com" filename:docker-compose.yml
+"example.com" filename:config extension:json
+```
+
+Also look at:
+
+- the organisation's own public repositories and **their commit history** (secrets removed in a later commit are still in history),
+- employees' personal repositories (forks of internal tools, dotfiles),
+- GitHub Gists and other code hosts (GitLab, Bitbucket).
+
+```bash
+trufflehog github --org=example-org --only-verified
+trufflehog git https://github.com/example-org/some-repo --only-verified
+```
+
+<Admonition type="tip" title="Beginner lane">
+
+Even without secrets, public code shows you **how the company builds things**: internal API patterns, naming conventions, frameworks, and sometimes exact backend logic — which makes black-box testing far more precise.
+
+</Admonition>
+
+---
+
+## Shodan, Censys and Internet Scanners
+
+Internet-wide scan databases show services exposed by an organisation, including those not on obvious subdomains.
+
+<Tabs>
+<TabItem value="shodan" label="Shodan" default>
+
+```text
+ssl:"example.com"
+ssl.cert.subject.cn:"example.com"
+org:"Example Inc"
+http.favicon.hash:<hash-of-their-favicon>
+hostname:example.com http.title:"Dashboard"
+ssl:"example.com" product:"Jenkins"
+ssl:"example.com" port:9200
+```
+
+</TabItem>
+<TabItem value="censys" label="Censys">
+
+Search by certificate names, organisation and services; useful for finding hosts behind a CDN by matching certificates on direct IPs (origin discovery).
+
+</TabItem>
+</Tabs>
+
+**Finding the origin IP** behind a CDN/WAF (via historic DNS, certificate matches or unique response content) can allow testing without WAF interference — but only test it if that IP is in scope.
+
+---
+
+## Public API Workspaces
+
+Developers often publish **Postman** collections and workspaces containing real endpoints, example requests — and sometimes valid tokens or environment variables. Search the public Postman network for the company name and domain. Similar leaks occur in public Swagger hubs and API documentation portals.
+
+---
+
+## Cloud Storage
+
+Look for storage buckets named after the company or its products:
+
+```text
+example-assets   example-backups   example-dev   example-logs   example-prod
+```
+
+| Provider | URL pattern |
+|---|---|
+| AWS S3 | `https://<bucket>.s3.amazonaws.com` |
+| Google Cloud Storage | `https://storage.googleapis.com/<bucket>` |
+| Azure Blob | `https://<account>.blob.core.windows.net/<container>` |
+
+Check whether listing is allowed, and whether *writing* is allowed (write access is usually far more severe). Only read the minimum needed to prove access — never download customer data in bulk.
+
+---
+
+## Other Leak Sources
+
+| Source | What leaks |
+|---|---|
+| Public Trello, Jira, Confluence, Notion pages | Internal plans, credentials, architecture |
+| Public Google Docs/Sheets/Drive links | Internal documents |
+| Slack/Discord invite links or public channels | Internal discussions |
+| Job postings | Exact technology stack and internal tool names |
+| Mobile app stores | Additional apps (often with different APIs) |
+| Archived documentation | Old API docs revealing deprecated but live endpoints |
+| Data breach compilations | Employee credentials — **do not use**; report exposure only if the program accepts it |
+
+---
+
+## Handling Sensitive Finds Responsibly
+
+1. **Stop** as soon as you've confirmed the exposure.
+2. Collect **minimal** evidence — a redacted screenshot, a single record, the key's permission scope.
+3. Don't share, keep or further use the data.
+4. Report quickly, especially for live credentials — they should be rotated.
+5. Delete what you collected after the report is resolved, if the program requests it.
+
+---
+
+## Key Takeaways
+
+- Search engines, GitHub, Shodan/Censys, Postman and cloud storage regularly leak targets, code and secrets.
+- Commit history keeps secrets that were "deleted."
+- Check program policy on leaked credentials; never use real employees' credentials without permission.
+- Collect minimal evidence and report sensitive leaks fast.
+
+---
+
+## Next
+
+Recon done — time to hunt: **[Stage 3 · Hunting Methodology](../03-Hunting/01-hunting-methodology.mdx)**

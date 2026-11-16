@@ -1,0 +1,159 @@
+---
+sidebar_position: 3
+title: "Content & Endpoint Discovery"
+description: "Crawling, historical URLs, directory and file fuzzing, hidden parameter discovery, API route discovery, and filtering huge URL lists down to the endpoints worth testing."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Content & Endpoint Discovery
+
+`Bug Bounty` · `Stage 2 — Recon` · `Level: L1 → L4` · `Reading time: ~11 min`
+
+Once you know *which hosts* exist, the next question is *what's on them*: pages, API routes, files, parameters — especially the ones the UI never links to.
+
+```text
+           ┌── crawl (what's linked now)
+Live host ─┼── archives (what existed before)      ──► merge ──► de-dupe ──► classify ──► test
+           ├── fuzzing (what exists but isn't linked)
+           └── parameters (what inputs are accepted)
+```
+
+---
+
+## 1. Crawling
+
+Crawlers follow links and, with headless mode, execute JavaScript to find dynamically loaded routes.
+
+```bash
+katana -u https://app.example.com -d 3 -jc -silent -o crawl.txt
+# -jc parses JavaScript files for endpoints; add -headless for heavily client-rendered apps
+```
+
+<Admonition type="tip" title="Beginner lane">
+
+The best crawler is **you, with your proxy running**. Click through every feature of the app as each of your test accounts — every button, every setting, every flow. Your proxy history then contains real, authenticated requests no crawler can reach.
+
+</Admonition>
+
+---
+
+## 2. Historical URLs (Archives)
+
+Web archives and URL datasets remember endpoints that are no longer linked — but often still work.
+
+```bash
+echo example.com | gau --subs > gau.txt
+echo example.com | waybackurls > wayback.txt
+cat gau.txt wayback.txt | sort -u > archive-urls.txt
+```
+
+Look for old API versions, forgotten admin pages, backup files, debug endpoints, and parameters that hint at functionality (`?redirect=`, `?url=`, `?file=`, `?callback=`, `?debug=`).
+
+---
+
+## 3. Directory and File Fuzzing
+
+Fuzzing requests many candidate paths to find unlinked content:
+
+```bash
+ffuf -u https://app.example.com/FUZZ -w ~/wordlists/raft-medium-directories.txt \
+     -mc all -fc 404 -ac -rate 50 -o ffuf.json
+```
+
+| Flag | Meaning |
+|---|---|
+| `-mc all -fc 404` | Show every status code except 404 |
+| `-ac` | Auto-calibrate filtering of "soft 404" responses |
+| `-rate 50` | Requests per second — keep within program rules |
+| `-e .bak,.old,.zip` | Also try file extensions |
+| `-recursion` | Fuzz inside discovered directories |
+
+**Choose wordlists by technology.** A Java app has `/actuator/`, `.jsp` and `WEB-INF`; a PHP app has `.php` files and `vendor/`; a Node app might expose `/.env` or `package.json`. Assetnote's technology-specific lists are excellent for this.
+
+High-value finds:
+
+```text
+/.git/  /.env  /.DS_Store  /backup.zip  /db.sql  /config.json  /phpinfo.php
+/actuator  /actuator/env  /server-status  /swagger-ui/  /api-docs  /graphql
+/admin  /console  /debug  /metrics  /.well-known/
+```
+
+<Admonition type="warning" title="403 is not 'nothing'">
+
+A `403 Forbidden` on `/admin` means something is there. Note it — **[403 bypass techniques](../03-Hunting/07-infrastructure-and-misconfig.mdx)** sometimes get through (alternative paths, methods, headers, encodings).
+
+</Admonition>
+
+---
+
+## 4. API Route Discovery
+
+| Source | How |
+|---|---|
+| API documentation | `/swagger.json`, `/openapi.json`, `/v2/api-docs`, `/api-docs`, `/docs`, `/redoc` |
+| GraphQL | `/graphql`, `/api/graphql`, `/v1/graphql` — then introspection |
+| JavaScript bundles | Route definitions and `fetch`/`axios` calls (next page) |
+| Mobile apps | Decompiled APKs often reference endpoints the web app never uses |
+| Version walking | If `/api/v3/users` exists, try `/api/v1/users` and `/api/v2/users` |
+| API wordlists | Assetnote's API route lists, fuzzing with `ffuf` against `/api/FUZZ` |
+
+---
+
+## 5. Hidden Parameter Discovery
+
+Endpoints often accept parameters the UI never sends — debug flags, admin options, alternative IDs.
+
+```bash
+arjun -u "https://app.example.com/api/profile" -m GET
+arjun -u "https://app.example.com/api/profile" -m JSON
+```
+
+Burp's **Param Miner** does the same for parameters, headers and cookies, and is especially useful for cache-poisoning research.
+
+Interesting hidden parameter names to watch for: `debug`, `admin`, `test`, `role`, `isAdmin`, `user_id`, `account`, `redirect`, `callback`, `url`, `template`, `preview`, `internal`, `format`.
+
+---
+
+## 6. Filter and Classify the URL Pile
+
+Raw URL lists are huge and repetitive. Reduce and classify them:
+
+```bash
+# Merge, then keep one URL per unique path+parameter pattern
+cat crawl.txt archive-urls.txt | sort -u | uro > urls.txt
+
+# Only live ones
+httpx -l urls.txt -silent -mc 200,301,302,401,403 -o live-urls.txt
+
+# Interesting extensions
+grep -Ei '\.(json|xml|config|bak|old|sql|zip|tar|gz|log|env|yml)(\?|$)' live-urls.txt
+
+# URLs with parameters, grouped by likely bug class (needs gf + community patterns)
+cat live-urls.txt | gf ssrf     > cand-ssrf.txt
+cat live-urls.txt | gf redirect > cand-redirect.txt
+cat live-urls.txt | gf xss      > cand-xss.txt
+cat live-urls.txt | gf sqli     > cand-sqli.txt
+cat live-urls.txt | gf lfi      > cand-lfi.txt
+```
+
+<Admonition type="info" title="Pro lane">
+
+Candidate lists from pattern matching are **starting points, not findings**. Mass-firing payloads at every candidate is noisy, often against program rules, and finds the same bugs everyone else's scripts find. Use the lists to pick endpoints for careful manual testing.
+
+</Admonition>
+
+---
+
+## Key Takeaways
+
+- Combine manual browsing, crawling, archives and fuzzing to build an endpoint map.
+- Match wordlists to the technology; treat 401/403 as interesting, not dead ends.
+- Hunt for API docs, old API versions and hidden parameters.
+- Reduce and classify URL lists, then test the best candidates manually.
+
+---
+
+## Next
+
+**[JavaScript Analysis](./04-javascript-analysis.mdx)**
