@@ -1,0 +1,167 @@
+---
+sidebar_position: 5
+title: "The Master Checklist"
+description: "A single printable workflow covering every stage — program selection, recon, hunting per bug class, chaining, and reporting — to run against any target without missing anything."
+---
+
+import Admonition from '@theme/Admonition';
+
+# The Master Checklist
+
+`Bug Bounty` · `Stage 5 — Reporting & Career` · `Level: All` · `Reading time: ~7 min`
+
+One page to run against any target. It condenses the whole section into a workflow you can keep open while hunting. Each item links back to the page that explains it.
+
+<Admonition type="tip" title="How to use it">
+
+You won't do every item on every target. Use it as a prompt list — scan it, pick what fits this program, and tick as you go in your notes. Its real value is making sure you don't *forget* a whole category.
+
+</Admonition>
+
+---
+
+## 0 · Before You Start
+
+- [ ] Read the full program policy: **scope**, **out of scope**, **excluded bug types**, **rules** (rate limits, required headers, test accounts), **safe harbor**. ([what BB is](../01-Foundations/01-what-is-bug-bounty.mdx))
+- [ ] Turn scope into files: `in-scope`, `out-of-scope`, `rules.md`. ([recon mindset](../02-Recon/01-recon-mindset-and-scope.mdx))
+- [ ] Set up proxy + browser profiles + **2+ test accounts** (and multiple roles/tenants). ([setup](../01-Foundations/04-hunter-setup.mdx))
+- [ ] Start a notes folder for the program.
+
+---
+
+## 1 · Recon
+
+- [ ] **Horizontal:** acquisitions, ASNs/IP ranges, reverse WHOIS, cert transparency, favicon/analytics IDs. ([recon mindset](../02-Recon/01-recon-mindset-and-scope.mdx))
+- [ ] **Subdomains:** passive + brute + permutations → resolve (wildcard-filtered) → probe → ports → screenshots. ([subdomains](../02-Recon/02-subdomain-enumeration.mdx))
+- [ ] **Content:** crawl + archives + fuzz; find API docs, old versions, hidden params. ([content discovery](../02-Recon/03-content-and-endpoint-discovery.mdx))
+- [ ] **JavaScript:** endpoints, secrets (validate safely), feature flags, DOM sinks, source maps. ([JS analysis](../02-Recon/04-javascript-analysis.mdx))
+- [ ] **OSINT:** search/GitHub/Shodan dorks, Postman, cloud storage, leaks. ([OSINT](../02-Recon/05-osint-dorking-and-leaks.mdx))
+- [ ] **Prioritise:** dev/staging/admin/internal, new hosts, unusual tech, 401/403.
+- [ ] **Monitor:** set up alerts for new subdomains/endpoints/JS. ([automation](../04-Level-Up/01-automation-pipelines.mdx))
+
+---
+
+## 2 · Understand the App
+
+- [ ] Use the product as each role; read docs/changelog. ([methodology](../03-Hunting/01-hunting-methodology.mdx))
+- [ ] Identify valuable data, money flows, roles, sharing/invite, integrations.
+- [ ] Build a **feature × bug-class map**.
+- [ ] Proxy every feature as each account; read all requests.
+
+---
+
+## 3 · Hunt — Access Control ([card](../03-Hunting/02-access-control-and-idor.mdx))
+
+- [ ] IDOR/BOLA on every ID (both accounts, all methods, secondary objects, batch).
+- [ ] Vertical privilege escalation / BFLA (admin endpoints as low role & unauth).
+- [ ] Mass assignment (add `role`, `isAdmin`, `emailVerified`, `orgId`…).
+- [ ] Multi-tenant leaks (search, filters, autocomplete, ORM filters).
+- [ ] Unauthenticated access (strip auth from requests).
+
+## 4 · Hunt — Authentication & ATO ([card](../03-Hunting/03-authentication-and-account-takeover.mdx))
+
+- [ ] Login/sign-up (enumeration, rate limit, collision).
+- [ ] Password reset (host-header, token quality/lifecycle, IDOR).
+- [ ] 2FA bypass (skip step, brute OTP, reuse, remember-device).
+- [ ] OAuth (`redirect_uri`, `state`, email trust, linking).
+- [ ] SAML / JWT (signature, `alg`, secret, claims, revocation).
+- [ ] Sessions (fixation, logout invalidation, timeouts, cookie flags).
+
+## 5 · Hunt — Client-Side ([card](../03-Hunting/04-client-side-bugs.mdx))
+
+- [ ] XSS: reflected, stored, DOM (identify context first).
+- [ ] CSRF on state-changing actions (token? SameSite?).
+- [ ] CORS (reflected origin + credentials on sensitive data).
+- [ ] Open redirect (and as a chain ingredient).
+- [ ] Clickjacking on sensitive actions.
+- [ ] postMessage (origin validation) & prototype pollution (+ gadget).
+
+## 6 · Hunt — Server-Side ([card](../03-Hunting/05-server-side-bugs.mdx))
+
+- [ ] SSRF (OOB confirm, internal/metadata, redirect/allowlist bypass).
+- [ ] SQLi / NoSQLi (errors, boolean, time; verify safely).
+- [ ] SSTI (`${7*7}{{7*7}}`), command injection (sleep/OOB).
+- [ ] XXE (OOB/file read), path traversal/LFI.
+- [ ] File upload (SVG XSS, exec, filename, URL→SSRF).
+- [ ] Deserialization (opaque blobs; confirm format/sink).
+
+## 7 · Hunt — Business Logic ([card](../03-Hunting/06-business-logic-and-race-conditions.mdx))
+
+- [ ] Payment/pricing tampering (price, quantity, currency, skip payment).
+- [ ] Coupons/credits/referrals (reuse, stack, self-refer).
+- [ ] Limit/quota bypass (server-side? other endpoints?).
+- [ ] Workflow (skip/reorder/replay steps; tamper carried state).
+- [ ] **Race conditions** (parallel requests on limited actions).
+- [ ] Rate-limit bypass (header spoof) + parameter pollution — chain them.
+
+## 8 · Hunt — Infrastructure ([card](../03-Hunting/07-infrastructure-and-misconfig.mdx))
+
+- [ ] Subdomain takeover (dangling CNAMEs).
+- [ ] Cache poisoning / deception (unkeyed inputs; prove on 2nd request).
+- [ ] Request smuggling (detection-only), host-header attacks.
+- [ ] Exposed panels/`.git`/`.env`/Actuator; known CVEs (safe detection).
+- [ ] 403/401 bypass (paths, methods, headers, encoding, versions).
+
+## 9 · Hunt — APIs / GraphQL / Mobile ([card](../03-Hunting/08-api-graphql-and-mobile.mdx))
+
+- [ ] REST: authz x3 (object/function/property), version walking, limits.
+- [ ] GraphQL: introspection, nested-resolver IDOR, mutations, batching.
+- [ ] Mobile: decompile for endpoints/secrets; proxy the (often weaker) API.
+
+## 10 · Hunt — AI & Agentic ([card](../03-Hunting/09-ai-and-agentic-testing.mdx))
+
+- [ ] Map model inputs (incl. docs/web/email it reads) and capabilities (tools, RAG/memory, actions).
+- [ ] Direct injection (steer / leak system prompt + tool list).
+- [ ] Indirect injection (plant text it reads later; fire in a 2nd account).
+- [ ] Tool/function abuse (argument injection → SSRF/SQLi/path; authority confusion; missing per-action authz).
+- [ ] RAG/memory (cross-tenant retrieval, persistent poisoning).
+- [ ] Output handling (XSS / Markdown exfil / sink injection) and cost/loop abuse.
+- [ ] Agentic chain: injection → capability → data → exfiltration.
+
+## 11 · Hunt — Cloud & Web3 ([card](../03-Hunting/10-modern-targets-ai-cloud-web3.mdx))
+
+- [ ] Cloud/CI: buckets (read/write), metadata SSRF, leaked creds — in scope only.
+- [ ] Web3 (if in scope): contract logic, access control, oracle/price, reentrancy — testnet/fork only.
+
+---
+
+## 12 · Escalate & Chain ([page](../04-Level-Up/02-chaining-and-impact.mdx))
+
+- [ ] Push each finding up the impact ladder (to whom / interaction / scale / data).
+- [ ] Try to combine weak findings (redirect + OAuth, IDOR + reset, self-XSS + login CSRF…).
+- [ ] Demonstrate impact with **your own accounts**, then **stop**.
+
+## 13 · Report ([page](./01-writing-reports-that-pay.mdx))
+
+- [ ] Reproduced from scratch; in scope; not excluded.
+- [ ] Title leads with impact; exact minimal steps; raw requests (tokens redacted).
+- [ ] Safe PoC; impact spelled out; severity/CVSS justified.
+- [ ] One bug or one clean chain. Submit. Then keep hunting.
+
+---
+
+## The Whole Path in One Picture
+
+```text
+Scope ─► Recon (horizontal + vertical + JS + OSINT + monitor)
+      ─► Understand app (feature × bug-class map)
+      ─► Hunt each class (access, auth, client, server, logic, infra, API, modern)
+      ─► Escalate & chain to real impact
+      ─► Report clearly & safely
+      ─► Repeat, specialise, build reputation
+```
+
+---
+
+## Key Takeaways
+
+- Use this as a prompt list so no category is forgotten — not a mandatory script.
+- Recon and app-understanding decide where the bugs are; the hunt cards decide how you find them.
+- Always finish by escalating to real impact and reporting safely.
+- Then do it again, go deeper, and let your reputation compound.
+
+---
+
+## You've Finished the Hunter's Path
+
+Head back to **[Start Here](../intro.mdx)** for the map, revisit any Hunt Card, or go practise: the **[Web Security](/docs/category/web-security)** labs, the **[OWASP](/docs/category/owasp)** deep-dives, the **[CTF](/ctf)**, and **[CVE Radar](/cve-radar)**. Now go find something real — in scope, in good faith, and well reported.

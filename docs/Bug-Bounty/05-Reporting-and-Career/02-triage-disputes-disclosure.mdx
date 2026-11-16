@@ -1,0 +1,132 @@
+---
+sidebar_position: 2
+title: "Triage, Disputes & Disclosure"
+description: "What happens after you submit — the triage lifecycle, handling duplicates and 'informative' closures, disputing fairly, and responsible public disclosure."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Triage, Disputes & Disclosure
+
+`Bug Bounty` · `Stage 5 — Reporting & Career` · `Level: L1 → L5` · `Reading time: ~9 min`
+
+Submitting is the start, not the end. How you handle triage, disagreements and disclosure shapes your reputation as much as your findings do.
+
+---
+
+## The Report Lifecycle
+
+```text
+Submitted ──► Triaged (validity/severity confirmed) ──► Accepted ──► Fixed ──► Rewarded ──► Resolved
+      │              │
+      │              └─► Need more info ──► you respond
+      ▼
+ Closed as: Duplicate / Informative / N/A / Out of scope / Not applicable
+```
+
+| State | Meaning |
+|---|---|
+| **New / Triaging** | Program is reviewing; may ask for more info |
+| **Triaged / Accepted** | Confirmed valid; severity set; often when reward is decided |
+| **Duplicate** | Someone reported it first |
+| **Informative** | Valid observation, insufficient impact to reward |
+| **N/A** | Not a valid security issue, or out of scope |
+| **Resolved** | Fixed and closed |
+
+---
+
+## Response Times and Patience
+
+Programs vary from hours to months. Many platforms publish average response times — a factor in **[choosing programs](../01-Foundations/03-platforms-and-programs.mdx)**. While waiting:
+
+- Don't spam follow-ups; one polite nudge after a reasonable period is fine.
+- Don't retest aggressively or escalate on your own.
+- Move on to other hunting — never block on one report.
+
+<Admonition type="tip" title="Beginner lane">
+
+A slow response is normal, not a rejection. Keep hunting. Hunters who stake their mood on one pending report burn out; hunters with a pipeline of work stay steady.
+
+</Admonition>
+
+---
+
+## Handling Duplicates
+
+Duplicates sting, but they're part of the game (only the first valid report pays).
+
+- **Verify** it's genuinely a duplicate if the program discloses enough to tell; politely ask if unclear.
+- **Learn:** duplicates on easy bugs mean you're hunting where everyone else is. Shift toward newer assets, deeper logic, and less-contested surfaces.
+- Don't take it personally or accuse the program of lying — reputable programs honour genuine firsts.
+
+---
+
+## Handling "Informative" / "N/A"
+
+If you believe a finding has more impact than the triager saw:
+
+1. **Re-read the scope and excluded issues** — make sure you're right before disputing.
+2. **Add impact, not emotion:** demonstrate a concrete attack, ideally a chain, that raises severity. New evidence reopens discussions; repetition doesn't.
+3. **Be specific:** "Here's a PoC showing this affects any user without interaction" beats "I think this deserves more."
+
+<Admonition type="warning" title="Disagree professionally">
+
+Triagers are people, often handling huge volumes. Rudeness, threats or public complaints damage your reputation across the platform and rarely change a decision. Make your case once, clearly, with evidence — then accept the outcome gracefully. Your long-term access depends on being someone programs want to work with.
+
+</Admonition>
+
+---
+
+## Mediation
+
+Most platforms offer **mediation** when a hunter and program can't agree. Use it as a last resort, with evidence, after a genuine attempt to resolve things directly. It exists for real disputes, not for every downgrade.
+
+---
+
+## Rewards, Taxes and Records
+
+- Rewards may be money, swag, points/reputation, or thanks (VDPs).
+- **Bounty income is usually taxable** — keep records of payouts, and understand your local obligations (you're typically self-employed/independent for this income). This isn't tax advice; consult a professional for your situation.
+- Keep your own log of submissions, outcomes and payments — useful for taxes, for CVs, and for understanding which strategies pay.
+
+---
+
+## Responsible Disclosure
+
+Public write-ups build your reputation and teach others — but only under the right conditions.
+
+```text
+Fix shipped  +  program permits disclosure  +  (coordinated timeline respected)
+        │
+        ▼
+Publish: redact sensitive details, help defenders, credit fairly
+```
+
+Rules:
+
+- **Only disclose if the program's policy allows it**, and follow any required process/timeline.
+- **Never disclose before a fix** unless explicitly permitted.
+- **Redact** anything that could harm the company or users (real data, exact internal hostnames where sensitive).
+- **Never** use disclosure as leverage for payment — that's extortion, not research.
+- Credit co-researchers and the program fairly.
+
+<Admonition type="info" title="Pro lane">
+
+Good public write-ups are a career engine: they demonstrate skill to programs and employers, attract private invites, and contribute to the community whose repositories and research you learned from. Many hunters' first job offers and live-event invites came from a well-received write-up.
+
+</Admonition>
+
+---
+
+## Key Takeaways
+
+- Know the lifecycle; respond promptly to info requests and be patient otherwise.
+- Duplicates and "informative" closures are signals to hunt deeper and argue impact with evidence.
+- Dispute professionally and sparingly; use mediation as a last resort.
+- Disclose only when permitted, after a fix, redacted, and never as leverage.
+
+---
+
+## Next
+
+**[Building a Sustainable Career](./03-building-a-career.mdx)**

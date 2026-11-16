@@ -1,0 +1,188 @@
+---
+sidebar_position: 1
+title: "Writing Reports That Get Paid"
+description: "A report template that triagers love, how to write clear reproduction steps and demonstrate impact, severity justification, and the mistakes that get valid bugs closed."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Writing Reports That Get Paid
+
+`Bug Bounty` · `Stage 5 — Reporting & Career` · `Level: L1 → L5` · `Reading time: ~12 min`
+
+A valid bug and a bad report can still equal no reward. The triager can only pay for what they can **understand and reproduce**. A clear report finds the bug its true severity; a confusing one gets it downgraded or closed.
+
+---
+
+## What the Triager Needs
+
+Put yourself in the triager's chair. They read dozens of reports a day. They need to, quickly:
+
+1. Understand **what** the bug is.
+2. **Reproduce** it in minutes.
+3. Grasp the **impact** and severity.
+4. Hand it to engineering to **fix**.
+
+Everything in your report should serve those four needs.
+
+---
+
+## The Template
+
+```markdown
+# Title: [Vulnerability type] on [endpoint/feature] leading to [impact]
+
+## Summary
+One or two sentences: what the bug is and what an attacker can do with it.
+
+## Affected asset
+- URL / endpoint: https://app.example.com/api/...
+- Parameter / field: ...
+- Scope item this falls under: ...
+
+## Steps to Reproduce
+1. Log in as User A (attacker) — account: attacker+test@...
+2. ...exact clicks/requests, copy-paste-able...
+3. Observe: [the specific evidence of the bug]
+
+(Include the raw HTTP request(s) and the key part of the response.)
+
+## Proof of Concept
+- Screenshots / short video, or
+- curl command / request, or
+- PoC HTML (for CSRF/XSS)
+
+## Impact
+Who is affected, what the attacker gains, interaction required, and scale.
+"An attacker can [action] against [any user / all accounts] without [interaction],
+exposing [data/money/control]."
+
+## Severity
+Suggested: [Critical/High/Medium/Low]
+CVSS: [vector string] (if the program uses CVSS) + one line of justification.
+
+## Remediation (optional but appreciated)
+Short, correct fix suggestion.
+```
+
+<Admonition type="tip" title="Beginner lane">
+
+The **most common reason a valid bug is closed** is reproduction steps the triager can't follow. Write them as if for someone who has never seen the app: exact accounts, exact clicks, exact requests, exact expected result. Then follow your own steps from scratch to make sure they work.
+
+</Admonition>
+
+---
+
+## Title: Lead With Impact
+
+A good title is `type + location + impact`:
+
+- Weak: "XSS found"
+- Strong: "Stored XSS in team-name field executes in admin dashboard → admin session compromise"
+- Weak: "IDOR"
+- Strong: "IDOR on `/api/invoices/{id}` exposes any customer's invoices (PII + amounts)"
+
+The title often sets the triager's first impression of severity.
+
+---
+
+## Reproduction Steps: Exact and Minimal
+
+- Number every step.
+- Name the accounts and their roles explicitly.
+- Include the **raw request(s)** (sanitise your own session tokens) and the **relevant response lines**.
+- Remove unrelated steps — the shortest reliable path only.
+- State the **observed result** vs the **expected secure result**.
+
+---
+
+## Proof of Concept: Show, Don't Assert
+
+| Bug type | Best PoC |
+|---|---|
+| IDOR / access control | Two-account request/response showing cross-user data |
+| XSS | The payload + a screenshot/video of execution (`alert(document.domain)`), plus the impactful action |
+| CSRF | A minimal auto-submitting HTML page |
+| SSRF | Out-of-band interaction log with your unique subdomain |
+| Injection | Benign proof (version string, sleep, OOB hit) — never data dumps |
+| Logic/race | Before/after state + the parallel requests |
+
+A **30–60 second video** is often the single most persuasive artefact for a chain.
+
+<Admonition type="warning" title="Keep PoCs safe and self-contained">
+
+Prove impact with your own accounts and benign markers. Don't include real user data, don't run destructive payloads, and don't make the triager reproduce something harmful. Redact your own credentials/tokens from pasted requests.
+
+</Admonition>
+
+---
+
+## Impact: Spell It Out
+
+Triagers rate impact, not cleverness. State explicitly:
+
+- **Who** is affected (any user? only the victim? admins?).
+- **What** the attacker gains (data, money, control, session).
+- **Interaction** required (none? a click? admin viewing content?).
+- **Scale** (one object? all accounts? unauthenticated?).
+- **Data/assets** touched (PII, payment, credentials, infrastructure).
+
+Then, if the program uses CVSS, provide a vector and a one-line justification so they can agree quickly.
+
+---
+
+## Common Reasons Valid Bugs Get Closed
+
+| Reason | Fix |
+|---|---|
+| Can't reproduce | Exact, minimal, tested steps; raw requests; accounts named |
+| Out of scope | Check scope *before* reporting; state which scope item applies |
+| Duplicate | Report fast; prefer less-contested bugs/assets; still write it well |
+| Informative / no impact | Chain it; demonstrate real impact; argue severity |
+| Known/accepted risk | Read the excluded-issues list first |
+| Unclear impact | Lead with impact; quantify who/scale/data |
+| Too much noise | One bug per report (unless it's one chain); be concise |
+
+---
+
+## Tone and Communication
+
+- Be **concise and professional**. Triagers skim.
+- One vulnerability per report — unless several steps form **one chain**, then present it as one.
+- Don't pad with generic theory; link to references instead.
+- When you disagree with a decision, stay calm and factual (next page covers disputes).
+
+<Admonition type="info" title="Pro lane">
+
+Consistently excellent reports build a **reputation with specific programs**. Triagers remember hunters whose reports are always reproducible and fairly rated — that trust translates into faster triage, better severity decisions, and private invites. Your report quality is part of your long-term earnings.
+
+</Admonition>
+
+---
+
+## Pre-Submit Checklist
+
+- [ ] Reproduced from scratch following my own steps.
+- [ ] In scope, and I've named the scope item.
+- [ ] Not on the excluded-issues list.
+- [ ] Raw requests included; my own tokens redacted.
+- [ ] Impact stated: who, what, interaction, scale, data.
+- [ ] Severity/CVSS suggested with justification.
+- [ ] PoC is safe (own accounts, benign markers, no real user data).
+- [ ] Title leads with impact.
+- [ ] One bug (or one clearly-presented chain).
+
+---
+
+## Key Takeaways
+
+- Write for the triager: understandable, reproducible, impact-first.
+- Exact, minimal, self-tested reproduction steps are the highest-leverage part.
+- Demonstrate impact safely with your own accounts; argue severity explicitly.
+- Most closures come from reproducibility, scope or impact — all fixable before you hit submit.
+
+---
+
+## Next
+
+**[Triage, Disputes & Disclosure](./02-triage-disputes-disclosure.mdx)**

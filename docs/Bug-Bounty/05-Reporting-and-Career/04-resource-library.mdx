@@ -1,0 +1,155 @@
+---
+sidebar_position: 4
+title: "Resource Library"
+description: "A curated map of the best places to learn bug bounty — labs, methodology repositories, tools, write-up sources, research, communities and books — organised by what you're trying to do."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Resource Library
+
+`Bug Bounty` · `Stage 5 — Reporting & Career` · `Level: All` · `Reading time: ~8 min`
+
+The problem with bug bounty resources isn't finding them — it's that there are thousands. This page is a **curated map**, organised by what you're trying to do, not an exhaustive dump.
+
+<Admonition type="tip" title="How to use this">
+
+Don't try to consume everything. Pick one item per row that matches your current stage, go deep, then come back. Breadth here is a trap; depth is the goal.
+
+</Admonition>
+
+---
+
+## Learn the Fundamentals (Labs)
+
+| Resource | What it's for |
+|---|---|
+| **PortSwigger Web Security Academy** | The best free structured curriculum; apprentice → expert labs with theory |
+| **OWASP Juice Shop** | A full vulnerable modern app; challenges across the Top 10 |
+| **OWASP WebGoat** | Guided, lesson-by-lesson vulnerable app |
+| **Hacker101** (HackerOne) | Free videos + CTF; CTF flags can earn private invites |
+| **TryHackMe** | Beginner-friendly guided rooms and paths |
+| **Hack The Box** | Machines and challenges; steeper curve, strong for skills |
+| **PentesterLab** | Short focused exercises |
+| This site's **[Web Security](/docs/category/web-security)**, **[OWASP](/docs/category/owasp)** and **[CTF](/ctf)** | Theory + practice in one place |
+
+---
+
+## Methodology & Technique References
+
+| Resource | What it's for |
+|---|---|
+| **PortSwigger Web Security Academy (theory sections)** | Authoritative explanations of each class |
+| **OWASP WSTG** | A full testing methodology, test by test |
+| **OWASP Cheat Sheet Series** | How controls *should* be built (helps you spot where they aren't) |
+| **HackTricks** | Broad, technique-heavy reference across web, cloud, and more |
+| **PayloadsAllTheThings** | Payloads and techniques per bug class |
+| Community methodology repos (e.g. **HowToHunt**, **AllAboutBugBounty**) | Per-bug-class testing notes aggregated by the community |
+
+---
+
+## Tools (by job)
+
+| Job | Tools |
+|---|---|
+| Proxy / core | Burp Suite, Caido, ZAP |
+| Subdomains | subfinder, amass, assetfinder, puredns, crt.sh |
+| Resolve / probe | dnsx, httpx, naabu |
+| Crawl / URLs | katana, gau, waybackurls |
+| Content discovery | ffuf, feroxbuster |
+| Parameters | arjun, Param Miner |
+| JS / secrets | LinkFinder, jsluice, trufflehog, gitleaks |
+| Scanning | nuclei (carefully), dalfox (XSS) |
+| OOB testing | Burp Collaborator, interactsh |
+| Automation glue | anew, uro, qsreplace, unfurl, notify |
+| Mobile | jadx, apktool, Frida, objection |
+| Static analysis | Semgrep, CodeQL |
+
+Setup details are in **[Hunter Setup](../01-Foundations/04-hunter-setup.mdx)**.
+
+---
+
+## Learn From Real Bugs (Write-ups)
+
+Reading disclosed reports is one of the fastest ways to improve.
+
+| Source | What you get |
+|---|---|
+| **HackerOne Hacktivity** | Disclosed real reports, searchable by type |
+| **Pentester Land / write-up aggregators** | Curated feeds of hunter write-ups |
+| **Personal blogs & Medium** | Deep dives on specific bugs and chains |
+| **Program disclosure pages** | How specific targets fail |
+| **Conference talks** (YouTube) | Methodology and novel techniques |
+
+<Admonition type="info" title="Pro lane: read for method, not payloads">
+
+When reading a write-up, don't just copy the payload — extract the **thought process**: Why did they look there? What made them suspicious? How did they escalate? The transferable skill is the reasoning, not the specific bug (which is probably patched).
+
+</Admonition>
+
+---
+
+## Cutting-Edge Research
+
+| Source | What it's for |
+|---|---|
+| **PortSwigger Research** (incl. "Top 10 Web Hacking Techniques" each year) | The most important new techniques, curated annually |
+| **Vendor security advisories & CISA KEV** | Fresh CVEs to hunt (1-day) |
+| This site's **[CVE Radar](/cve-radar)** | Track new CVEs against your recon inventory |
+| Security conference proceedings (Black Hat, DEF CON, etc.) | Deep novel research |
+
+<Admonition type="info" title="2025–2026 technique directions">
+
+Recent top techniques trended toward **parser differentials**, **protocol-level and side-channel attacks** (HTTP/2 tricks, cross-origin leaks via timing/size oracles), **Unicode normalization abuse**, **ORM/search-feature data leaks**, **novel SSRF** (redirect-loop techniques), and **error-based blind SSTI**. The pattern: when the obvious classes are well-defended, bugs move into *how systems interpret and parse* data, and into *measurable differences* (timing, size, errors). Worth studying once you're past the fundamentals.
+
+</Admonition>
+
+---
+
+## Communities
+
+| Community | Notes |
+|---|---|
+| Platform forums & Discords (HackerOne, Bugcrowd, Intigriti, YesWeHack) | Program news, support, learning |
+| Security Twitter/X & Mastodon (infosec) | Techniques, write-ups, research — follow practitioners |
+| Reddit (r/bugbounty, r/netsec) | Discussion and links |
+| Local meetups / OWASP chapters | In-person learning and networking |
+
+Engage respectfully; the community's shared knowledge is why bug bounty is learnable at all.
+
+---
+
+## Books (for depth)
+
+| Book | For |
+|---|---|
+| *The Web Application Hacker's Handbook* | The classic foundation (some tooling dated, concepts timeless) |
+| *Real-World Bug Hunting* | Bug-bounty-specific, written around real reports |
+| *Bug Bounty Bootcamp* | A structured beginner-to-intermediate path |
+| *The Tangled Web* | Deep browser security model |
+| *Alice and Bob Learn Application Security* | Gentle, broad AppSec intro |
+
+---
+
+## A Note on Keeping Current
+
+Tools, techniques and even platform policies change fast (the AI-report situation in 2025–2026 is a vivid example). Favour:
+
+- **Primary sources** (PortSwigger, OWASP, vendor advisories) over second-hand summaries,
+- **Recent** write-ups and research for techniques,
+- **Timeless** books and labs for fundamentals.
+
+---
+
+## Key Takeaways
+
+- Pick one resource per job and go deep; don't drown in breadth.
+- Labs for fundamentals, methodology repos for technique, write-ups for reasoning, research for the edge.
+- Read write-ups for the thought process, not just the payload.
+- Favour primary and recent sources for anything fast-moving.
+
+---
+
+## Next
+
+**[The Master Checklist](./05-master-checklist.mdx)**
