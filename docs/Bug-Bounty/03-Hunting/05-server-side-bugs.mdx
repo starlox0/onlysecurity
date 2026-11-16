@@ -1,0 +1,211 @@
+---
+sidebar_position: 5
+title: "Hunt Cards: Server-Side Bugs"
+description: "SSRF, SQL and NoSQL injection, SSTI, command injection, XXE, path traversal/LFI, file upload and deserialization — the high-impact server-side classes, how to test and escalate safely."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: Server-Side Bugs
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L2 → L5` · `Reading time: ~16 min`
+
+Server-side bugs tend to be the highest-severity findings — data theft, internal access, and remote code execution — but also the easiest to cause real damage with. Test carefully and stop at proof.
+
+**Theory:** [SQL & NoSQL Injection](../../Web-Security/01-sql-and-nosql-injection.mdx) · [Command & Code Injection](../../Web-Security/02-command-and-code-injection.mdx) · [Template Injection](../../Web-Security/03-template-injection.mdx) · [XML & XXE](../../Web-Security/04-xml-and-data-format-attacks.mdx) · [CORS, SSRF & Request Forgery](../../Web-Security/07-cors-ssrf-and-request-forgery.mdx) · [File Upload & Inclusion](../../Web-Security/10-file-upload-and-inclusion.mdx) · [Deserialization](../../Web-Security/11-deserialization-and-supply-chain.mdx)
+
+<Admonition type="warning" title="Prove, don't damage">
+
+For injection and RCE, prove the vulnerability with the least invasive evidence: a benign math result, a harmless out-of-band callback, reading a single non-sensitive marker file, or a short sleep. Never run destructive commands, never dump databases, never pivot into internal systems beyond what's needed to confirm impact, and follow the program's rules.
+
+</Admonition>
+
+---
+
+## Card 1 — SSRF (Server-Side Request Forgery)
+
+### Where it hides
+Any feature where the server fetches a URL you influence: webhooks, URL-based imports ("import from URL"), link previews/unfurling, avatar-from-URL, PDF/screenshot generators, SSO metadata URLs, document converters, `?url=`, `?image=`, `?callback=`, `?feed=`, XML/SVG parsers.
+
+### First tests
+1. Point the URL at an **out-of-band listener** you control (Burp Collaborator / interactsh). A DNS or HTTP hit confirms the server made the request (blind SSRF).
+2. Try internal targets: `http://127.0.0.1`, `http://localhost`, internal ranges, and cloud metadata (`http://169.254.169.254/...`) — only to confirm reachability, not to harvest credentials beyond proof.
+3. Bypass allowlists: alternative IP encodings (decimal/octal/hex), IPv6, `@` tricks, DNS rebinding, and **redirects** — point at your server, which 302-redirects to the internal target.
+
+### Escalate
+SSRF to cloud metadata, internal admin panels, or internal services is typically high/critical. The **HTTP redirect loop** technique can make a blind SSRF visible. Chain with other parsers (an SVG or PDF that fetches a URL) to reach SSRF indirectly.
+
+### Prove it
+Show the out-of-band interaction (with your unique subdomain) or a response proving an internal resource was reached. Describe the internal impact without over-collecting.
+
+### Why it gets rejected
+The fetch is restricted to validated external hosts; only DNS resolves with no actual request made; "SSRF" to a public URL with no internal reach.
+
+---
+
+## Card 2 — SQL Injection
+
+### Where it hides
+Any parameter reaching a query: search, filters, sort columns, IDs, login, reporting, export filters, `ORDER BY` parameters, headers used in queries.
+
+### First tests
+- Add a single quote and watch for errors or differing responses.
+- Boolean pairs: `' AND '1'='1` vs `' AND '1'='2` — different responses suggest injection.
+- Time-based (blind): a database `SLEEP`/delay that measurably slows the response.
+- Confirm carefully with `sqlmap` *after* manual signals, at a low rate and within program rules (`--risk`/`--level` modest; avoid dumping real data).
+
+### Escalate
+Data extraction (prove with database version or a harmless `current_user`, not customer data), authentication bypass, or — rarely — code execution. Severity is usually high/critical.
+
+### Why it gets rejected
+WAF blocking that's mistaken for a vuln; false positives from timing noise; findings that can't be reproduced reliably.
+
+---
+
+## Card 3 — NoSQL Injection
+
+### Where it hides
+Apps on MongoDB and similar; JSON login and query endpoints.
+
+### First tests
+- In JSON bodies, replace a string with an operator object: `{"password":{"$ne":null}}`, `{"user":{"$gt":""}}`.
+- In query strings, try `param[$ne]=x` style injection.
+- Authentication endpoints are the classic target.
+
+### Why it gets rejected
+Input is schema-validated (operators rejected); no observable auth bypass or data access.
+
+---
+
+## Card 4 — Server-Side Template Injection (SSTI)
+
+### Where it hides
+Anywhere user input is rendered through a server template: email/notification templates, custom reports, "personalisation" fields, name/subject fields that appear in generated content, PDF generators.
+
+### First tests
+- Polyglot probe: `${7*7}{{7*7}}<%= 7*7 %>` — look for `49` in the output.
+- Identify the engine from which syntax evaluated and from error messages.
+- For blind cases, **error-based** SSTI techniques can reveal evaluation without visible output.
+
+### Escalate
+Many template engines allow escalation from expression evaluation to file read or RCE through documented features — demonstrate with the least invasive step (read a harmless marker or run a benign command), then stop.
+
+### Why it gets rejected
+Autoescaping context where input is data, not template; "math" evaluating client-side rather than server-side.
+
+---
+
+## Card 5 — OS Command Injection
+
+### Where it hides
+Features that shell out: ping/traceroute/network tools, file conversion, image/video processing, archive handling, backup/restore, admin utilities.
+
+### First tests
+- Append shell metacharacters: `; sleep 5`, `| sleep 5`, `$(sleep 5)`, backticks — look for the delay (blind).
+- Out-of-band: `; nslookup unique.yourcollab.net` — a DNS hit confirms execution.
+
+### Escalate
+Command injection is usually critical. Prove with a sleep or an out-of-band callback; do not run anything destructive or exfiltrate data.
+
+### Why it gets rejected
+Input passed as an argument array (no shell); timing coincidence without reproducible proof.
+
+---
+
+## Card 6 — XXE (XML External Entity)
+
+### Where it hides
+Any XML input: SOAP endpoints, SAML, SVG/DOCX/XLSX uploads (they're XML inside a zip), RSS/feed imports, XML APIs, sitemap parsers.
+
+### First tests
+- Inject a `DOCTYPE` with an external entity pointing at an out-of-band URL (blind) or a harmless local file to confirm reading.
+- For blind XXE, use out-of-band exfiltration to your listener.
+
+### Escalate
+XXE can read local files, perform SSRF, and sometimes cause denial of service. Prove with a single non-sensitive file or an OOB hit.
+
+### Why it gets rejected
+Parser has external entities disabled; only `DOCTYPE` echoes with no resolution.
+
+---
+
+## Card 7 — Path Traversal / LFI
+
+### Where it hides
+File parameters: `?file=`, `?path=`, `?template=`, `?download=`, `?lang=`, `?page=`, document viewers, export/download endpoints, image loaders.
+
+### First tests
+- `../../../../etc/passwd` and Windows equivalents; encoded variants (`%2e%2e%2f`, double-encoding, `....//`).
+- Null-byte and extension tricks on older stacks.
+- Look for a read of a single, non-sensitive marker to confirm.
+
+### Escalate
+LFI can escalate to RCE via log poisoning or session files in some stacks; prove the read first, escalate only as far as needed.
+
+### Why it gets rejected
+Path canonicalisation blocks traversal; only in-directory files accessible; non-sensitive file with no impact.
+
+---
+
+## Card 8 — File Upload
+
+### Where it hides
+Avatars, attachments, import features, document/image processors, anywhere a file is accepted and later served or parsed.
+
+### First tests
+- Check what validation exists (extension, content-type, magic bytes) and where files are served from.
+- **Stored XSS via SVG:** upload an SVG containing script if images are served inline on the app's origin.
+- Try alternate/dangerous extensions, double extensions, content-type mismatch, and polyglot files if the server might execute uploads.
+- Filename injection (path traversal in the filename), and oversized/zip-bomb inputs for DoS (only if allowed).
+- URL-based uploads → test for **SSRF**.
+
+### Escalate
+Executable upload served from the web root is critical; SVG stored XSS on the main origin can lead to ATO.
+
+### Why it gets rejected
+Files served from a sandboxed domain or with safe content types; uploads re-encoded; execution disabled in the upload directory.
+
+---
+
+## Card 9 — Insecure Deserialization
+
+### Where it hides
+Opaque blobs in cookies, hidden fields, tokens, caches, and message queues. Signatures: Java `AC ED` / base64 `rO0`, PHP `O:`/`a:`, .NET `ViewState`, Python pickle.
+
+### First tests
+- Decode suspicious blobs. Can you read/modify the structure and have the server accept it?
+- Confirm the format and framework before attempting anything further.
+
+### Escalate
+Deserialization RCE is critical, but exploitation is sensitive — confirm the sink and format, prove with a benign out-of-band callback where possible, and report rather than fully weaponising against production.
+
+### Why it gets rejected
+Blob is signed/encrypted and tampering is rejected; plain data with no dangerous deserializer.
+
+---
+
+## Severity Snapshot
+
+```text
+Critical   RCE (command injection, deserialization, SSTI->RCE), SSRF to cloud creds, SQLi dumping data
+High       SSRF to internal services, XXE file read, stored XSS in admin, strong LFI
+Medium     Blind SSRF with limited reach, reflected XSS, some file-upload issues
+Low        Self-contained issues needing heavy chaining or unrealistic conditions
+```
+
+Severity always depends on **demonstrated impact** on the specific target.
+
+---
+
+## Key Takeaways
+
+- Server-side bugs are high severity — prove them with the least invasive evidence and stop.
+- Out-of-band listeners confirm blind SSRF, XXE, SSTI and command injection.
+- Many classes hide in file parsers, upload features and URL-fetching functionality.
+- Escalate only as far as needed to establish impact; never damage or over-collect.
+
+---
+
+## Next
+
+**[Hunt Cards: Business Logic & Race Conditions](./06-business-logic-and-race-conditions.mdx)**

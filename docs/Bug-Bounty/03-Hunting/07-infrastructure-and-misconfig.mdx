@@ -1,0 +1,191 @@
+---
+sidebar_position: 7
+title: "Hunt Cards: Infrastructure & Misconfiguration"
+description: "Subdomain takeover, web cache poisoning and deception, HTTP request smuggling, host-header attacks, exposed panels and dashboards, known CVEs, and 403/401 bypass techniques."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: Infrastructure & Misconfiguration
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L2 → L5` · `Reading time: ~14 min`
+
+These are the bugs that live in the plumbing — DNS, caches, proxies, and exposed services — rather than in application code. They reward strong recon and are often less duplicated because they require noticing something, not guessing a payload.
+
+**Theory:** [Caching & Infrastructure Abuse](../../Web-Security/13-caching-and-infrastructure-abuse.mdx) · [HTTP Protocol-Level Attacks](../../Web-Security/12-http-protocol-attacks.mdx) · [OWASP A02:2025 Security Misconfiguration](../../OWASP/03-a02-security-misconfiguration.mdx)
+
+---
+
+## Card 1 — Subdomain Takeover
+
+### Where it hides
+Subdomains with a dangling DNS record (usually a `CNAME`) pointing at a third-party service that's no longer claimed — deprovisioned cloud apps, old SaaS pages, expired hosting.
+
+### First tests
+1. From recon, collect `CNAME` records for all subdomains (`dnsx -cname`).
+2. Look for `CNAME`s pointing to third-party platforms with a "not found"/"no such app" response.
+3. Cross-check the fingerprint against the community project **can-i-take-over-xyz**, which documents which services are vulnerable and how to confirm.
+4. If a service lets you claim the referenced resource, claim it and host a harmless proof page.
+
+### Escalate
+A takeover on a subdomain trusted for cookies (`*.target.com`) or used in OAuth/SSO can escalate to session theft or auth abuse — mention the trust impact.
+
+### Prove it
+A benign proof page you control at the subdomain, plus the DNS record and the service fingerprint. Remove your claim after reporting unless asked otherwise.
+
+### Why it gets rejected
+The service can't actually be claimed by an attacker; the subdomain is out of scope; no real trust/impact (programs vary on "fun fact" takeovers).
+
+---
+
+## Card 2 — Web Cache Poisoning
+
+### Where it hides
+Sites behind a CDN/cache where an **unkeyed input** (a header like `X-Forwarded-Host`, `X-Forwarded-Scheme`, or a specific query param) influences the response body.
+
+### First tests
+1. Use **Param Miner** to discover unkeyed headers/parameters.
+2. Send a request with an unkeyed header reflected into the response (e.g. into a `<script src>` or link), then confirm the poisoned response is **served to a clean request** for the same cache key.
+3. Mark your probes with a unique value so you can see when the cache serves your version.
+
+### Escalate
+Poisoning a response that affects all visitors (malicious script `src`, redirect) is high impact — demonstrate that a second, unrelated request receives the poisoned response. Chain with an open redirect or XSS payload for severity.
+
+### Why it gets rejected
+The reflected input is part of the cache key (so only your own request is affected); you can't show a second visitor receiving the poisoned copy; the affected header isn't actually cached.
+
+<Admonition type="warning" title="Don't poison production for real users">
+
+Prove cache poisoning with a harmless marker and your own follow-up request. Avoid poisoning high-traffic pages with anything that would affect real users; some programs want you to coordinate. Follow the rules.
+
+</Admonition>
+
+---
+
+## Card 3 — Web Cache Deception
+
+### Where it hides
+Apps that serve dynamic, user-specific pages but sit behind a cache that caches by file extension or path pattern.
+
+### First tests
+- Request a sensitive authenticated page with an appended fake static path/extension: `/account/settings/nonexistent.css`.
+- If the backend returns the real private page and the cache stores it as "static," another party requesting that URL may receive your cached private content.
+
+### Why it gets rejected
+Cache keys on content-type/`Cache-Control`, not the fake extension; the backend 404s on the crafted path.
+
+---
+
+## Card 4 — HTTP Request Smuggling
+
+### Where it hides
+Front-end/back-end chains (CDN/load balancer + origin) that disagree on request boundaries (`Content-Length` vs `Transfer-Encoding`), and HTTP/1.1↔HTTP/2 downgrades.
+
+### First tests
+- Use Burp's **HTTP Request Smuggler** to test CL.TE / TE.CL / TE.TE and HTTP/2 variants safely (it has a non-destructive detection mode).
+- Confirm with timing-based probes before anything else.
+
+### Escalate
+Smuggling can poison other users' requests/responses, bypass front-end controls, or capture other users' requests — typically high/critical.
+
+### Why it gets rejected
+Not reproducible; the "desync" is a timing artefact; impact not demonstrated.
+
+<Admonition type="warning" title="Smuggling can harm real users">
+
+Request smuggling can affect other visitors' traffic. Use detection-only/non-destructive techniques, avoid capturing real users' requests, and follow program rules precisely. When in doubt, report the confirmed desync without weaponising it against real traffic.
+
+</Admonition>
+
+---
+
+## Card 5 — Host Header Attacks
+
+### Where it hides
+Apps that use the `Host` (or `X-Forwarded-Host`) header to build links, especially password-reset emails, absolute URLs and redirects.
+
+### First tests
+- Change `Host` / add `X-Forwarded-Host` and see whether it's reflected into responses, links, or (critically) **password-reset emails** (see the [reset ATO card](./03-authentication-and-account-takeover.mdx)).
+- Test for routing-based access (reaching internal vhosts via a crafted Host).
+
+### Escalate
+Host-header injection into password reset → token theft → ATO is the classic high-severity chain.
+
+---
+
+## Card 6 — Exposed Panels, Dashboards & Services
+
+### Where it hides
+From recon: admin panels, CI tools (Jenkins), dashboards (Grafana, Kibana), databases (Elasticsearch, Mongo), Spring Boot Actuator, Swagger UIs, Git directories, `.env` files, monitoring and metrics endpoints.
+
+### First tests
+- Is it reachable without auth? Default credentials? A known auth-bypass CVE for that product/version?
+- `/actuator/env`, `/actuator/heapdump`, `/.git/`, `/.env`, `/server-status`, `/metrics`, `/debug` — check carefully and non-destructively.
+
+### Escalate
+An unauthenticated admin/CI dashboard, a readable `.git` (reconstruct source + secrets), or an exposed Actuator heapdump (secrets) are often high/critical.
+
+### Why it gets rejected
+Panel is intentionally public / a demo; requires credentials you shouldn't have; non-sensitive metrics.
+
+---
+
+## Card 7 — Known CVEs (1-Day Hunting)
+
+### Where it hides
+Outdated software identified during recon: specific versions of CMSs, dev tools, VPNs, mail servers, frameworks.
+
+### First tests
+- Fingerprint exact product and version (headers, favicons, static asset hashes, login pages).
+- Match against known CVEs; use **Nuclei** templates for safe detection.
+- Confirm the vulnerability exists without running destructive exploit payloads against production.
+
+### Escalate
+A confirmed critical CVE (RCE, auth bypass) on an in-scope asset is high value — but prove presence safely and let the program confirm exploitation where destructive.
+
+### Why it gets rejected
+Version-only reports with no proof of actual vulnerability; the instance is patched/backported; the CVE isn't exploitable in this configuration.
+
+<Admonition type="info" title="Pro lane: patch-diffing and fresh CVEs">
+
+When a new CVE drops for a widely deployed product, hunters race to find affected in-scope instances. Monitoring **[CVE Radar](/cve-radar)** and the KEV catalog, plus watching vendor advisories, lets you be first. For deeper work, patch-diffing (comparing patched vs unpatched versions) reveals the exact bug and how to detect it.
+
+</Admonition>
+
+---
+
+## Card 8 — 403 / 401 Bypass
+
+### Where it hides
+Endpoints that return `403`/`401` — the content exists but is "protected," sometimes inconsistently across proxy layers.
+
+### First tests
+```text
+Path tricks:   /admin  ->  /admin/  /admin/.  /%2e/admin  /admin%20  /admin..;/  /./admin
+Case:          /Admin  /ADMIN
+Methods:       try POST/PUT/HEAD/OPTIONS instead of GET
+Headers:       X-Original-URL: /admin   X-Rewrite-URL: /admin
+               X-Forwarded-For: 127.0.0.1   X-Custom-IP-Authorization: 127.0.0.1
+Encoding:      URL-encode and double-encode path segments
+Versioning:    old API versions / alternate hosts for the same resource
+```
+
+Each trick tests whether one layer's access check disagrees with another layer's routing.
+
+### Why it gets rejected
+The block holds everywhere; the "bypassed" page has no sensitive content; inconsistent/unreliable bypass.
+
+---
+
+## Key Takeaways
+
+- Infrastructure bugs reward recon and noticing anomalies, not payloads.
+- Prove cache and smuggling bugs non-destructively; they can affect real users.
+- Host-header injection into password reset is a classic ATO chain.
+- Exposed panels, readable `.git`/`.env`, and fresh CVEs on in-scope assets are high-value — confirm safely.
+
+---
+
+## Next
+
+**[Hunt Cards: APIs, GraphQL & Mobile](./08-api-graphql-and-mobile.mdx)**

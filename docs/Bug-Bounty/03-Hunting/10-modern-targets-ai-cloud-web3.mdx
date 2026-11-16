@@ -1,0 +1,113 @@
+---
+sidebar_position: 10
+title: "Hunt Cards: Modern Targets — AI, Cloud & Web3"
+description: "Hunting LLM-powered features (prompt injection, excessive agency), cloud and CI/CD misconfiguration, and an orientation to smart-contract bug bounties — the fastest-growing areas in 2026."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: Modern Targets — AI, Cloud & Web3
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L3 → L5` · `Reading time: ~13 min`
+
+Three areas have grown fast and are less crowded than classic web targets. They reward hunters who learn them early.
+
+**Theory:** [OWASP Projects — LLM Top 10](../../OWASP/13-owasp-projects-asvs-wstg.mdx) · [Deserialization & Supply-Chain](../../Web-Security/11-deserialization-and-supply-chain.mdx)
+
+---
+
+## Part 1 — AI / LLM-Powered Features
+
+AI assistants, copilots and **agents** that call tools and take actions are one of the fastest-growing, least-hardened surfaces in bug bounty. Because the topic is large, it has its own full page:
+
+<Admonition type="info" title="See the dedicated page">
+
+**[AI & Agentic Application Testing](./09-ai-and-agentic-testing.mdx)** covers this in depth: direct and indirect prompt injection, tool/function abuse, RAG and memory poisoning, output-handling bugs, resource abuse, and full **agentic chaining** (planted instruction → capability → data → exfiltration).
+
+The one-line summary to carry with you: **an AI bug's severity is about what the model can *do*, not what it can be made to say.** The highest-value AI bugs are usually classic web bugs (IDOR on chat history, XSS from model output, SSRF via a fetch tool, cross-tenant RAG access) reached through the model.
+
+</Admonition>
+
+---
+
+## Part 2 — Cloud & CI/CD
+
+When cloud assets are in scope, misconfiguration is a rich source of findings. **Only test cloud resources explicitly in scope.**
+
+### Card 4 — Cloud Storage & Services
+
+**Where it hides:** storage buckets, exposed databases, serverless functions, container registries, management consoles found during recon.
+
+**First tests:**
+- Buckets: is listing enabled? Is **writing** enabled (far more severe)? Are backups/exports public?
+- Metadata SSRF: an in-scope app with SSRF reaching `169.254.169.254` can yield temporary credentials (confirm reachability; don't harvest/use beyond proof).
+- Exposed services on non-standard ports (Elasticsearch, Mongo, Redis, Kubernetes API, Docker API) without auth.
+
+**Escalate:** writable buckets, readable backups, or reachable internal services are high/critical. Prove access minimally; never exfiltrate customer data.
+
+### Card 5 — CI/CD & Secrets
+
+**Where it hides:** exposed CI dashboards (Jenkins), pipeline config in public repos, build logs, and secrets in Git history (see [OSINT](../02-Recon/05-osint-dorking-and-leaks.mdx)).
+
+**First tests:**
+- Public repos: secrets in history, overly powerful CI tokens, third-party actions pinned to mutable tags (supply-chain risk).
+- Exposed build logs leaking env vars/secrets.
+- Dependency confusion: internal package names claimable on public registries (report the risk; don't actually publish malicious packages).
+
+**Escalate:** a valid cloud/CI credential or a pipeline compromise path is high/critical — report, don't exploit destructively.
+
+<Admonition type="warning" title="Cloud rules are strict">
+
+Cloud testing can easily stray out of scope or cause real impact. Confirm the asset is in scope, use read-only/minimal checks, never pivot into production systems or other tenants, and stop at proof. When unsure, ask the program.
+
+</Admonition>
+
+---
+
+## Part 3 — Web3 & Smart Contracts (Orientation)
+
+Web3 bug bounties (via platforms focused on crypto) include some of the **largest individual payouts** in the industry, because a smart-contract bug can mean direct, irreversible loss of funds. This is a specialised field; treat this card as a map, not a full guide.
+
+### What's different
+- Contract code is usually **public on-chain** — everyone reads the same source.
+- Bugs are often in **logic and economics**, not memory safety.
+- Deployed contracts are hard/impossible to patch, so prevention is everything.
+- Testing happens on **testnets/forks**, never by draining real funds.
+
+### Common smart-contract bug classes
+| Class | Idea |
+|---|---|
+| Reentrancy | A called contract calls back before state updates, draining funds |
+| Access control | Missing `onlyOwner`/role checks on privileged functions |
+| Integer/rounding issues | Precision and overflow/underflow errors in accounting |
+| Oracle/price manipulation | Manipulating a price feed (often via flash loans) to profit |
+| Logic/economic flaws | Mis-designed incentives, fee/reward miscalculations |
+| Front-running / MEV | Exploiting transaction ordering in the mempool |
+| Signature/replay | Reusing or forging signatures across chains/contexts |
+
+### How to start
+- Learn **Solidity** and the EVM; read audited contracts and audit reports.
+- Use **Foundry**/**Hardhat** to fork mainnet and test exploits safely.
+- Study tools like **Slither** (static analysis) and **Echidna** (fuzzing).
+- Practise on wargames such as **Ethernaut** and **Damn Vulnerable DeFi**.
+
+<Admonition type="info" title="Pro lane">
+
+Web3 and web2 skills combine well: many crypto companies also run normal web apps (exchanges, dashboards, bridges' front-ends) with classic web bugs. You can hunt the web2 surface with the skills from this whole section while learning Solidity for the contract surface.
+
+</Admonition>
+
+---
+
+## Key Takeaways
+
+- Most high-value AI bugs are classic web bugs (IDOR, XSS, SSRF) plus prompt injection into an agent that can *act*.
+- Cloud/CI findings (writable buckets, leaked credentials, metadata SSRF) are high impact — test only in-scope assets, minimally.
+- Smart-contract bounties pay the most but need Solidity/EVM skills; test on testnets/forks only.
+- Across all three, demonstrated impact and careful, non-destructive proof matter more than ever.
+
+---
+
+## Next
+
+Stage 3 complete. Level up: **[Stage 4 · Automation Pipelines](../04-Level-Up/01-automation-pipelines.mdx)**

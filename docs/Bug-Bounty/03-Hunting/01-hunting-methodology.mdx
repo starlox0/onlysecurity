@@ -1,0 +1,177 @@
+---
+sidebar_position: 1
+title: "Hunting Methodology"
+description: "A repeatable way to hunt: understand the application, build a feature map, form hypotheses, test systematically, time-box, take notes — plus how to read Hunt Cards in this stage."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunting Methodology
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L1 → L5` · `Reading time: ~12 min`
+
+Recon tells you **where** to look. Methodology decides whether you find anything when you get there. The hunters who find bugs consistently aren't the ones who know the most payloads — they're the ones who **understand the application better than its own developers expected anyone to**.
+
+---
+
+## The Hunting Loop
+
+```text
+        ┌──────────────────────────────────────────────┐
+        ▼                                              │
+  1. UNDERSTAND   use the feature as a normal user     │
+        │                                              │
+  2. OBSERVE      read every request it makes          │
+        │                                              │
+  3. HYPOTHESISE  "what if… ?"                         │
+        │                                              │
+  4. TEST         one change at a time                 │
+        │                                              │
+  5. RECORD       tested.md / ideas.md                 │
+        │                                              │
+  6. ESCALATE or MOVE ON ───────────────────────────────┘
+```
+
+---
+
+## 1. Understand the Application
+
+Before attacking anything, **use the product properly**. Read its help docs. Watch its onboarding videos. Ask:
+
+- What is this product *for*? What do customers pay for?
+- What's the most valuable data in it? Whose is it?
+- What are the roles? (owner, admin, member, guest, support, API client)
+- What can users share or invite others to?
+- Where does money move? (subscriptions, credits, coupons, refunds, payouts)
+- Where does the app talk to other systems? (integrations, webhooks, imports, SSO)
+
+<Admonition type="tip" title="Beginner lane">
+
+Read the product's **API documentation and changelog** if public. Docs describe exactly what each endpoint is *supposed* to allow — which tells you precisely what to test for being allowed when it shouldn't be. Changelogs tell you what's new.
+
+</Admonition>
+
+---
+
+## 2. Build a Feature Map
+
+Turn the app into a list you can work through. For each feature, record the endpoints, the roles that can use it, and which bug classes apply:
+
+| Feature | Endpoints | Roles | Test for |
+|---|---|---|---|
+| Invite member | `POST /api/teams/{id}/invites` | owner, admin | IDOR on team ID, privilege escalation (member inviting admins), mass assignment of role |
+| Export report | `GET /api/reports/{id}/export?format=pdf` | all | IDOR, SSRF/HTML injection in PDF generator |
+| Change email | `POST /api/me/email` | all | CSRF, ATO via missing verification, race condition |
+| Avatar upload | `POST /api/me/avatar` | all | File upload abuse, stored XSS (SVG), SSRF (URL import) |
+| Apply coupon | `POST /api/billing/coupon` | owner | Race condition, reuse, logic flaws |
+| Webhook settings | `POST /api/integrations/webhooks` | admin | SSRF |
+
+The **feature × bug class** matrix is the heart of methodical hunting: it stops you testing the same easy thing everywhere and missing whole areas.
+
+---
+
+## 3. Observe Everything
+
+With your proxy recording, use the feature as each role. Then read the history carefully:
+
+- Which **IDs** appear? (numeric, UUID, email, slug, encoded)
+- Which **parameters** are sent that the UI never shows you?
+- What do responses **contain beyond what the UI renders**? (extra fields are a classic finding)
+- How is the user **authenticated** on each request? (cookie, bearer token, both, neither)
+- Are there **CSRF tokens**? Are they checked?
+- Which requests go to **other hosts** (APIs, CDNs, third parties)?
+
+---
+
+## 4. Form Hypotheses
+
+Good hunting is a series of small, specific questions:
+
+- "What if I send Bob's `teamId` with my session?"
+- "What if I add `"role":"admin"` to this JSON?"
+- "What if I call this admin endpoint as a member?"
+- "What if I send this request twice at the same time?"
+- "What if the `redirect` parameter points to my domain?"
+- "What if this URL field points at `169.254.169.254`?"
+- "What if I skip step 2 of this flow?"
+- "What does this endpoint do with a negative number? An array? `null`?"
+
+---
+
+## 5. Test One Change at a Time
+
+Change **one** thing per request so you know exactly what caused a different response. Keep a baseline response to compare against (status, length, body, timing, headers).
+
+---
+
+## 6. Record and Time-Box
+
+- Mark each feature/bug-class cell as tested (✓), vulnerable (✗) or revisit (?).
+- **Time-box** rabbit holes: give an idea a fixed budget (say, 45 minutes). If it isn't going anywhere, write it in `ideas.md` and move on. Come back with fresh eyes — or a new technique — later.
+
+<Admonition type="info" title="Pro lane: think like the developer">
+
+Ask how a developer under deadline pressure would have built this feature — and where they'd cut corners. The main web UI probably got security review; the **mobile API**, the **CSV export**, the **legacy v1 endpoint**, the **admin bulk-action tool** and the **integration added last month** probably got less. Bugs cluster where attention was thinnest.
+
+</Admonition>
+
+---
+
+## Where Bugs Cluster
+
+| Area | Why |
+|---|---|
+| **New features** | Least tested by hunters and by internal QA |
+| **Multi-tenant / team features** | Complex permission logic across organisations and roles |
+| **Second-class clients** | Mobile APIs, partner APIs, old API versions |
+| **Edges of flows** | Password reset, email change, invitation acceptance, account deletion, cancellation, refunds |
+| **Imports and exports** | Parsers (CSV, XML, PDF, images, Office files) and file generation |
+| **Integrations** | Webhooks, OAuth connections, SSO — trust boundaries between systems |
+| **Admin and support tools** | Powerful functionality, often assumed to be "internal only" |
+
+---
+
+## How to Read the Hunt Cards
+
+Every bug class in this stage follows the same structure:
+
+| Part | Purpose |
+|---|---|
+| 🎯 **Where it hides** | Features and parameters to look at first |
+| 🧪 **First tests** | The fastest checks |
+| 📈 **Escalate** | How to raise the impact |
+| 🧾 **Prove it** | What evidence makes triage easy |
+| 🚫 **Why it gets rejected** | Common reasons for N/A or informative |
+
+Each card also links to the **[Web Security](/docs/category/web-security)** page that explains the vulnerability's mechanism in depth.
+
+---
+
+## Hunt Card Index
+
+| Page | Bug classes |
+|---|---|
+| [Access Control & IDOR](./02-access-control-and-idor.mdx) | IDOR/BOLA, privilege escalation, BFLA, mass assignment, multi-tenant leaks |
+| [Authentication & Account Takeover](./03-authentication-and-account-takeover.mdx) | Login, sign-up, password reset, 2FA bypass, OAuth, SAML, JWT, sessions |
+| [Client-Side Bugs](./04-client-side-bugs.mdx) | XSS, CSRF, CORS, open redirect, clickjacking, postMessage, prototype pollution, HTML injection |
+| [Server-Side Bugs](./05-server-side-bugs.mdx) | SSRF, SQLi, NoSQLi, SSTI, command injection, XXE, path traversal/LFI, file upload, deserialization |
+| [Business Logic & Race Conditions](./06-business-logic-and-race-conditions.mdx) | Payments, coupons, limits, workflows, race conditions, rate limiting, parameter pollution |
+| [Infrastructure & Misconfiguration](./07-infrastructure-and-misconfig.mdx) | Subdomain takeover, cache poisoning/deception, request smuggling, host header, exposed panels, known CVEs, 403 bypass |
+| [APIs, GraphQL & Mobile](./08-api-graphql-and-mobile.mdx) | REST/GraphQL specifics, API versioning, mobile app testing |
+| [AI & Agentic Application Testing](./09-ai-and-agentic-testing.mdx) | Prompt injection (direct/indirect), tool & function abuse, RAG/memory poisoning, output handling, agentic chaining |
+| [Modern Targets: AI, Cloud & Web3](./10-modern-targets-ai-cloud-web3.mdx) | Cloud & CI/CD misconfiguration, smart contracts (+ AI overview) |
+
+---
+
+## Key Takeaways
+
+- Understand the product and build a feature × bug-class map before testing.
+- Read every request; test one hypothesis and one change at a time.
+- Record everything and time-box rabbit holes.
+- Focus where attention was thinnest: new features, secondary clients, flow edges, integrations.
+
+---
+
+## Next
+
+**[Hunt Cards: Access Control & IDOR](./02-access-control-and-idor.mdx)**

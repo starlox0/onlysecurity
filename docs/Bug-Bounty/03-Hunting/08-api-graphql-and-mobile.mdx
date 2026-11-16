@@ -1,0 +1,146 @@
+---
+sidebar_position: 8
+title: "Hunt Cards: APIs, GraphQL & Mobile"
+description: "Testing REST and GraphQL APIs, API versioning and documentation abuse, GraphQL introspection and batching, and extracting endpoints and secrets from mobile apps."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: APIs, GraphQL & Mobile
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L2 → L5` · `Reading time: ~13 min`
+
+Most modern functionality lives in APIs, and most mobile apps are thin clients over the same (or a second, weaker) API. These surfaces are where access-control and logic bugs concentrate.
+
+**Theory:** [OWASP API Security Top 10](../../OWASP/12-owasp-api-security-top-10.mdx) · [Web API Pentesting](../../Web-Security/15-misc-and-emerging-web-attacks.mdx)
+
+---
+
+## Card 1 — REST API Testing
+
+### Where it hides
+Everywhere the app calls `/api/...`; documented and undocumented endpoints; old versions.
+
+### First tests
+- Get the spec: `/swagger.json`, `/openapi.json`, `/v2/api-docs`, `/api-docs`, Postman collections. The spec lists endpoints and expected roles — a map of exactly what to test for being over-permissive.
+- **Authorization at three levels** (the core of API hunting):
+  - **Object (BOLA/IDOR):** change IDs across your two accounts.
+  - **Function (BFLA):** call admin endpoints as a normal user; try every method.
+  - **Property (BOPLA):** compare request vs response fields; add `role`, `isAdmin`, etc. (mass assignment); check responses for extra sensitive fields (excessive data exposure).
+- **Version walking:** if `/api/v3/x` exists, test `/api/v1/x` and `/api/v2/x` — older versions often miss newer access checks.
+- **Resource limits:** oversized `limit`/`pageSize`, large/batched payloads, unthrottled endpoints.
+- **Method confusion:** `GET` vs `POST` vs `PUT` vs `PATCH` vs `DELETE` on the same path.
+
+### Escalate
+Cross-user object access, admin functions as a normal user, or an old version exposing data are typically high/critical.
+
+### Why it gets rejected
+Access actually enforced; endpoint intended to be public; "extra field" is non-sensitive.
+
+<Admonition type="tip" title="Beginner lane: the spec is a to-do list">
+
+An OpenAPI/Swagger spec tells you every endpoint, parameter and role. Import it into Burp/Postman and walk it method by method with two accounts. You're testing whether the server enforces what the docs promise.
+
+</Admonition>
+
+---
+
+## Card 2 — GraphQL
+
+### Where it hides
+`/graphql`, `/api/graphql`, `/v1/graphql`, `/query`, `/gql`.
+
+### First tests
+- **Introspection:** is it enabled in production? Query the schema to map every type, query and mutation (Burp **InQL**, GraphQL Voyager). Even with introspection off, **field suggestions** in error messages can leak schema.
+- **Authorization per resolver:** GraphQL often authorizes the top-level query but not nested fields — request a nested object you shouldn't see. This is a very common GraphQL IDOR.
+- **Mutations:** enumerate mutations (create/update/delete/admin actions) and test access control on each.
+- **Batching / aliasing abuse:** send many operations in one request (aliases) to bypass rate limits — useful for brute forcing OTPs/passwords where per-request limits exist.
+- **Query depth/complexity:** deeply nested or recursive queries with no limit → denial of service (test cautiously, respect rules).
+- **Injection via arguments:** GraphQL arguments can reach SQL/NoSQL sinks — test like any other input.
+
+### Escalate
+Nested-resolver IDOR, an admin mutation callable by a normal user, or batching to defeat auth rate limits are high value.
+
+### Why it gets rejected
+Introspection off and schema not leaked; authorization enforced per field; batching limited.
+
+---
+
+## Card 3 — API Authentication & Keys
+
+### First tests
+- How are requests authenticated (cookie, bearer/JWT, API key in header/query)? Keys in the **URL** leak via logs/`Referer`.
+- Does an API key have broader scope than intended? Test what it can reach.
+- Revocation: do old tokens/keys keep working after logout/rotation?
+- For JWTs, apply the [JWT hunt card](./03-authentication-and-account-takeover.mdx).
+
+---
+
+## Card 4 — Mobile App Testing
+
+Mobile apps frequently talk to a **different or older API** than the web app, sometimes with weaker checks — a rich, less-contested surface.
+
+### Static analysis (no device needed to start)
+- Obtain the APK (Android) from the device or a store mirror within program rules.
+- Decompile with **jadx** / **apktool**. Search the smali/Java and resources for:
+  - endpoints and hostnames (including internal/staging),
+  - hard-coded secrets, API keys, tokens (validate safely — see [JS analysis](../02-Recon/04-javascript-analysis.mdx)),
+  - feature flags, debug endpoints, and third-party SDK configs,
+  - the `AndroidManifest.xml` for exported components (activities/services/providers) that could be invoked by other apps.
+- iOS: inspect the IPA, `Info.plist`, embedded strings and frameworks (more setup required).
+
+### Dynamic analysis
+- Proxy the app's traffic through Burp (install the CA; handle certificate pinning with **Frida**/**objection** on a test device/emulator you own).
+- Then test the mobile API exactly like a web API — the authorization and logic bugs are the same, often weaker.
+
+### Escalate
+A mobile-only endpoint missing an access check present on the web API, or secrets granting real access, can be high/critical.
+
+### Why it gets rejected
+Secrets that are public by design; endpoints that enforce the same checks; findings requiring a rooted device in ways the program excludes.
+
+<Admonition type="warning" title="Decompile apps you're allowed to test">
+
+Only analyse apps that are in scope. Keep extracted secrets private, validate them safely, and report rather than use them.
+
+</Admonition>
+
+---
+
+## Card 5 — WebSockets
+
+### Where it hides
+Real-time features: chat, notifications, live dashboards, collaboration.
+
+### First tests
+- Does the WebSocket handshake validate `Origin`? (If not: cross-site WebSocket hijacking, a CSRF-like risk against an authenticated socket.)
+- Are messages authorized, or does the socket trust anything after connect? Test IDOR/authz on message payloads.
+- Is message input validated like HTTP input, or does it skip the usual middleware?
+
+---
+
+## API Testing Flow
+
+```text
+1. Find the API      swagger/openapi, JS, mobile app, version walking
+2. Map it            endpoints, params, roles (from docs/introspection)
+3. Authz x3          object (IDOR), function (admin), property (mass assignment / data exposure)
+4. Limits            page size, batching, rate limits, DoS
+5. Old versions      /v1 /v2 beta internal
+6. Auth              keys in URLs, scope, revocation, JWT
+```
+
+---
+
+## Key Takeaways
+
+- API hunting is mostly authorization at three levels: object, function and property.
+- The spec (OpenAPI) or GraphQL introspection is your to-do list.
+- GraphQL's classic bug is missing authorization on nested resolvers; batching can defeat rate limits.
+- Mobile apps reveal endpoints and secrets statically and often use weaker APIs — test them like any API.
+
+---
+
+## Next
+
+**[Hunt Cards: AI & Agentic Application Testing](./09-ai-and-agentic-testing.mdx)**

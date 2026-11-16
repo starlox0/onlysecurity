@@ -1,0 +1,164 @@
+---
+sidebar_position: 2
+title: "Hunt Cards: Access Control & IDOR"
+description: "IDOR/BOLA, privilege escalation, function-level authorization, mass assignment and multi-tenant data leaks — where they hide, how to test, escalate, prove and avoid rejection."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: Access Control & IDOR
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L1 → L5` · `Reading time: ~13 min`
+
+Access control bugs are the most common high-value findings in bug bounty: rarely caught by scanners, often high severity, and testable by anyone who understands the application. If you master one category first, make it this one.
+
+**Theory:** [Access Control & Business Logic](../../Web-Security/09-access-control-and-business-logic.mdx) · [OWASP A01:2025](../../OWASP/02-a01-broken-access-control.mdx) · [API Top 10](../../OWASP/12-owasp-api-security-top-10.mdx)
+
+---
+
+## The Setup You Need
+
+```text
+Org A:  Owner-A, Admin-A, Member-A, Viewer-A
+Org B:  Owner-B                                  <- a separate tenant
+Plus:   a logged-out browser
+```
+
+Every access-control test is a variant of the same idea: *perform an action as one identity, then repeat it as another identity that should not be allowed, and see what happens.* Use only accounts you created for testing.
+
+<Admonition type="tip" title="Beginner lane: let Autorize do the repeating">
+
+Install **Autorize** in Burp. Give it Member-A's (or Owner-B's) session, then browse the app as Owner-A. Autorize repeats every request with the lower-privilege session (and with no session) and colour-codes which ones still succeeded. Then verify each flagged result by hand — Autorize surfaces candidates, not confirmed bugs.
+
+</Admonition>
+
+---
+
+## Card 1 — IDOR / BOLA
+
+### Where it hides
+- Any request containing an identifier: path (`/invoices/1043`), query (`?userId=`), JSON body (`"accountId":`), headers or cookies.
+- "Secondary" objects: attachments, comments, exports, notifications, audit logs, saved searches, API keys, webhooks, invoices.
+- Write actions — update, delete, share, transfer, approve — which are often less protected than reads.
+- Batch endpoints that take arrays of IDs.
+- Mobile and older API versions of the same resource.
+
+### First tests
+1. As Owner-A, perform the action and capture the request.
+2. Replace the identifier with Owner-B's object ID; send it with Owner-A's session.
+3. Try each method on the path (`GET`, `PUT`, `PATCH`, `DELETE`).
+4. If IDs are random (UUIDs), find where other users' IDs legitimately appear: shared links, public profiles, team member lists, notifications, API responses, exports, email links.
+5. Try identifier variations: numeric vs string, wrapping in an array (`[1043]`), sending the value twice, changing case on emails/slugs, appending `.json` to a path.
+
+### Escalate
+- Read access to write or delete access is a large severity increase.
+- A single object to **enumeration at scale** (sequential IDs) shows mass impact — demonstrate with a couple of your own accounts' objects, never real users' data.
+- Low-value fields to sensitive data (personal, financial, health, or authentication data such as reset tokens or API keys).
+- IDOR on an "invite" or "add member" endpoint can mean joining any organisation — often critical.
+
+### Prove it
+Two accounts you own, the exact request, the response showing Account B's data returned to Account A, and a plain statement of what data or action is exposed for *any* user.
+
+### Why it gets rejected
+- The object was meant to be public (public profiles, share-by-link resources).
+- IDs are unguessable and the report doesn't show how an attacker would obtain them — show a realistic leak path when you can.
+- Tested on real users' data instead of your own accounts.
+- The exposed field isn't sensitive.
+
+---
+
+## Card 2 — Privilege Escalation & Function-Level Authorization (BFLA)
+
+### Where it hides
+- Admin/owner-only actions: managing members, changing roles, billing, SSO settings, API-key creation, audit logs, data exports, deleting the organisation.
+- Endpoints visible in JavaScript but hidden from the lower role's UI (see **[JavaScript Analysis](../02-Recon/04-javascript-analysis.mdx)**).
+- Paths such as `/admin/`, `/internal/`, `/manage/`, `/staff/`, `/support/`.
+
+### First tests
+1. Capture every privileged action as Admin-A.
+2. Repeat each one with Member-A's and Viewer-A's sessions, then with no session.
+3. Try to change your own role: `PATCH /api/members/me` with `"role":"admin"`.
+4. As a Member, try to invite someone as Admin, or edit an Admin.
+
+### Escalate
+Viewer to Admin within one org is high; any user to admin of *any* org is critical. State what the gained privileges allow (export all data, take over the org, delete it).
+
+### Prove it
+Show the low-privilege session performing the privileged action and the resulting state change — for example, the member list showing your Viewer account now set to Admin.
+
+### Why it gets rejected
+The lower role was actually permitted that action by design — check the product's role documentation first.
+
+---
+
+## Card 3 — Mass Assignment (Property-Level Authorization)
+
+### Where it hides
+Create and update endpoints that accept JSON objects: sign-up, profile update, team settings, object creation.
+
+### First tests
+1. Compare the **response** object's fields with what the **request** sends.
+2. Add fields that appear in responses but not in requests: `role`, `isAdmin`, `verified`, `emailVerified`, `plan`, `credits`, `balance`, `orgId`, `ownerId`, `createdBy`, `discount`, `price`.
+3. Try nested shapes: `"user":{"role":"admin"}`, `"permissions":["*"]`, and the form-encoded equivalent (`user[role]=admin`).
+4. Confirm with a fresh `GET` — the update's own response may not reflect the real change.
+
+### Escalate
+`emailVerified:true` can bypass verification and open account-takeover chains; `orgId` can move your objects into another tenant; `plan:"enterprise"` can unlock paid features for free.
+
+### Why it gets rejected
+The field changed in the response but had no effect server-side — always verify the behaviour actually changed.
+
+---
+
+## Card 4 — Multi-Tenant Data Leaks
+
+### Where it hides
+Search, filters, autocomplete, dashboards, reports, exports, recent-activity and notification feeds, and global lookups (for example "find user by email" during an invite).
+
+### First tests
+- Place a unique string in Org B, then search for it while logged in as Org A.
+- Use filter and sort parameters with another tenant's IDs.
+- Check autocomplete and invite-by-email endpoints for leaking other tenants' users.
+- Test ORM-style filter parameters (`?filter[owner][email]=`, `?where=`, GraphQL filters) for **ORM leaks** — filtering on a related field you can't see directly can disclose data a character at a time.
+
+### Escalate
+Cross-tenant access on a B2B product is usually rated high or critical because it breaks the product's core promise.
+
+---
+
+## Card 5 — Unauthenticated Access
+
+### Where it hides
+APIs called by the front end, file-download links, export URLs, WebSocket endpoints, GraphQL, mobile APIs, "preview" endpoints.
+
+### First tests
+Remove the cookie and `Authorization` header from each interesting request and resend. Also try an expired or malformed token — some servers treat "invalid" as "anonymous but allowed."
+
+---
+
+## Quick Reference: Where IDs Leak
+
+When identifiers are unguessable, these are the usual places another user's ID becomes visible:
+
+```text
+Shared links & invitations     Public profiles & directories     Team member lists
+Comments, mentions, @-tags     Notification payloads             Activity / audit feeds
+Email links                    Exported files (CSV, PDF)         WebSocket messages
+Error messages                 Search & autocomplete             Analytics/tracking calls
+Mobile API responses           Old API versions                  GraphQL introspection
+```
+
+---
+
+## Key Takeaways
+
+- Build a multi-role, multi-tenant test setup with accounts you own before testing.
+- Repeat every request across identities — Autorize speeds this up, manual verification confirms it.
+- Escalate by showing write access, scale, or sensitive data, and state the real impact.
+- Prove findings with your own accounts only.
+
+---
+
+## Next
+
+**[Hunt Cards: Authentication & Account Takeover](./03-authentication-and-account-takeover.mdx)**

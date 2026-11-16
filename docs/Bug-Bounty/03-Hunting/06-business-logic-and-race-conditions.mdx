@@ -1,0 +1,182 @@
+---
+sidebar_position: 6
+title: "Hunt Cards: Business Logic & Race Conditions"
+description: "Payment and coupon abuse, limit bypass, workflow flaws, race conditions, rate-limit bypass and parameter pollution — the bugs scanners can't find and that are rarely duplicated."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: Business Logic & Race Conditions
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L2 → L5` · `Reading time: ~13 min`
+
+Business logic bugs come from understanding the **product**, not from payloads. That's exactly why they're rarely duplicated and highly valued: a scanner can't know that a coupon should only apply once, or that you shouldn't be able to buy a negative quantity.
+
+**Theory:** [Access Control & Business Logic](../../Web-Security/09-access-control-and-business-logic.mdx) · [OWASP A06:2025 Insecure Design](../../OWASP/07-a06-insecure-design.mdx)
+
+<Admonition type="warning" title="Use test funds only">
+
+Test payment and billing logic with the program's sandbox/test cards where provided. Never use real stolen cards, and never cause real financial loss to the company or third parties. Prove the flaw at the smallest possible scale on your own account.
+
+</Admonition>
+
+---
+
+## The Core Question
+
+For every valuable action, ask: **"What is this worth to an attacker, and what stops them doing it cheaply, repeatedly, out of order, or at scale?"**
+
+```text
+Value    money, credits, free goods, premium features, other users' resources
+Cheaply  negative/zero prices, free trials abuse, coupon stacking
+Repeatedly  one-time limits with no server enforcement
+Out of order  skipping payment/verification steps
+At scale  automation past intended limits
+```
+
+---
+
+## Card 1 — Payment & Pricing Logic
+
+### Where it hides
+Checkout, subscription upgrade/downgrade, add-ons, currency handling, refunds, credits, payouts.
+
+### First tests
+- **Price tampering:** is the amount/price sent from the client and trusted? Change it to a lower or negative value.
+- **Quantity abuse:** negative quantities (refund/credit you?), zero, huge values, fractional values.
+- **Currency confusion:** pay in a weaker currency while receiving value in a stronger one, or mismatch currency and amount.
+- **Skip payment:** reach the "success"/fulfilment step directly; does the server independently verify payment with the processor, or trust a client-supplied "paid" signal/callback?
+- **Refund logic:** refund more than paid, refund twice, refund to a different account.
+
+### Escalate
+Free or discounted purchases, self-crediting, or draining payouts are typically high/critical and clearly worth money.
+
+### Why it gets rejected
+The server re-verifies price and payment status independently; "negative" values rejected server-side.
+
+---
+
+## Card 2 — Coupons, Credits & Referrals
+
+### Where it hides
+Promo codes, gift cards, referral bonuses, loyalty points, free-trial logic.
+
+### First tests
+- Apply the same one-time coupon repeatedly (sequentially and **concurrently** — see races below).
+- Stack multiple coupons; combine coupon with referral.
+- Self-refer (your two accounts) for a bonus; farm sign-ups for referral credit.
+- Apply a coupon, then change the cart, and see whether the discount persists incorrectly.
+
+### Escalate
+Unlimited credit generation or stacking to effectively free purchases is high/critical.
+
+### Why it gets rejected
+Server enforces one-time use and eligibility; discount recalculated on every cart change.
+
+---
+
+## Card 3 — Limit & Quota Bypass
+
+### Where it hides
+Anything with a cap: team seats, API rate/usage limits, storage, "one per account," free-tier limits, invites, votes.
+
+### First tests
+- Is the limit enforced server-side or only in the UI?
+- Reset counters via a different endpoint, old API version, or mobile API.
+- Bypass "one per account" with multiple accounts, casing/Unicode email tricks, or by targeting the object directly.
+
+---
+
+## Card 4 — Workflow & Sequence Flaws
+
+### Where it hides
+Multi-step flows: checkout, KYC/verification, onboarding, approval chains, multi-party actions.
+
+### First tests
+- **Skip steps:** call the final step's endpoint without completing prior steps.
+- **Reorder steps:** perform them out of sequence.
+- **Replay steps:** repeat a step that should be single-use.
+- **Tamper state between steps:** change values the server carried forward and trusts.
+
+### Escalate
+Skipping verification/payment/approval is often high. Bypassing KYC or approval on a regulated action can be critical.
+
+---
+
+## Card 5 — Race Conditions
+
+### Where it hides
+Any "check then act" on a limited resource: balance/credit spend, coupon redemption, one-time actions, inventory, "accept invite," withdrawal, vote, like, follow, "claim."
+
+### First tests
+1. Capture the action's request.
+2. Fire many copies **simultaneously** (single-packet / parallel) — Burp's **Turbo Intruder** or the Repeater "send group in parallel" / "single-packet attack" feature.
+3. Check whether the limited action happened more times than allowed (e.g. a one-time coupon applied five times, a balance spent twice).
+
+### Escalate
+Duplicate withdrawals, multiplied credits/refunds, or bypassing a one-time limit are high/critical with clear financial impact.
+
+### Prove it
+Show the before/after state and the parallel requests, proving the action occurred more times than the logic should permit — on your own account.
+
+### Why it gets rejected
+The action is atomic (row locks/transactions); you only demonstrate a timing anomaly without a real over-count.
+
+---
+
+## Card 6 — Rate-Limit Bypass
+
+### Where it hides
+Login, OTP, password reset, messaging/email/SMS triggers, voting, API endpoints.
+
+### First tests
+- Rotate `X-Forwarded-For` / `X-Real-IP` / `X-Client-IP` — does the limit reset per spoofed IP?
+- Change case/encoding in the path, add trailing characters, or switch to another endpoint/version performing the same action.
+- Remove or alter a client-set identifier the limiter keys on.
+
+### Escalate
+A rate-limit bypass is usually **informative on its own** but valuable when it **enables** another attack — OTP brute force (→ 2FA bypass), reset-token brute force, or mass messaging abuse. Report it chained.
+
+### Why it gets rejected
+No downstream impact; the spoofed header isn't actually trusted; limit enforced elsewhere.
+
+---
+
+## Card 7 — HTTP Parameter Pollution
+
+### Where it hides
+Endpoints where a parameter might be parsed differently by different layers (WAF vs app, framework quirks).
+
+### First tests
+- Send a parameter twice (`?role=user&role=admin`), in different locations (query + body), with array syntax (`role[]=`), and observe which value wins.
+- Use it to smuggle a value past a filter that only checked the first occurrence, or to influence access control / pricing.
+
+### Why it gets rejected
+Consistent parsing with no security effect; no filter to bypass.
+
+---
+
+## Finding Logic Bugs: a Checklist
+
+- [ ] List every action with monetary or resource value.
+- [ ] For each: can the client set a value the server should own (price, quantity, role, limit)?
+- [ ] Can it be done negative, zero, huge, or fractional?
+- [ ] Can it be repeated — sequentially and concurrently?
+- [ ] Can steps be skipped, reordered or replayed?
+- [ ] Is the "paid/verified/approved" signal trusted from the client?
+- [ ] Is the limit enforced on the server, on every path (web, mobile, old API)?
+
+---
+
+## Key Takeaways
+
+- Logic bugs require understanding the product; they're rarely duplicated and well paid.
+- Test values (negative/zero/huge), repetition, ordering, and trust of client-supplied state.
+- Race conditions turn "check then act" into over-counting — fire requests in parallel.
+- Rate-limit and parameter-pollution findings shine when chained into real impact.
+
+---
+
+## Next
+
+**[Hunt Cards: Infrastructure & Misconfiguration](./07-infrastructure-and-misconfig.mdx)**

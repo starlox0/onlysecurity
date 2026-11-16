@@ -1,0 +1,9 @@
+{
+  "label": "Stage 3 · Hunting",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "title": "Stage 3 · Hunting",
+    "description": "A hunting methodology plus a Hunt Card for every major bug class: where it hides, how to test, how to escalate, and why reports get rejected."
+  }
+}

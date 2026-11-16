@@ -1,0 +1,191 @@
+---
+sidebar_position: 3
+title: "Hunt Cards: Authentication & Account Takeover"
+description: "Login flaws, sign-up bugs, password reset, 2FA bypass, OAuth and SAML misconfiguration, JWT attacks and session handling — the paths that lead to account takeover."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: Authentication & Account Takeover
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L2 → L5` · `Reading time: ~15 min`
+
+Account takeover (ATO) is one of the highest-impact outcomes a hunter can demonstrate. It rarely comes from one bug — it usually comes from chaining a weakness in one of the four pillars below.
+
+```text
+Credentials ── Sessions ── Recovery ── Federated login (OAuth/SAML/JWT)
+     an attacker only needs the weakest one
+```
+
+**Theory:** [Authentication & Session Attacks](../../Web-Security/08-authentication-and-session-attacks.mdx) · [OWASP A07:2025](../../OWASP/08-a07-authentication-failures.mdx)
+
+<Admonition type="warning" title="Test only your own accounts">
+
+Demonstrate ATO against accounts you created (Attacker takes over Victim, both yours). Never target real users. Stop as soon as takeover is proven.
+
+</Admonition>
+
+---
+
+## Card 1 — Login & Sign-Up
+
+### Where it hides
+Login, registration, "check if email exists," and any pre-auth endpoint.
+
+### First tests
+- **Username enumeration:** compare responses (text, status, timing) for a valid vs invalid email on login, registration and password reset.
+- **Rate limiting:** is there a lockout on repeated failed logins, per account and per IP? Does an `X-Forwarded-For` header reset it?
+- **Weak registration:** can you register `admin@target.com` or a pre-existing email with different casing/Unicode (`Admin@target.com`, `admin@target.com ` with a trailing space) to collide with another account?
+- **Pre-auth logic:** does a client-side `response.success` flag gate access while the server doesn't enforce it?
+
+### Escalate
+Enumeration + no rate limit enables credential stuffing against the program; registration collision can mean taking over an existing account.
+
+### Why it gets rejected
+Username enumeration alone, or missing rate limiting alone, is often low or informative unless you chain it into real impact.
+
+---
+
+## Card 2 — Password Reset (High-Yield ATO Source)
+
+### Where it hides
+The "forgot password" flow end to end: request, email link, token, and the password-set step.
+
+### First tests
+1. **Host header poisoning:** change `Host` or add `X-Forwarded-Host: attacker.com` on the reset request; if the emailed link uses your host, the victim's token leaks to you when they click.
+2. **Token analysis:** is the reset token short, sequential, time-based, or reused? Collect several and compare.
+3. **Token lifecycle:** does the token expire? Is it single-use? Does it still work after the email changes?
+4. **Password reset without old password:** does the change-password endpoint accept a new password without verifying the current one, enabling CSRF or session-based takeover?
+5. **Response leakage:** does the reset response or a related API return the token or user ID?
+6. **IDOR on reset:** does the final `POST` accept a `userId` or `email` parameter you can change to reset someone else's password?
+
+### Escalate
+A reliable reset flaw that works against any account is typically critical.
+
+### Prove it
+Show the full chain against your two accounts: trigger reset for Victim, obtain/derive the token as Attacker, set a new password, log in as Victim.
+
+### Why it gets rejected
+Host-header reset links that the mail system rewrites to the real domain; tokens that look weak but are actually validated server-side.
+
+---
+
+## Card 3 — Two-Factor Bypass
+
+### Where it hides
+The step between password and full login, and "remember this device" handling.
+
+### First tests
+- Browse directly to a post-login page after the password step but before entering the code.
+- Brute-force the OTP (in your own account) to check for attempt limits.
+- Check whether the code's verification endpoint accepts another user's identifier.
+- Reuse a code; check whether it's invalidated after one use.
+- Check whether backup codes or "remember device" cookies are weak or portable to another device/session.
+- Does disabling 2FA require re-authentication?
+
+### Why it gets rejected
+Needing the victim's password first without showing how you'd have it (though a clean 2FA bypass is still usually valid and valued).
+
+---
+
+## Card 4 — OAuth / Social Login
+
+### Where it hides
+"Log in with Google/GitHub/Facebook," account linking, and the `redirect_uri` handling.
+
+### First tests
+- **`redirect_uri` validation:** can you change it to your domain, a subdomain, an open redirect on an allowed host, or a path/parameter trick to steal the authorization `code` or token?
+- **`state` parameter:** is it present and validated? A missing/unchecked `state` enables CSRF on the OAuth flow (forced account linking).
+- **Email trust:** does the app trust the provider's email without checking it's verified, allowing linking to an existing account?
+- **Account linking:** can you link your social identity to a victim's account, or pre-link before they register?
+- **Token/code leakage:** does the `code` leak via `Referer`, logs, or an open redirect in the flow?
+
+### Escalate
+A `redirect_uri` or linking flaw that yields another user's session is typically high or critical.
+
+### Why it gets rejected
+Redirect targets restricted to assets you don't actually control; `code` that's single-use and already consumed.
+
+---
+
+## Card 5 — SAML
+
+### Where it hides
+Enterprise SSO login (often on `sso.`, `login.`, or an IdP-initiated flow).
+
+### First tests
+- Is the assertion signature actually validated, or merely present?
+- Try XML signature wrapping (moving/duplicating the signed element), stripping the signature, or altering the assertion's `NameID`.
+- Does the service accept an unsigned assertion, or one signed by an untrusted key?
+- SAML is XML — test for **XXE** in the assertion parser.
+
+### Why it gets rejected
+Robust signature validation (most mature IdPs); findings require a working forged assertion, not just theory.
+
+---
+
+## Card 6 — JWT
+
+### Where it hides
+Bearer tokens, session cookies holding JWTs, and API authentication.
+
+### First tests
+- Decode the token (it's Base64) and inspect header and claims.
+- **`alg: none`:** set the algorithm to `none` and strip the signature.
+- **Algorithm confusion:** if tokens are RS256, try re-signing with HS256 using the public key as the secret.
+- **Weak secret:** attempt to crack an HS256 secret offline against a wordlist; if found, forge tokens.
+- **Claim tampering:** change `role`, `user`, `sub`, `admin`; check whether `exp` is enforced; try `kid` header injection (path traversal, SQL) if present.
+- **No revocation:** does an old token still work after logout or password change?
+
+### Prove it
+Show a forged token (for example `role: admin` or another user's `sub`) being accepted by a protected endpoint.
+
+### Why it gets rejected
+The algorithm is pinned and claims are validated; a "weak" token that's actually verified correctly.
+
+---
+
+## Card 7 — Session Management
+
+### Where it hides
+Cookies, session lifecycle, logout.
+
+### First tests
+- Does the session ID change on login? (If not: **session fixation**.)
+- Does logout invalidate the session server-side? (Replay the old cookie after logging out.)
+- Are there idle and absolute timeouts?
+- Cookie flags: `HttpOnly`, `Secure`, `SameSite`.
+- Are session IDs ever placed in URLs (leaking via `Referer`/history)?
+- Do password change and email change invalidate other sessions?
+
+### Why it gets rejected
+Missing cookie flags alone are often low/informative unless chained (for example, a missing `HttpOnly` combined with an XSS to show cookie theft).
+
+---
+
+## ATO Chain Patterns
+
+```text
+Host-header reset  ──► victim clicks link ──► token to attacker ──► full ATO
+IDOR on email-change  ──► change victim's email ──► reset password ──► ATO
+Stored XSS on profile ──► steals session/token of anyone viewing ──► ATO
+OAuth redirect_uri    ──► steal auth code ──► log in as victim ──► ATO
+Mass assignment emailVerified ──► skip verification ──► takeover pre-registered account
+```
+
+The best ATO reports **narrate the chain** clearly, step by step, with the exact requests.
+
+---
+
+## Key Takeaways
+
+- ATO usually comes from chaining a weakness across credentials, sessions, recovery or federated login.
+- Password reset and OAuth `redirect_uri` are the two highest-yield areas.
+- For JWTs, test algorithm handling, secret strength, claim validation and revocation.
+- Always demonstrate takeover against your own accounts, and narrate the full chain.
+
+---
+
+## Next
+
+**[Hunt Cards: Client-Side Bugs](./04-client-side-bugs.mdx)**

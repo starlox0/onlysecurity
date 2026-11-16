@@ -1,0 +1,180 @@
+---
+sidebar_position: 4
+title: "Hunt Cards: Client-Side Bugs"
+description: "XSS (reflected, stored, DOM), CSRF, CORS, open redirect, clickjacking, postMessage and prototype pollution — where they hide in real apps, how to test, escalate, prove and avoid rejection."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Hunt Cards: Client-Side Bugs
+
+`Bug Bounty` · `Stage 3 — Hunting` · `Level: L1 → L5` · `Reading time: ~15 min`
+
+Client-side bugs run in the victim's browser against the trusted site. Impact ranges from annoying to full account takeover, depending on what the injected code can reach.
+
+**Theory:** [XSS](../../Web-Security/05-xss-cross-site-scripting.mdx) · [CSRF, Clickjacking & UI Redress](../../Web-Security/06-csrf-clickjacking-and-ui-redress.mdx) · [CORS, SSRF & Request Forgery](../../Web-Security/07-cors-ssrf-and-request-forgery.mdx)
+
+<Admonition type="warning" title="Keep proof-of-concept payloads harmless">
+
+Use a benign marker such as `alert(document.domain)` or a DNS/HTTP callback to your own listener. Do not deploy payloads that act on real users, exfiltrate real data, or persist destructively. For stored XSS on shared pages, confine it to your own account/object where possible and tell the triager where it is.
+
+</Admonition>
+
+---
+
+## Card 1 — Cross-Site Scripting (XSS)
+
+### Where it hides
+- **Reflected:** any input echoed into the response — search, error messages, query parameters rendered on the page.
+- **Stored:** profile fields (name, bio, company), comments, messages, filenames, support tickets, team/org names, anything other users will view — including admins viewing user content.
+- **DOM:** client-side code writing `location.hash`/`search`/`referrer`/`postMessage` data into a sink like `innerHTML` (see the sink list in **[JavaScript Analysis](../02-Recon/04-javascript-analysis.mdx)**).
+
+### First tests
+1. Inject a unique marker (`os1337`) and find where it lands in the response or DOM.
+2. Identify the **context**: HTML body, attribute, JavaScript string, URL, or inside an existing tag.
+3. Try the minimal break-out for that context:
+   - HTML body: `<u>os1337</u>` renders? then a script-capable payload.
+   - Attribute: close it — `" autofocus onfocus=...`.
+   - JS string: `';...//`.
+   - URL sink: `javascript:` scheme on links/redirects.
+4. For DOM XSS, use Burp's **DOM Invader** to trace source-to-sink automatically.
+5. If filtered, test the filter: case, encoding, double encoding, alternative tags/events, SVG, broken tags that browsers fix.
+
+### Escalate
+- Reflected to **account takeover** by scripting an action as the victim (change email, read a token) — show the real impact, not just a popup.
+- Stored XSS that fires in an **admin panel** when staff view user content is often high/critical.
+- Steal a non-`HttpOnly` session token, or perform a state-changing request with the victim's session.
+
+### Prove it
+A clear PoC: the exact injection point, a payload that proves script execution (`alert(document.domain)`), and ideally a short description or video of the account-impacting action it enables. Note the context and why standard encoding was absent.
+
+### Why it gets rejected
+- **Self-XSS** (only the victim can trigger it on themselves) — usually out of scope unless chained.
+- Fires only in an outdated/unsupported browser.
+- Requires an unrealistic victim action, or lands behind a strong CSP that blocks execution.
+- A popup with no demonstrated impact on a low-value page.
+
+---
+
+## Card 2 — Cross-Site Request Forgery (CSRF)
+
+### Where it hides
+State-changing requests that rely only on cookies: change email/password, update settings, add a payment method, transfer, delete, invite.
+
+### First tests
+1. Capture a state-changing request. Is there a CSRF token? Is it actually validated (remove it, change it, use another user's token)?
+2. Check `SameSite` on the session cookie — `Lax`/`Strict` blocks most cross-site CSRF for top-level and cross-site requests.
+3. Does the endpoint accept `GET` as well as `POST`? Does it accept a simple content type (form-encoded) that avoids a CORS preflight?
+4. Build a minimal auto-submitting HTML PoC and test it from another origin while logged in.
+
+### Escalate
+CSRF on email change or add-payment can lead to ATO or financial loss. CSRF to change account recovery settings is a strong chain.
+
+### Why it gets rejected
+`SameSite=Lax` by default on modern browsers neutralises many classic CSRFs; low-value action with no real impact; token actually validated.
+
+---
+
+## Card 3 — CORS Misconfiguration
+
+### Where it hides
+APIs that return sensitive data and set `Access-Control-Allow-Origin` dynamically.
+
+### First tests
+- Send `Origin: https://evil.example` and inspect the response. Is it **reflected** in `Access-Control-Allow-Origin` together with `Access-Control-Allow-Credentials: true`?
+- Try `Origin: https://sub.target.com.evil.example`, `Origin: null`, and a trusted-looking subdomain to test weak regex matching.
+
+### Escalate
+Reflected origin + credentials on an endpoint returning user data lets an attacker page read that data cross-origin — demonstrate reading your victim account's data from an attacker origin.
+
+### Why it gets rejected
+Wildcard ACAO **without** credentials on a public, non-sensitive endpoint; origins restricted to assets you don't control.
+
+---
+
+## Card 4 — Open Redirect
+
+### Where it hides
+`?redirect=`, `?next=`, `?url=`, `?return=`, `?continue=`, `?dest=`, login/logout flows, OAuth `redirect_uri`.
+
+### First tests
+- Set the parameter to `https://evil.example` and follow the response. Does it redirect off-site?
+- Bypass weak validators: `//evil.example`, `https:evil.example`, `https://target.com.evil.example`, `https://target.com@evil.example`, backslashes, whitespace, double-encoding.
+
+### Escalate
+Open redirect is often low alone, but is a powerful **chain ingredient**: stealing OAuth `code`/tokens, bypassing SSRF allowlists, and making phishing links look legitimate. Report it chained where you can.
+
+### Why it gets rejected
+Low severity by itself; the redirect only works to same-site paths; target requires user interaction that programs consider unrealistic.
+
+---
+
+## Card 5 — Clickjacking
+
+### Where it hides
+Sensitive state-changing pages that can be framed.
+
+### First tests
+Check for `X-Frame-Options` / CSP `frame-ancestors`. If absent, build a framing PoC over a sensitive action (e.g. "delete account," "change email," "authorize app").
+
+### Why it gets rejected
+Non-sensitive pages; `SameSite` cookies preventing the framed action from carrying the session; most programs want a *sensitive* action to accept it.
+
+---
+
+## Card 6 — postMessage Vulnerabilities
+
+### Where it hides
+Pages with `window.addEventListener("message", ...)` handlers — common in widgets, SSO popups, payment iframes, chat.
+
+### First tests
+- Find message handlers in JavaScript. Does the handler check `event.origin` against an allowlist?
+- If not, send crafted messages from an attacker page and see whether the data reaches a sink (DOM XSS) or a privileged action.
+
+### Why it gets rejected
+Origin is validated; the handler does nothing security-relevant with the data.
+
+---
+
+## Card 7 — Prototype Pollution (Client-Side)
+
+### Where it hides
+Client-side merge/extend/clone logic processing attacker-controlled JSON or query strings; libraries known for this historically.
+
+### First tests
+- Inject `__proto__[test]=polluted` (or JSON `{"__proto__":{"test":"polluted"}}`) through parameters the app parses, then check `Object.prototype.test` in the console.
+- Look for a **gadget** — code that later reads a polluted property — to turn pollution into DOM XSS or logic change.
+
+### Escalate
+Prototype pollution alone is often informative; pollution + a gadget leading to XSS or auth bypass is a real finding.
+
+### Why it gets rejected
+No exploitable gadget; pollution has no observable security effect.
+
+---
+
+## Context Cheat Sheet (XSS)
+
+```text
+HTML body         -> inject element/event handler
+HTML attribute    -> break out of the quote, add an event handler
+JS string         -> close the string/statement
+URL/href          -> javascript: scheme
+<script> JSON     -> break out of the JSON/script context
+Framework binding -> look for the raw-HTML escape hatch (dangerouslySetInnerHTML, v-html, [innerHTML])
+```
+
+---
+
+## Key Takeaways
+
+- Identify the injection context first; the payload follows from it.
+- Push XSS past "popup" to a real account-impacting action for good severity.
+- CSRF/CORS/clickjacking need a *sensitive* action and real impact to be paid.
+- Open redirect and prototype pollution shine as chain ingredients — report them chained.
+
+---
+
+## Next
+
+**[Hunt Cards: Server-Side Bugs](./05-server-side-bugs.mdx)**
