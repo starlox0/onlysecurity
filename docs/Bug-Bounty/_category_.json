@@ -1,0 +1,10 @@
+{
+  "label": "Bug Bounty",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "slug": "/category/bug-bounty",
+    "title": "Bug Bounty: The Hunter's Path",
+    "description": "A complete, stage-by-stage path from your first program to professional hunting — foundations, recon, a hunt card for every bug class, automation, chaining, reporting, and building a sustainable career."
+  }
+}
