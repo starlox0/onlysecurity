@@ -1,0 +1,246 @@
+---
+sidebar_position: 7
+title: "A05:2025 — Injection"
+description: "SQL, NoSQL, OS command, LDAP and template injection plus cross-site scripting — the shared root cause, how to test for each, and the structural fixes that actually work."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A05:2025 — Injection
+
+`OWASP` · `Top 10:2025` · `Reading time: ~14 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #5 in 2025 (#3 in 2021; #1 in 2017 — and #1 for most of the list's history) |
+| **Mapped CWEs** | 38 |
+| **Example CWEs** | CWE-89 SQL Injection, CWE-79 Cross-site Scripting, CWE-78 OS Command Injection, CWE-77 Command Injection, CWE-90 LDAP Injection, CWE-917 Expression Language Injection, CWE-1336 Template Injection, CWE-94 Code Injection |
+| **Note** | XSS has been part of this category since 2021 |
+
+---
+
+## In Plain English
+
+Every application talks to **interpreters**: a database speaks SQL, the operating system speaks shell commands, the browser speaks HTML and JavaScript, a template engine speaks its own expression language.
+
+Injection happens when the application builds a message for one of those interpreters by **gluing user input into code**. If the input contains the interpreter's own syntax, the interpreter can't tell where the developer's code ends and the attacker's begins.
+
+```text
+Developer intends:   SELECT * FROM users WHERE name = '<DATA>'
+User supplies:       x' OR '1'='1
+Interpreter sees:    SELECT * FROM users WHERE name = 'x' OR '1'='1'
+                                                      └────────────┘
+                                          now part of the query's logic
+```
+
+It dropped to #5 not because it's harmless, but because modern frameworks (parameterised ORMs, auto-escaping templates) prevent it by default. When it does occur, the impact is still often catastrophic: full database dumps, account takeover, or remote code execution.
+
+---
+
+## The Injection Family
+
+| Type | Interpreter | Typical impact |
+|---|---|---|
+| **SQL injection** | Relational database | Read/modify/delete data, bypass login, sometimes code execution |
+| **NoSQL injection** | MongoDB and similar | Login bypass, data extraction via operator injection |
+| **OS command injection** | System shell | Full server compromise |
+| **LDAP / XPath injection** | Directory or XML query engines | Authentication bypass, data disclosure |
+| **Template injection (SSTI)** | Server-side template engine | Often remote code execution |
+| **Expression language injection** | Framework EL/OGNL/SpEL | Remote code execution |
+| **Cross-site scripting (XSS)** | The victim's browser | Session theft, actions as the victim, data theft |
+| **Header/CRLF injection** | HTTP protocol | Response splitting, cache poisoning, log forgery |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Learn the pattern once and you've learnt the whole category: **code and data mixed in one string, handed to an interpreter.** The fix is always to keep them separate — parameters for SQL, argument arrays for commands, context-aware encoding for HTML. "Filtering bad characters" is never the main fix.
+
+</Admonition>
+
+---
+
+## Vulnerable vs. Fixed Code
+
+<Tabs>
+<TabItem value="sql" label="SQL" default>
+
+**Vulnerable** — string concatenation:
+
+```js
+const q = `SELECT * FROM products WHERE category = '${req.query.cat}'`;
+const rows = await db.query(q);
+```
+
+**Fixed** — parameterised query; the driver sends data separately from the SQL:
+
+```js
+const rows = await db.query(
+  'SELECT * FROM products WHERE category = $1',
+  [req.query.cat]
+);
+```
+
+Identifiers (table/column names, `ORDER BY` fields) can't be parameterised — map user choices to an allowlist instead:
+
+```js
+const SORTABLE = { price: 'price', name: 'name', newest: 'created_at' };
+const column = SORTABLE[req.query.sort] ?? 'name';
+```
+
+</TabItem>
+<TabItem value="nosql" label="NoSQL">
+
+**Vulnerable** — request body passed straight into the query:
+
+```js
+// Attacker sends: { "username": "admin", "password": { "$ne": null } }
+const user = await Users.findOne({
+  username: req.body.username,
+  password: req.body.password,
+});
+```
+
+**Fixed** — enforce types with a schema before querying (and compare password hashes properly, never raw passwords):
+
+```js
+const { z } = require('zod');
+const Login = z.object({ username: z.string().max(64), password: z.string().max(256) });
+
+const { username, password } = Login.parse(req.body);   // objects rejected
+const user = await Users.findOne({ username });
+const ok = user && await argon2.verify(user.passwordHash, password);
+```
+
+</TabItem>
+<TabItem value="cmd" label="OS command">
+
+**Vulnerable** — shell string with user input:
+
+```python
+import os
+os.system(f"ping -c 1 {request.args['host']}")    # host = "8.8.8.8; cat /etc/passwd"
+```
+
+**Fixed** — no shell, arguments as a list, input validated:
+
+```python
+import subprocess, ipaddress
+
+host = str(ipaddress.ip_address(request.args["host"]))   # raises if not an IP
+subprocess.run(["ping", "-c", "1", host], check=True, timeout=5)
+```
+
+Better still: use a library function instead of an external program whenever one exists.
+
+</TabItem>
+<TabItem value="xss" label="XSS">
+
+**Vulnerable** — inserting user data as HTML:
+
+```js
+commentBox.innerHTML = comment.text;
+```
+
+**Fixed** — insert as text, or sanitise if HTML is genuinely required:
+
+```js
+commentBox.textContent = comment.text;
+
+// If rich text is a real requirement:
+commentBox.innerHTML = DOMPurify.sanitize(comment.html);
+```
+
+In React, `{comment.text}` is escaped automatically; the risk returns with `dangerouslySetInnerHTML`.
+
+</TabItem>
+<TabItem value="ssti" label="Template">
+
+**Vulnerable** — user input becomes part of the template source:
+
+```python
+from jinja2 import Template
+Template("Hello " + request.args["name"]).render()    # name = "{{7*7}}" → Hello 49
+```
+
+**Fixed** — fixed template, user input passed as data:
+
+```python
+from jinja2 import Environment, select_autoescape
+env = Environment(autoescape=select_autoescape())
+env.from_string("Hello {{ name }}").render(name=request.args["name"])
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **MOVEit Transfer (CVE-2023-34362, 2023)** — A SQL injection in a widely used managed file-transfer product was exploited at scale by a ransomware group, leading to data theft from a very large number of organisations worldwide.
+- **Heartland Payment Systems (2008)** — SQL injection was the initial entry point in one of the largest payment-card breaches of its era.
+- **Equifax (2017)** — The initial exploit targeted an unpatched Apache Struts vulnerability (CVE-2017-5638) that allowed command execution through an injected expression in an HTTP header — an injection flaw delivered through a vulnerable component.
+
+---
+
+## How to Test for It
+
+- [ ] Map every input: URL and query parameters, form fields, JSON/XML bodies, headers (`User-Agent`, `Referer`, `X-Forwarded-For`), cookies, file names and file contents.
+- [ ] Send interpreter-specific "breaking" characters (`'`, `"`, `;`, `` ` ``, `$(`, `{{`, `<`) and look for errors or behaviour changes.
+- [ ] Use boolean pairs (`AND 1=1` vs `AND 1=2`) and compare response length/content for blind SQLi.
+- [ ] Use time delays (`SLEEP`, `pg_sleep`, `WAITFOR DELAY`, `sleep 5`) where nothing is reflected.
+- [ ] Try polyglot template probes such as `${7*7}{{7*7}}` and look for `49`.
+- [ ] For XSS, check where the input is reflected (HTML body, attribute, script, URL) and test with a payload suited to that context.
+- [ ] Use out-of-band callbacks (DNS/HTTP to a listener you control) for blind command injection, SSRF-style SQLi and blind XSS.
+- [ ] Confirm with tools only after manual analysis: `sqlmap` for SQLi, `commix` for command injection, scanners for broad coverage.
+- [ ] In code review, search for string-built queries, `exec`/`eval`, `os.system`, `shell=True`, `innerHTML`, `dangerouslySetInnerHTML`, `v-html`, and raw ORM queries.
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Parameterised queries / prepared statements** | The query's structure is fixed before data is attached. |
+| **Use safe APIs that don't invoke an interpreter** | Library functions instead of shell commands; ORM methods instead of raw SQL. |
+| **Allowlist validation for structure** | Enum-like inputs (sort order, column names, file types) should only ever be one of a known set. |
+| **Schema validation on request bodies** | Stops type confusion like NoSQL operator injection. |
+| **Context-aware output encoding** | Encode for HTML body, attribute, JavaScript or URL as appropriate; use auto-escaping templates. |
+| **Content Security Policy** | Limits damage if an XSS slips through. |
+| **Least privilege** | A database account that can't `DROP` tables or read other schemas limits blast radius. |
+| **SAST/DAST in CI** | Static and dynamic scanners catch the most common patterns early. |
+
+<Admonition type="warning" title="Escaping is a last resort">
+
+Manually escaping special characters is fragile — every interpreter, version and context has its own rules. Use it only when there is truly no parameterised or structured API available, and use a well-tested library to do it.
+
+</Admonition>
+
+---
+
+## Pro Notes
+
+- **Second-order injection.** Input stored safely today can be injected tomorrow when another component reads it back and concatenates it into a query. Every *use* of data must be safe, not just the first write.
+- **ORM escape hatches.** `raw()`, `extra()`, `literal()`, `sequelize.query()` and string-interpolated `where` clauses reintroduce SQLi inside "safe" frameworks.
+- **WAFs buy time, not safety.** A web application firewall is useful for virtual patching but is regularly bypassed through encoding tricks, alternative syntax and parameter pollution.
+- **Prompt injection** in LLM-powered applications follows the same pattern — instructions and data mixed in one channel — but has no complete equivalent of "parameterisation" yet. OWASP tracks it separately in its Top 10 for LLM Applications.
+
+---
+
+## Key Takeaways
+
+- Injection = user data mixed into code for an interpreter (SQL, shell, browser, template engine).
+- XSS is part of this category.
+- The fix is structural: parameters, safe APIs, argument arrays, auto-escaping and schema validation.
+- It's less common than it used to be, but still one of the highest-impact bug classes when it appears.
+
+**Go deeper:** [SQL & NoSQL Injection](../Web-Security/01-sql-and-nosql-injection.mdx) · [Command & Code Injection](../Web-Security/02-command-and-code-injection.mdx) · [Template Injection](../Web-Security/03-template-injection.mdx) · [XSS](../Web-Security/05-xss-cross-site-scripting.mdx)
+
+---
+
+## Next
+
+**[A06:2025 — Insecure Design](./07-a06-insecure-design.mdx)**

@@ -1,0 +1,208 @@
+---
+sidebar_position: 5
+title: "A03:2025 — Software Supply Chain Failures"
+description: "Vulnerable dependencies, malicious packages, compromised build pipelines and tampered updates — the expanded 2025 category that covers everything your software trusts on its way to production."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A03:2025 — Software Supply Chain Failures
+
+`OWASP` · `Top 10:2025` · `Reading time: ~13 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #3 in 2025 |
+| **History** | Expanded from A06:2021 "Vulnerable and Outdated Components" (A9:2017 "Using Components with Known Vulnerabilities") |
+| **Mapped CWEs** | 5 — a small count, because many supply chain problems don't map neatly onto a single code weakness |
+| **Example CWEs** | CWE-1104 Use of Unmaintained Third-Party Components, CWE-1395 Dependency on Vulnerable Third-Party Component, CWE-829 Inclusion of Functionality from Untrusted Control Sphere |
+| **Why it matters** | It ranked highly in OWASP's practitioner survey — attacks are severe and widespread, but hard to measure with ordinary application testing |
+
+---
+
+## In Plain English
+
+Your application is mostly code **you didn't write**. A typical modern web app pulls in hundreds or thousands of open-source packages, runs through a CI/CD pipeline full of third-party actions and plugins, is built inside base images someone else maintains, and gets delivered through registries and CDNs.
+
+Every one of those is a link in a chain. If an attacker compromises *any* link, their code ends up inside your product — signed, shipped, and trusted.
+
+```text
+Your code  ◄── 1,000+ open-source packages
+     │      ◄── build tools & CI plugins
+     │      ◄── container base images
+     ▼
+ Build pipeline ──► Artifact registry ──► Deployment ──► Users
+     ▲                    ▲                    ▲
+  attacker can        attacker can        attacker can
+  inject here         swap here           tamper here
+```
+
+The 2021 version of this category mostly asked *"are your libraries outdated?"* The 2025 version asks the bigger question: *"can you trust everything that went into this build, and everything it passed through on the way out?"*
+
+---
+
+## How It Happens
+
+| Failure | Description |
+|---|---|
+| **Known-vulnerable components** | Running a library version with a published CVE (the classic case — think Log4Shell). |
+| **Unmaintained components** | Depending on a package nobody patches any more. |
+| **Malicious packages** | Typosquatting (`reqeusts` instead of `requests`), hijacked maintainer accounts, or packages that turn malicious in a new version. |
+| **Dependency confusion** | A public package with the same name as your private internal one gets installed instead. |
+| **Compromised build systems** | Attackers modify code during the build, so the source repository looks clean but the output is backdoored. |
+| **Poisoned CI/CD** | Untrusted pull requests running with secrets, third-party CI actions pinned to mutable tags, overly powerful pipeline tokens. |
+| **Tampered distribution** | Altered artifacts, unsigned updates, or compromised CDNs and registries. |
+| **No inventory** | Not knowing what's in your software, so you can't tell whether a new CVE affects you. |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+When a big vulnerability hits the news, the first question every security team asks is: *"Do we use that anywhere?"* Teams with a good inventory (an **SBOM** — Software Bill of Materials) answer in minutes. Teams without one spend weeks searching. Supply chain security starts with simply knowing what you depend on.
+
+</Admonition>
+
+---
+
+## Vulnerable vs. Fixed Practices
+
+<Tabs>
+<TabItem value="deps" label="Dependencies" default>
+
+**Risky** — loose version ranges, no lockfile committed, install scripts run freely:
+
+```json
+{
+  "dependencies": {
+    "some-lib": "*",
+    "other-lib": "^2.0.0"
+  }
+}
+```
+
+```bash
+npm install          # resolves whatever is newest today
+```
+
+**Better** — committed lockfile, reproducible installs, audited regularly:
+
+```bash
+npm ci                          # installs exactly what package-lock.json says
+npm audit --audit-level=high    # fail the build on known high-severity issues
+npm ci --ignore-scripts         # where feasible, block install-time scripts
+```
+
+Combine with automated update PRs (Dependabot, Renovate) so patching is routine, not an emergency.
+
+</TabItem>
+<TabItem value="ci" label="CI pipeline">
+
+**Risky** — third-party action pinned to a mutable tag, broad token permissions:
+
+```yaml
+permissions: write-all
+
+steps:
+  - uses: some-org/deploy-action@v1     # tag can be moved to malicious code
+```
+
+**Better** — pinned to an immutable commit SHA, least-privilege token:
+
+```yaml
+permissions:
+  contents: read
+
+steps:
+  - uses: some-org/deploy-action@3f1c2a9b8e7d6c5b4a39281706f5e4d3c2b1a098  # v1.4.2
+```
+
+</TabItem>
+<TabItem value="registry" label="Private packages">
+
+**Risky** — private package names resolvable from the public registry:
+
+```ini
+# .npmrc
+registry=https://registry.npmjs.org/
+```
+
+**Better** — scope internal packages to your private registry only:
+
+```ini
+# .npmrc
+@yourcompany:registry=https://npm.internal.yourcompany.com/
+registry=https://registry.npmjs.org/
+```
+
+…and register your `@yourcompany` scope on the public registry so nobody else can.
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **Log4Shell (CVE-2021-44228, 2021)** — A remote code execution flaw in the ubiquitous Java logging library Log4j. Organisations spent weeks just finding where it was used, often deep inside other dependencies.
+- **SolarWinds (2020)** — Attackers compromised the vendor's build process and inserted a backdoor into signed software updates for the Orion product, which were then installed by thousands of customers, including government agencies.
+- **xz Utils backdoor (CVE-2024-3094, 2024)** — A contributor spent a long period building trust in an open-source compression project, then introduced a carefully hidden backdoor into release tarballs that could have affected SSH on many Linux systems. It was caught by chance, by an engineer investigating a small performance anomaly.
+- **event-stream (2018)** — A popular npm package was handed over to a new maintainer, who added a dependency containing code designed to steal from specific cryptocurrency wallets.
+- **Codecov (2021)** — Attackers modified the company's Bash uploader script, used in many CI pipelines, so that it exfiltrated environment variables — including secrets — from customers' builds.
+
+---
+
+## How to Test for It
+
+- [ ] Generate or request an SBOM and check it against vulnerability databases (OSV, NVD, GitHub Advisories).
+- [ ] Run software composition analysis: `npm audit`, `pip-audit`, OWASP Dependency-Check, Trivy, Grype or similar.
+- [ ] Check for unmaintained dependencies (no releases for years, archived repositories).
+- [ ] Review lockfiles: are they committed, and do builds use them?
+- [ ] Inspect CI configuration: are third-party actions pinned to commit SHAs? Do pull requests from forks get access to secrets? Are tokens least-privilege?
+- [ ] Look for internal package names that could be claimed on public registries (dependency confusion).
+- [ ] Check for scripts loaded from third-party CDNs in the browser without Subresource Integrity (SRI) hashes.
+- [ ] Verify release artifacts are signed and that signatures are actually checked during deployment.
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Maintain an SBOM** (CycloneDX or SPDX) | You can't patch what you don't know you have. |
+| **Continuous dependency scanning** | New CVEs appear daily against code you shipped months ago. |
+| **Patch on a schedule, not just in emergencies** | Small, frequent upgrades are much easier than one huge jump under pressure. |
+| **Lock and pin** | Lockfiles for dependencies; commit SHAs for CI actions; digests for container images. |
+| **Use trusted sources and scoped registries** | Prevents typosquatting and dependency confusion. |
+| **Harden the pipeline** | Least-privilege tokens, protected branches, required reviews, isolated build runners. |
+| **Sign and verify artifacts** | Tools such as Sigstore/cosign let you prove an artifact came from your pipeline untouched. |
+| **Aim for provenance** | Frameworks like **SLSA** (Supply-chain Levels for Software Artifacts) describe how to make builds verifiable and tamper-resistant step by step. |
+| **Remove what you don't use** | Every unused dependency is risk with no benefit. |
+
+---
+
+## Pro Notes
+
+- **Transitive dependencies are the real iceberg.** You might choose 30 packages; they pull in 900 more. Most vulnerable components are transitive, which is why SBOMs and SCA tools matter more than manual review.
+- **Reachability matters for triage.** A CVE in a dependency is only exploitable if your code actually reaches the vulnerable function. Modern SCA tools increasingly do reachability analysis to cut noise — but treat "unreachable" as lower priority, not "never fix."
+- **VEX documents** (Vulnerability Exploitability eXchange) let vendors state formally that a CVE in a component does or doesn't affect their product — useful when customers scan your SBOM.
+- **Reproducible builds** let independent parties rebuild from source and confirm they get bit-for-bit identical output — the strongest defence against a compromised build system.
+- **Regulation is catching up.** SBOM and secure-development requirements are increasingly appearing in government procurement rules and product-security legislation, which is pushing this category from "best practice" toward "obligation."
+
+---
+
+## Key Takeaways
+
+- A03:2025 covers the whole chain: dependencies, build systems, CI/CD and distribution — not just outdated libraries.
+- Supply chain attacks are high-impact because malicious code arrives trusted and signed.
+- Start with inventory (SBOM) and continuous scanning; then lock, pin, sign and verify.
+- Harden CI/CD like production — it effectively *is* production for your code.
+
+**Go deeper:** [Deserialization & Supply-Chain Attacks](../Web-Security/11-deserialization-and-supply-chain.mdx)
+
+---
+
+## Next
+
+**[A04:2025 — Cryptographic Failures](./05-a04-cryptographic-failures.mdx)**

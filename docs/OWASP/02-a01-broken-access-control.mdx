@@ -1,0 +1,240 @@
+---
+sidebar_position: 3
+title: "A01:2025 — Broken Access Control"
+description: "The number-one web risk: IDOR, privilege escalation, forced browsing, CORS mistakes and SSRF — how they happen, how to test for them, and how to fix them properly."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A01:2025 — Broken Access Control
+
+`OWASP` · `Top 10:2025` · `Reading time: ~14 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #1 in 2025 (also #1 in 2021; #5 in 2017) |
+| **Mapped CWEs** | 40 — the maximum the 2025 edition allowed per category |
+| **Example CWEs** | CWE-639 Authorization Bypass Through User-Controlled Key (IDOR), CWE-284 Improper Access Control, CWE-285 Improper Authorization, CWE-862 Missing Authorization, CWE-863 Incorrect Authorization, CWE-22 Path Traversal, CWE-352 CSRF, CWE-918 SSRF |
+| **New in 2025** | Server-Side Request Forgery (SSRF), previously its own category, now lives here |
+
+---
+
+## In Plain English
+
+**Authentication** asks *"who are you?"* **Access control** (also called **authorization**) asks *"are you allowed to do this specific thing, to this specific object?"*
+
+Broken access control is when the second question is answered wrongly — or never asked at all.
+
+```text
+Login page:      "You are Alice."                      <-- authentication ✓
+GET /invoice/77: "Invoice 77 belongs to Bob."
+                 Does the server check Alice may read it?
+                    ├── Yes → 403 Forbidden            <-- access control ✓
+                    └── No  → Bob's invoice is shown   <-- A01 ✗
+```
+
+It's #1 because it is everywhere: every endpoint, every object, every role needs its own correct decision — and scanners are bad at spotting it, because the "wrong" response looks exactly like a normal successful response.
+
+---
+
+## How It Happens
+
+Access control breaks in a few repeatable ways:
+
+| Pattern | What goes wrong | Example |
+|---|---|---|
+| **IDOR** (Insecure Direct Object Reference) | The server checks you're logged in, but not that the object is *yours*. | Change `/orders/1001` to `/orders/1002`. |
+| **Vertical privilege escalation** | A normal user reaches admin-only functions. | Calling `POST /admin/users/5/promote` directly. |
+| **Horizontal privilege escalation** | A user acts as another user at the same level. | Changing `userId` in a "update profile" request. |
+| **Forced browsing** | Pages are "protected" only by not being linked anywhere. | Guessing `/admin`, `/backup.zip`, `/debug`. |
+| **Client-side enforcement only** | The UI hides the button; the API still accepts the request. | Disabled "Delete" button, working `DELETE` endpoint. |
+| **Metadata tampering** | The server trusts a role or ID inside a cookie, JWT or hidden field without verifying it. | Editing `role=user` to `role=admin` in an unsigned cookie. |
+| **CORS misconfiguration** | Untrusted origins are allowed to read authenticated API responses. | Reflecting any `Origin` with `Allow-Credentials: true`. |
+| **Missing checks on some HTTP methods** | `GET` is protected but `PUT`/`DELETE` on the same path aren't. | `PUT /api/posts/9` edits someone else's post. |
+| **SSRF** | The server fetches a URL you control and reaches internal systems you can't. | Image-from-URL feature fetching `http://169.254.169.254/`. |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Almost every A01 bug comes down to one sentence: **the server trusted the client to only ask for things it was allowed to have.** The client is the attacker's machine. Anything it sends — IDs, roles, hidden fields, which buttons it shows — can be changed.
+
+</Admonition>
+
+---
+
+## Vulnerable vs. Fixed Code
+
+<Tabs>
+<TabItem value="idor" label="IDOR" default>
+
+**Vulnerable** — authenticated, but no ownership check:
+
+```js
+// Express.js
+app.get('/api/invoices/:id', requireLogin, async (req, res) => {
+  const invoice = await db.invoices.findById(req.params.id);
+  if (!invoice) return res.status(404).end();
+  res.json(invoice); // any logged-in user can read any invoice
+});
+```
+
+**Fixed** — scope the query to the current user:
+
+```js
+app.get('/api/invoices/:id', requireLogin, async (req, res) => {
+  const invoice = await db.invoices.findOne({
+    id: req.params.id,
+    ownerId: req.user.id,      // ownership enforced in the query itself
+  });
+  if (!invoice) return res.status(404).end(); // same response whether it
+  res.json(invoice);                           // doesn't exist or isn't yours
+});
+```
+
+Returning 404 for both "doesn't exist" and "not yours" also stops attackers from learning which IDs are valid.
+
+</TabItem>
+<TabItem value="role" label="Admin function">
+
+**Vulnerable** — the role comes from the request:
+
+```python
+# Flask
+@app.post("/admin/delete-user")
+def delete_user():
+    if request.form.get("is_admin") == "true":   # attacker controls this
+        User.query.filter_by(id=request.form["id"]).delete()
+        return "deleted"
+    abort(403)
+```
+
+**Fixed** — the role comes from the server-side session, checked centrally:
+
+```python
+def admin_required(view):
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != "admin":
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapper
+
+@app.post("/admin/delete-user")
+@login_required
+@admin_required
+def delete_user():
+    User.query.filter_by(id=request.form["id"]).delete()
+    return "deleted"
+```
+
+</TabItem>
+<TabItem value="ssrf" label="SSRF">
+
+**Vulnerable** — fetches any URL the user provides:
+
+```js
+app.post('/api/avatar-from-url', requireLogin, async (req, res) => {
+  const img = await fetch(req.body.url);   // can reach internal hosts
+  await saveAvatar(req.user.id, await img.arrayBuffer());
+  res.sendStatus(204);
+});
+```
+
+**Fixed** — allowlist the destination, then resolve and check the IP:
+
+```js
+const ALLOWED_HOSTS = new Set(['images.example-cdn.com']);
+
+app.post('/api/avatar-from-url', requireLogin, async (req, res) => {
+  let url;
+  try { url = new URL(req.body.url); } catch { return res.sendStatus(400); }
+
+  if (url.protocol !== 'https:' || !ALLOWED_HOSTS.has(url.hostname)) {
+    return res.sendStatus(400);
+  }
+  // Also: resolve DNS yourself and reject private/link-local IPs,
+  // and disable automatic redirects (or re-validate every hop).
+  const img = await fetch(url, { redirect: 'error' });
+  await saveAvatar(req.user.id, await img.arrayBuffer());
+  res.sendStatus(204);
+});
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **Optus (Australia, 2022)** — Widely reported to have involved an internet-facing API that returned customer records without authentication, with sequential identifiers that made it easy to enumerate millions of records. Missing authorization combined with predictable IDs is A01 in its purest form.
+- **Capital One (2019)** — An attacker used SSRF against a misconfigured web application firewall to reach the AWS instance metadata service, obtain temporary credentials, and read data from storage buckets. In the 2025 Top 10, this whole SSRF class now sits under A01.
+- **Countless bug bounty reports** — IDOR is consistently one of the most frequently reported and paid bug classes on public bug bounty platforms, because it's common and requires no special tooling to find.
+
+---
+
+## How to Test for It
+
+<Admonition type="note" title="The two-account method">
+
+The most effective A01 technique needs no special tools: create **two accounts at the same role** (Alice and Bob) and **one at a higher role** (Admin). Then, for every request Alice makes, replay it with Bob's session — and replay every Admin request with Alice's session. Any request that still succeeds is a likely finding.
+
+</Admonition>
+
+Checklist:
+
+- [ ] Replace every object ID in URLs, bodies and headers with another user's ID (numeric, UUID, slug, email).
+- [ ] Call admin and privileged endpoints with a low-privilege session — and with no session at all.
+- [ ] Try every HTTP method (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) on each endpoint, not just the one the UI uses.
+- [ ] Look for role, ID or permission values inside cookies, JWT claims, hidden fields and local storage, then modify them.
+- [ ] Browse to unlinked paths: `/admin`, `/api/internal`, `/actuator`, old `/api/v1/` routes.
+- [ ] For multi-step flows (checkout, approvals), try skipping or reordering steps.
+- [ ] Check CORS: send `Origin: https://evil.example` and see whether it's reflected alongside `Access-Control-Allow-Credentials: true`.
+- [ ] For any feature that fetches a URL, try internal targets (`127.0.0.1`, private ranges, cloud metadata addresses) and an external listener you control for blind SSRF.
+
+Useful tooling: an intercepting proxy, plus an authorization-testing extension that automatically replays requests with a second user's session (Burp's **Autorize** and **AuthMatrix** are popular examples).
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Deny by default** | Every route should require an explicit allow rule. Forgetting a rule then fails safe. |
+| **Enforce on the server, in one place** | Use central middleware/policies rather than ad-hoc `if` checks scattered through handlers. |
+| **Check ownership in the data query** | `WHERE id = ? AND owner_id = ?` can't be forgotten by a later code path. |
+| **Never trust client-supplied roles or IDs for authorization** | Derive identity and permissions from the server-side session or a verified token. |
+| **Use unpredictable identifiers — but don't rely on them** | UUIDs slow enumeration; they are not an access control. |
+| **Rate-limit and log access-control failures** | A burst of 403s from one account is a strong signal of IDOR hunting (see A09). |
+| **Write tests for "should be denied" cases** | Most test suites only check that allowed things work. Add tests proving that Bob *can't* read Alice's data. |
+| **For SSRF: allowlist destinations, block internal ranges at the network layer, enforce IMDSv2 on AWS** | Defence in depth — application checks can be bypassed by redirects and DNS tricks. |
+
+---
+
+## Pro Notes
+
+- **RBAC vs ABAC vs ReBAC.** Role-based access control (roles → permissions) is common but coarse. Attribute-based (rules on user, resource and context attributes) and relationship-based (Google Zanzibar-style "Alice is an editor of doc X") models handle multi-tenant and sharing features far better. Many IDORs come from forcing a role-based model onto what is really a relationship problem.
+- **Multi-tenancy is A01 at scale.** In a SaaS product, a missing `tenant_id` filter on one query can expose every customer's data to every other customer. Row-level security at the database layer is a strong second line of defence.
+- **GraphQL makes IDOR easier to miss.** Resolvers for nested objects often skip the authorization check the top-level query performed. Authorize in each resolver, or at the data layer.
+- **404 vs 403 is a design choice.** Returning 404 for unauthorized objects hides their existence; returning 403 is more honest for debugging. Pick one deliberately per resource type.
+- **SSRF bypasses** include alternate IP encodings (`2130706433`, `0x7f000001`), IPv6-mapped addresses, DNS rebinding, and open redirects on allowed hosts. Validate the *resolved* address at connection time, not the string.
+
+---
+
+## Key Takeaways
+
+- Access control decides what an authenticated user may do — and it must be checked on the server for every request and every object.
+- IDOR, privilege escalation, forced browsing, CORS mistakes and (since 2025) SSRF all live in A01.
+- The two-account replay method finds most access-control bugs.
+- Deny by default, enforce centrally, and scope data queries to the current user.
+
+**Go deeper:** [Access Control & Business Logic Flaws](../Web-Security/09-access-control-and-business-logic.mdx) · [CORS, SSRF & Request Forgery](../Web-Security/07-cors-ssrf-and-request-forgery.mdx)
+
+---
+
+## Next
+
+**[A02:2025 — Security Misconfiguration](./03-a02-security-misconfiguration.mdx)**

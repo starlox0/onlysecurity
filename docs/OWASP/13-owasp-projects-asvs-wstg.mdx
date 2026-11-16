@@ -1,0 +1,231 @@
+---
+sidebar_position: 14
+title: "OWASP Projects Beyond the Top 10"
+description: "ASVS 5.0, the Web Security Testing Guide, the Cheat Sheet Series, SAMM, Juice Shop, Dependency-Check, the Top 10 for LLM Applications, and ZAP — what each is for and how professionals use them together."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# OWASP Projects Beyond the Top 10
+
+`OWASP` · `Projects & Standards` · `Reading time: ~12 min`
+
+The Top 10 tells you *what to worry about*. The projects on this page tell you **what to build, how to test it, and how to improve as a team**. Knowing which document to reach for is a big part of moving from fresher to professional.
+
+---
+
+## Which Project for Which Job?
+
+| You want to… | Use |
+|---|---|
+| Learn the main risk categories | **Top 10** (web), **API Security Top 10**, **Top 10 for LLM Applications** |
+| Define what "secure" means for an app, in testable requirements | **ASVS** |
+| Run a structured web penetration test | **WSTG** |
+| Fix one specific problem correctly | **Cheat Sheet Series** |
+| Practise attacks legally | **Juice Shop** (also WebGoat) |
+| Find vulnerable dependencies | **Dependency-Check**, **Dependency-Track** |
+| Measure and improve a team's security practices | **SAMM** |
+| Produce a software bill of materials | **CycloneDX** |
+
+---
+
+## ASVS — Application Security Verification Standard
+
+ASVS is the closest thing OWASP has to a formal standard: a catalogue of specific, verifiable security requirements. Version **5.0.0** was released in **May 2025**.
+
+**Three levels**, each including everything in the level before it:
+
+| Level | Intended for | Roughly |
+|---|---|---|
+| **L1** | Every application — first-layer defences | ~70 requirements |
+| **L2** | Most applications handling sensitive data — the recommended default | ~180 more |
+| **L3** | High-value, high-assurance systems (finance, health, critical infrastructure) | ~90 more |
+
+**ASVS 5.0 chapters:**
+
+| | | |
+|---|---|---|
+| V1 Encoding and Sanitization | V7 Session Management | V13 Configuration |
+| V2 Validation and Business Logic | V8 Authorization | V14 Data Protection |
+| V3 Web Frontend Security | V9 Self-contained Tokens | V15 Secure Coding and Architecture |
+| V4 API and Web Service | V10 OAuth and OIDC | V16 Security Logging and Error Handling |
+| V5 File Handling | V11 Cryptography | V17 WebRTC |
+| V6 Authentication | V12 Secure Communication | |
+
+Each requirement has an identifier (in the form *chapter.section.requirement*) so it can be referenced precisely in tickets, test plans and reports.
+
+<Admonition type="tip" title="How teams actually use ASVS">
+
+- **As requirements:** pick a level, copy the relevant requirements into the backlog as acceptance criteria.
+- **As a pentest scope:** "test against ASVS 5.0 Level 2" is far more precise than "do a security test."
+- **As a vendor question:** ask suppliers which ASVS level they verify against.
+- **As a learning path:** reading one chapter at a time is an excellent way to deepen knowledge after the Top 10.
+
+</Admonition>
+
+<Admonition type="warning" title="Version numbering matters">
+
+ASVS 5.0 reorganised the chapters, so requirement IDs from 4.0.3 don't map one-to-one onto 5.0. Always cite the version (for example "ASVS 5.0.0 V8") in findings and requirements.
+
+</Admonition>
+
+---
+
+## WSTG — Web Security Testing Guide
+
+The WSTG is a complete methodology for testing web applications, organised as individual test cases with IDs like `WSTG-ATHN-03`. Its main areas:
+
+| Area | Covers |
+|---|---|
+| Information Gathering | Fingerprinting, mapping entry points, reviewing metadata |
+| Configuration & Deployment | Platform config, file extensions, admin interfaces, HTTP methods |
+| Identity Management | Roles, registration, account provisioning |
+| Authentication | Credentials, lockout, bypass, password reset, MFA |
+| Authorization | Path traversal, privilege escalation, IDOR |
+| Session Management | Cookies, fixation, CSRF, logout, timeouts |
+| Input Validation | XSS, SQLi, command injection, SSTI, SSRF and more |
+| Error Handling | Error codes, stack traces |
+| Cryptography | TLS, padding oracles, weak crypto |
+| Business Logic | Workflow circumvention, limits, upload abuse |
+| Client-side | DOM XSS, clickjacking, CORS, web messaging, storage |
+| API Testing | Including GraphQL |
+
+**How it fits with the others:**
+
+```text
+ASVS  →  WHAT must be true          "Sessions are invalidated on logout."
+WSTG  →  HOW to check it            WSTG-SESS-06: Testing for logout functionality
+Top 10 → WHICH CATEGORY it's in     A07:2025 Authentication Failures
+```
+
+Professional reports often reference all three for a single finding.
+
+---
+
+## Cheat Sheet Series
+
+Concise, practical guides — each focused on doing one thing correctly. A few of the most useful for developers:
+
+| Cheat sheet | Use it when… |
+|---|---|
+| Password Storage | Choosing a hashing algorithm and parameters |
+| Authentication | Designing login, MFA and recovery |
+| Session Management | Configuring cookies, timeouts and invalidation |
+| SQL Injection Prevention | Writing database access code |
+| Cross Site Scripting Prevention | Rendering user data in HTML/JS |
+| Cross-Site Request Forgery Prevention | Protecting state-changing requests |
+| Server Side Request Forgery Prevention | Building features that fetch URLs |
+| Input Validation | Validating and normalising input |
+| Logging | Deciding what to log and how |
+| Secrets Management | Storing keys and credentials |
+
+If a code review flags a problem, linking the relevant cheat sheet is often the fastest way to show *how* to fix it.
+
+---
+
+## SAMM — Software Assurance Maturity Model
+
+SAMM measures how mature an organisation's whole approach to secure software is, across five business functions:
+
+| Function | Example practices |
+|---|---|
+| **Governance** | Strategy, policy & compliance, education & guidance |
+| **Design** | Threat assessment, security requirements, secure architecture |
+| **Implementation** | Secure build, secure deployment, defect management |
+| **Verification** | Architecture assessment, requirements-driven testing, security testing |
+| **Operations** | Incident management, environment management, operational management |
+
+Each practice is scored across maturity levels, so a team can see where it stands and plan concrete improvements — useful for security leads and anyone building an AppSec programme.
+
+---
+
+## Hands-On: Juice Shop and WebGoat
+
+<Tabs>
+<TabItem value="juice" label="Juice Shop" default>
+
+**OWASP Juice Shop** is a deliberately insecure modern web shop (Angular front-end, Node.js back-end) with a large number of challenges across the whole Top 10 — from one-star beginner tasks to very hard ones. It includes a built-in scoreboard and hints.
+
+```bash
+docker run --rm -p 3000:3000 bkimminich/juice-shop
+# then open http://localhost:3000
+```
+
+Great for: practising everything in this section legally, preparing for CTFs and interviews.
+
+</TabItem>
+<TabItem value="webgoat" label="WebGoat">
+
+**OWASP WebGoat** is a deliberately insecure Java application organised as guided lessons — each explains a vulnerability and then asks you to exploit it.
+
+```bash
+docker run --rm -p 8080:8080 -p 9090:9090 webgoat/webgoat
+# then open http://localhost:8080/WebGoat
+```
+
+Great for: structured, lesson-by-lesson learning.
+
+</TabItem>
+</Tabs>
+
+<Admonition type="warning" title="Practise legally">
+
+Only test applications you own or have explicit written permission to test. Juice Shop, WebGoat and similar deliberately vulnerable apps exist precisely so you can practise without legal risk. Run them locally, not on a public server.
+
+</Admonition>
+
+---
+
+## Supply Chain Tooling
+
+| Project | What it does |
+|---|---|
+| **Dependency-Check** | Scans project dependencies and reports known vulnerabilities (CVEs). |
+| **Dependency-Track** | A platform that ingests SBOMs and continuously monitors components across all your projects. |
+| **CycloneDX** | An SBOM standard, widely supported by build tools and scanners. |
+
+These map directly onto **A03:2025 Software Supply Chain Failures**.
+
+---
+
+## OWASP Top 10 for LLM Applications
+
+As AI features spread into web applications, OWASP's **GenAI Security Project** maintains a separate Top 10 for applications built on large language models. Its 2025 edition covers risks such as prompt injection, sensitive information disclosure, supply chain issues, data and model poisoning, improper output handling, excessive agency, system prompt leakage, vector and embedding weaknesses, misinformation, and unbounded consumption.
+
+Many of these are familiar ideas in a new setting — prompt injection mirrors classic injection, improper output handling mirrors XSS, and unbounded consumption mirrors API4. If you understand the web Top 10, you already have a head start.
+
+---
+
+## A Note on ZAP
+
+**ZAP** (Zed Attack Proxy) is a free, open-source web application scanner and intercepting proxy that was one of OWASP's best-known flagship projects for many years. It **left OWASP in 2023** and has since continued as an independent open-source project — now branded **"ZAP by Checkmarx."** You'll still see "OWASP ZAP" in older tutorials and job ads; it's the same tool, still free and widely used for automated DAST scans in CI pipelines.
+
+---
+
+## Putting It All Together
+
+```text
+Plan       → SAMM (how mature are we?)  +  threat modelling
+Require    → ASVS level as acceptance criteria
+Build      → Cheat Sheets  +  CycloneDX SBOM  +  Dependency-Check in CI
+Test       → WSTG methodology  +  ZAP / proxy tooling
+Report     → Findings mapped to Top 10:2025 + ASVS requirement + WSTG test ID
+Learn      → Juice Shop / WebGoat  +  this site's CTF
+```
+
+---
+
+## Key Takeaways
+
+- ASVS 5.0 (May 2025) defines testable security requirements in three levels; L2 is the usual target.
+- WSTG is the testing methodology; Cheat Sheets give focused fix-it guidance; SAMM measures programme maturity.
+- Juice Shop and WebGoat let you practise every Top 10 category legally.
+- OWASP also maintains specialised lists for APIs and LLM applications; ZAP is now an independent project outside OWASP.
+
+---
+
+## You've Completed the OWASP Section
+
+Go back to **[What Is OWASP?](./intro.mdx)** for the big picture, revisit the **[Top 10:2025 overview](./01-owasp-top-10-2025-overview.mdx)**, or put it into practice in the **[Web Security](../Web-Security/00-web-security-methodology.mdx)** section and on the [CTF](/ctf) page.

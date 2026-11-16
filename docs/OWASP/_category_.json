@@ -1,0 +1,10 @@
+{
+  "label": "OWASP",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "slug": "/category/owasp",
+    "title": "OWASP",
+    "description": "An in-depth study of OWASP's work: the Top 10:2025 risk by risk, the API Security Top 10, and the projects professionals use every day — ASVS, WSTG, Cheat Sheets, SAMM and Juice Shop."
+  }
+}

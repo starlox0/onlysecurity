@@ -1,0 +1,145 @@
+---
+sidebar_position: 2
+title: "OWASP Top 10:2025 at a Glance"
+description: "The full OWASP Top 10:2025 list, what changed since 2021, how the 2017, 2021 and 2025 editions map to each other, and how to use the list in practice."
+---
+
+import Admonition from '@theme/Admonition';
+
+# OWASP Top 10:2025 at a Glance
+
+`OWASP` · `Top 10` · `Reading time: ~9 min`
+
+The OWASP Top 10 is updated roughly every four years. The **2025 edition** is the current one. This page gives you the whole list, explains what moved and why, and shows how it lines up with earlier editions you'll still see referenced in reports and courses.
+
+---
+
+## The List
+
+| Rank | Category | One-line summary |
+|---|---|---|
+| **A01** | [Broken Access Control](./02-a01-broken-access-control.mdx) | Users can do or see things they shouldn't — now including SSRF. |
+| **A02** | [Security Misconfiguration](./03-a02-security-misconfiguration.mdx) | Insecure defaults, exposed admin panels, verbose errors, open cloud storage. |
+| **A03** | [Software Supply Chain Failures](./04-a03-software-supply-chain-failures.mdx) | Compromised or vulnerable dependencies, build systems and distribution. |
+| **A04** | [Cryptographic Failures](./05-a04-cryptographic-failures.mdx) | Sensitive data unprotected, weak algorithms, poor key handling. |
+| **A05** | [Injection](./06-a05-injection.mdx) | Untrusted input interpreted as code or commands — SQLi, XSS, command injection. |
+| **A06** | [Insecure Design](./07-a06-insecure-design.mdx) | Flaws in the design itself, which perfect code can't fix. |
+| **A07** | [Authentication Failures](./08-a07-authentication-failures.mdx) | Weak login, session, credential and MFA handling. |
+| **A08** | [Software or Data Integrity Failures](./09-a08-software-or-data-integrity-failures.mdx) | Trusting code or data without verifying it hasn't been tampered with. |
+| **A09** | [Security Logging & Alerting Failures](./10-a09-security-logging-and-alerting-failures.mdx) | Attacks happen and nobody notices or responds. |
+| **A10** | [Mishandling of Exceptional Conditions](./11-a10-mishandling-of-exceptional-conditions.mdx) | Errors and edge cases that leave the app failing open or leaking data. |
+
+<Admonition type="tip" title="Freshers' memory trick">
+
+Group the ten into four themes:
+
+- **Who can do what** → A01 Access Control, A07 Authentication
+- **What you trust** → A03 Supply Chain, A05 Injection, A08 Integrity
+- **How it's built and run** → A02 Misconfiguration, A04 Crypto, A06 Design
+- **What happens when things go wrong** → A09 Logging & Alerting, A10 Exceptional Conditions
+
+</Admonition>
+
+---
+
+## What Changed Since 2021
+
+| Change | Detail |
+|---|---|
+| **New category** | **A10 Mishandling of Exceptional Conditions** — error handling, failing open, and logic that breaks under unusual conditions. |
+| **Expanded** | **A03 Software Supply Chain Failures** grew out of 2021's "Vulnerable and Outdated Components." It now covers the whole chain: dependencies, build pipelines, and distribution — not just outdated libraries. |
+| **Merged** | **SSRF**, which had its own slot (A10) in 2021, was folded into **A01 Broken Access Control**. |
+| **Big climber** | **Security Misconfiguration** rose from #5 to #2. |
+| **Moved down** | Cryptographic Failures (#2 → #4), Injection (#3 → #5), Insecure Design (#4 → #6). |
+| **Renamed** | A07 dropped "Identification and" — now just **Authentication Failures**. A09 changed "Monitoring" to **Alerting**. |
+| **Held position** | A01, A07, A08 and A09 kept their ranks. |
+
+<Admonition type="warning" title="'Moved down' doesn't mean 'less important'">
+
+Injection dropping to #5 doesn't mean injection is solved. It means frameworks with safe defaults (parameterised ORMs, auto-escaping templates) have made it *less common* relative to other problems. A single SQL injection can still mean a total data breach — as the MOVEit incident in 2023 showed.
+
+</Admonition>
+
+---
+
+## Why Misconfiguration Climbed to #2
+
+Modern applications are mostly *configuration*: cloud IAM policies, container settings, CI/CD pipelines, CDN rules, feature flags, framework settings. Each one is a place to get security wrong, and each one is often owned by a different team. As more of the stack moved into "infrastructure as code" and managed services, the surface area for misconfiguration grew faster than the surface area for classic coding bugs.
+
+---
+
+## Why Supply Chain Got Its Own Broader Category
+
+Between 2021 and 2025 the industry saw repeated attacks that never touched the target's own code — they went through something the target *trusted*:
+
+```text
+Attacker
+   |
+   v
+Compromises a dependency, a build tool, or an update channel
+   |
+   v
+Thousands of downstream organisations install it normally
+   |
+   v
+Malicious code runs inside each of them with full trust
+```
+
+"Is this library outdated?" is no longer a big enough question. A03 asks: *can you trust everything that went into this build?*
+
+---
+
+## Mapping Across Editions
+
+Older reports and course material still use the 2017 and 2021 numbering. This table shows how they line up:
+
+| 2017 | 2021 | 2025 |
+|---|---|---|
+| A1 Injection | A03 Injection (XSS merged in) | A05 Injection |
+| A2 Broken Authentication | A07 Identification & Authentication Failures | A07 Authentication Failures |
+| A3 Sensitive Data Exposure | A02 Cryptographic Failures | A04 Cryptographic Failures |
+| A4 XML External Entities (XXE) | merged into A05 Security Misconfiguration | A02 Security Misconfiguration |
+| A5 Broken Access Control | A01 Broken Access Control | A01 Broken Access Control |
+| A6 Security Misconfiguration | A05 Security Misconfiguration | A02 Security Misconfiguration |
+| A7 Cross-Site Scripting (XSS) | merged into A03 Injection | A05 Injection |
+| A8 Insecure Deserialization | merged into A08 Software & Data Integrity Failures | A08 Software or Data Integrity Failures |
+| A9 Using Components with Known Vulnerabilities | A06 Vulnerable & Outdated Components | A03 Software Supply Chain Failures |
+| A10 Insufficient Logging & Monitoring | A09 Security Logging & Monitoring Failures | A09 Security Logging & Alerting Failures |
+| — | A04 Insecure Design (new) | A06 Insecure Design |
+| — | A10 Server-Side Request Forgery (new) | merged into A01 Broken Access Control |
+| — | — | A10 Mishandling of Exceptional Conditions (new) |
+
+<Admonition type="info" title="Pro tip">
+
+When you write a report, cite the edition explicitly — "A01:2025" rather than just "A01". An "A03" finding means Injection in 2021 but Software Supply Chain Failures in 2025, and that confusion turns up in real audit findings more often than you'd expect.
+
+</Admonition>
+
+---
+
+## How to Use the Top 10 in Practice
+
+| Situation | How the Top 10 helps |
+|---|---|
+| **Learning** | A prioritised curriculum — study in this order and you'll cover the most common real-world problems first. |
+| **Code review** | A quick checklist of categories to consider for every feature. |
+| **Threat modelling** | A prompt list: "How could this feature suffer from A01? A06? A10?" |
+| **Pentest reports** | A common way to classify findings so non-specialists understand them. |
+| **Developer training** | The standard starting syllabus for secure-coding courses. |
+
+What it is **not** good for: being a complete test plan or a pass/fail compliance bar. For those, use the WSTG and ASVS — see **[OWASP Projects Beyond the Top 10](./13-owasp-projects-asvs-wstg.mdx)**.
+
+---
+
+## Key Takeaways
+
+- The 2025 list is: Broken Access Control, Security Misconfiguration, Software Supply Chain Failures, Cryptographic Failures, Injection, Insecure Design, Authentication Failures, Software or Data Integrity Failures, Security Logging & Alerting Failures, and Mishandling of Exceptional Conditions.
+- New for 2025: A10 Exceptional Conditions; supply chain broadened into A03; SSRF folded into A01.
+- Always cite the edition year — category numbers change between editions.
+- The Top 10 is for awareness and prioritisation; use ASVS and WSTG for full verification and testing.
+
+---
+
+## Next
+
+Start with the number-one risk: **[A01: Broken Access Control](./02-a01-broken-access-control.mdx)**.

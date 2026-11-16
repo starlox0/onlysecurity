@@ -1,0 +1,197 @@
+---
+sidebar_position: 8
+title: "A06:2025 — Insecure Design"
+description: "Flaws baked into a system's design before any code is written — missing threat modelling, absent business-logic controls, and how secure design patterns prevent whole classes of bugs."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A06:2025 — Insecure Design
+
+`OWASP` · `Top 10:2025` · `Reading time: ~12 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #6 in 2025 (introduced at #4 in 2021) |
+| **Example CWEs** | CWE-840 Business Logic Errors, CWE-841 Improper Enforcement of Behavioral Workflow, CWE-799 Improper Control of Interaction Frequency, CWE-602 Client-Side Enforcement of Server-Side Security, CWE-434 Unrestricted Upload of File with Dangerous Type, CWE-522 Insufficiently Protected Credentials |
+| **Key idea** | A secure *implementation* of an insecure *design* is still insecure |
+
+---
+
+## In Plain English
+
+Most categories in the Top 10 are about **implementation bugs** — the design was fine, but the code got it wrong. Insecure design is the opposite: the code does exactly what it was designed to do, and **the design itself is the problem**.
+
+```text
+Implementation flaw:  "The plan said check ownership. The developer forgot."
+                       → Fix the code.
+
+Design flaw:          "The plan never considered that someone might
+                       book all 600 seats and never pay."
+                       → No amount of careful coding fixes this.
+                         The design must change.
+```
+
+You can't scan your way out of insecure design. It's prevented by thinking like an attacker *before* building — during requirements, architecture and feature planning.
+
+---
+
+## What Insecure Design Looks Like
+
+| Design flaw | Example |
+|---|---|
+| **No abuse-case thinking** | A cinema lets groups reserve up to 15 seats without a deposit. An attacker scripts reservations for every seat in every cinema, then never pays. |
+| **No limits on valuable actions** | A promo-code feature with no per-account cap; a referral bonus with no check for fake accounts. |
+| **Security questions for recovery** | "What's your mother's maiden name?" is often public knowledge — the recovery design is weak however well it's coded. |
+| **Trusting the client for business rules** | The price, discount or quantity limit is enforced only in the mobile app. |
+| **Single control for high-value actions** | A large transfer requires only a session cookie — no re-authentication, no second approval, no anomaly check. |
+| **No tenant isolation in the architecture** | All customers' data in one table with filtering left to each developer's memory. |
+| **Bot-friendly by design** | Ticket or limited-stock sales with no anti-automation, letting scalper bots buy everything. |
+| **Unrestricted file handling** | A design that stores uploads inside the web root and serves them from the main domain. |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+When testing, ask **"what is this feature worth to an attacker?"** — money, data, free stuff, other people's accounts, or just causing chaos. Then ask **"what stops someone doing it 10,000 times, or out of order, or with someone else's account?"** If the honest answer is "nothing," you've likely found a design flaw.
+
+</Admonition>
+
+---
+
+## Design Flaw vs. Secure Design
+
+<Tabs>
+<TabItem value="reset" label="Password recovery" default>
+
+**Insecure design:**
+
+```text
+1. User enters username
+2. App asks security question ("Favourite colour?")
+3. Correct answer → user sets a new password immediately
+```
+
+Weak: answers are guessable or discoverable; no proof of control over a registered channel; no notification to the real owner.
+
+**Secure design:**
+
+```text
+1. User enters email → same response whether or not the account exists
+2. App sends a single-use, high-entropy, short-lived link to that email
+3. Link opens reset form; old sessions are invalidated after the change
+4. Owner is notified on all registered channels that the password changed
+5. Rate limiting on requests; MFA re-check if MFA is enabled
+```
+
+</TabItem>
+<TabItem value="coupon" label="Promo codes">
+
+**Insecure design:** codes are "valid / invalid" with no notion of who used them or how often, and validation happens in the client.
+
+**Secure design:**
+
+```text
+- Codes stored server-side with: max total uses, max uses per account,
+  expiry, eligible products, minimum order value
+- Redemption is an atomic database operation (no race conditions)
+- New-account and velocity checks to resist referral/coupon farming
+- Alerting when redemption rates spike unexpectedly
+```
+
+</TabItem>
+<TabItem value="transfer" label="Money transfer">
+
+**Insecure design:** "Logged in" is the only requirement for any transfer amount.
+
+**Secure design (risk-based):**
+
+```text
+Small, known payee        → session is enough
+New payee                 → step-up authentication (MFA)
+Large amount              → step-up + cooling-off period + notification
+Unusual pattern/location  → hold for review
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## How to Find Design Flaws
+
+Design flaws are found through analysis and creative testing rather than automated scanning:
+
+- [ ] Read the feature's purpose and list every way it could be abused (abuse/misuse cases).
+- [ ] For every limit the business mentions ("one per customer", "up to 15 seats"), check it's enforced server-side and can't be bypassed with multiple accounts or parallel requests.
+- [ ] Try workflows out of order, skip steps, repeat steps, and run steps concurrently (race conditions).
+- [ ] Check whether high-value actions require extra verification proportionate to their risk.
+- [ ] Ask what happens at scale: one request is fine — what about one million?
+- [ ] Review architecture diagrams for trust boundaries: where does untrusted data enter, and what assumes it's trusted afterwards?
+- [ ] Check recovery, onboarding and support flows — they're frequently designed with less care than login.
+
+---
+
+## How to Prevent It
+
+### Threat modelling
+
+Threat modelling is the core practice for this category. A lightweight version you can run for any feature:
+
+```text
+1. What are we building?      → sketch data flows and trust boundaries
+2. What can go wrong?         → use a prompt list such as STRIDE
+3. What are we doing about it? → controls, tests, accepted risks
+4. Did we do a good job?      → review after building
+```
+
+**STRIDE** is a handy prompt list:
+
+| Letter | Threat | Question to ask |
+|---|---|---|
+| **S** | Spoofing | Can someone pretend to be another user or system? |
+| **T** | Tampering | Can data be modified in transit or at rest? |
+| **R** | Repudiation | Could a user deny doing something, with no way to prove otherwise? |
+| **I** | Information disclosure | Can data leak to someone who shouldn't see it? |
+| **D** | Denial of service | Can the feature be made unavailable or too expensive to run? |
+| **E** | Elevation of privilege | Can someone gain rights they shouldn't have? |
+
+### Secure design practices
+
+| Practice | Why |
+|---|---|
+| **Security requirements up front** | Write "must not" stories alongside user stories. |
+| **Reuse secure design patterns** | Proven, reviewed components for auth, sessions, file storage and access control. |
+| **Defence in depth** | No single control should be the only thing between an attacker and the goal. |
+| **Limit by design** | Rate limits, quotas and per-user caps for anything valuable. |
+| **Segregate tenants and tiers** | Architectural isolation beats per-query discipline. |
+| **Plausibility checks** | Reject quantities, prices or sequences that make no business sense. |
+| **Unit and integration tests for misuse cases** | Prove that abuse is blocked, not just that normal use works. |
+
+---
+
+## Pro Notes
+
+- **"Shift left" is mostly about this category.** Fixing a design flaw after release often means migrations, API changes and customer communication; catching it on a whiteboard costs an hour.
+- **OWASP SAMM** includes design-related practices (threat assessment, security requirements, secure architecture) for measuring how mature an organisation's design process is.
+- **Business logic bugs are high-value in bug bounties** precisely because scanners can't find them — they reward understanding the product.
+- **Pair design reviews with architecture decision records.** Recording *why* a security trade-off was accepted makes later audits and incident reviews far easier.
+
+---
+
+## Key Takeaways
+
+- Insecure design is a flaw in the plan, not the code — and perfect code can't fix it.
+- Think in abuse cases: what is the feature worth, and what stops it being misused at scale?
+- Threat modelling (for example with STRIDE) is the core preventive practice.
+- Enforce business rules server-side, with limits, plausibility checks and risk-based extra verification.
+
+**Go deeper:** [Access Control & Business Logic Flaws](../Web-Security/09-access-control-and-business-logic.mdx)
+
+---
+
+## Next
+
+**[A07:2025 — Authentication Failures](./08-a07-authentication-failures.mdx)**

@@ -1,0 +1,213 @@
+---
+sidebar_position: 11
+title: "A09:2025 — Security Logging & Alerting Failures"
+description: "Why breaches go unnoticed for months — missing logs, logs nobody watches, alerts that never fire — and how to build logging and alerting that actually catches attacks."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A09:2025 — Security Logging & Alerting Failures
+
+`OWASP` · `Top 10:2025` · `Reading time: ~11 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #9 in 2025 (also #9 in 2021; #10 in 2017) |
+| **Name change** | "Logging and **Monitoring** Failures" became "Logging & **Alerting** Failures" — emphasising that logs only help if someone is actually alerted and acts |
+| **Mapped CWEs** | 5 |
+| **Example CWEs** | CWE-778 Insufficient Logging, CWE-223 Omission of Security-relevant Information, CWE-532 Insertion of Sensitive Information into Log File, CWE-117 Improper Output Neutralization for Logs |
+| **Why it's in the list** | It's hard to test from outside, so OWASP's practitioner survey keeps it in — teams on the ground know how often breaches go unnoticed |
+
+---
+
+## In Plain English
+
+Every other category in the Top 10 is about **preventing** attacks. This one is about **noticing** them. No system prevents everything, so the real question is: when an attacker gets in, how long until you find out?
+
+```text
+Attack starts ─────────────────────────────────────────► Detected
+              │◄──────────── dwell time ──────────────►│
+                 data stolen, access expanded,
+                 backdoors planted, evidence erased
+```
+
+Without good logging and alerting, that gap can stretch to months — and when it's finally discovered, often by someone outside the organisation, there may not be enough evidence to work out what happened.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+There are three different failures here, and it helps to keep them separate:
+
+1. **Not logging** the right events.
+2. **Logging, but nobody looks** — no alerts, no review.
+3. **Alerting, but nobody responds** — no process, no owner, alert fatigue.
+
+All three end the same way: the attack succeeds silently.
+
+</Admonition>
+
+---
+
+## How It Happens
+
+| Failure | Example |
+|---|---|
+| **Security events not logged** | Failed logins, access-control denials, password resets and admin actions leave no trace. |
+| **Logs without context** | Entries with no user ID, source IP, timestamp or request ID — impossible to correlate. |
+| **Logs stored only locally** | An attacker with server access simply deletes them. |
+| **No alerting thresholds** | 10,000 failed logins in an hour produce no notification. |
+| **Alert fatigue** | So many noisy alerts that real ones are ignored. |
+| **No incident response plan** | An alert fires, but nobody knows who owns it or what to do. |
+| **Sensitive data in logs** | Passwords, tokens and card numbers written to logs create a *new* data exposure (CWE-532). |
+| **Log injection** | User input with newline characters forges fake log lines or breaks log parsers (CWE-117). |
+| **Monitoring gaps** | APIs, background jobs, or cloud control-plane activity aren't monitored at all. |
+| **Short retention** | Logs deleted after a few days, before a slow-moving breach is noticed. |
+
+---
+
+## What to Log
+
+| Event | Why |
+|---|---|
+| Login success and failure, MFA events, lockouts | Detect credential stuffing, brute force and account takeover. |
+| Password, email and MFA changes; password resets | The usual steps of an account takeover. |
+| Access-control failures (403s) | A burst usually means someone is probing for IDOR or privilege escalation. |
+| Input validation failures at scale | Signals scanning or injection attempts. |
+| Admin and high-value actions | Role changes, data exports, configuration changes, payments. |
+| Session and token events | Creation, invalidation, use of revoked tokens. |
+| Server-side errors | Repeated exceptions in one endpoint often mean someone is fuzzing it. |
+| Cloud and infrastructure audit events | IAM changes, new access keys, security group changes, storage made public. |
+
+Each entry should answer: **who** (user/service ID), **what** (action, resource), **when** (UTC timestamp), **where** (source IP, endpoint), **outcome** (success/failure), and a **correlation ID** to tie related entries together.
+
+---
+
+## Vulnerable vs. Fixed Code
+
+<Tabs>
+<TabItem value="basic" label="Logging a login" default>
+
+**Vulnerable** — nothing useful, and a secret leaked:
+
+```js
+console.log('login attempt', req.body);   // logs the plaintext password!
+```
+
+**Fixed** — structured, contextual, no secrets:
+
+```js
+logger.info({
+  event: 'auth.login',
+  outcome: ok ? 'success' : 'failure',
+  userId: user?.id ?? null,
+  emailHash: sha256(email.toLowerCase()),   // avoid raw PII where possible
+  ip: req.ip,
+  userAgent: req.get('user-agent'),
+  requestId: req.id,
+});
+```
+
+</TabItem>
+<TabItem value="inject" label="Log injection">
+
+**Vulnerable** — raw user input written into a text log:
+
+```python
+logger.info("Failed login for user: " + username)
+# username = "bob\n2026-11-16 INFO Successful login for user: admin"
+```
+
+**Fixed** — structured logging (fields are encoded, not concatenated):
+
+```python
+logger.info("auth.login.failure", extra={"username": username, "ip": ip})
+```
+
+With a JSON formatter, newline characters stay inside the field value instead of creating fake entries.
+
+</TabItem>
+<TabItem value="alert" label="Alert rule">
+
+A simple detection rule (pseudo-query, adaptable to most SIEMs):
+
+```text
+WHEN count(event = "auth.login" AND outcome = "failure")
+     GROUP BY ip
+     OVER 5 minutes
+     > 50
+THEN alert "Possible credential stuffing" → on-call security channel
+
+WHEN count(distinct userId WHERE event = "auth.login" AND outcome = "failure")
+     GROUP BY ip OVER 10 minutes > 20
+THEN alert "Possible password spraying"
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **Equifax (2017)** — According to the US Government Accountability Office's review, attackers were inside the network for roughly 76 days before discovery. A key factor was an expired certificate on a device used to inspect encrypted network traffic, which meant malicious traffic wasn't being examined for a long period.
+- **Target (2013)** — Security tooling reportedly generated alerts about the malware used in the breach, but they were not acted on in time — a classic case of alerting without effective response.
+- **Industry dwell-time data** — Incident-response reports consistently show many intrusions are first discovered by an external party (law enforcement, a partner, or the attacker's own ransom note) rather than the victim's own monitoring.
+
+---
+
+## How to Test for It
+
+This category is hard to test purely black-box, so it's usually assessed with the team:
+
+- [ ] During a pentest, keep a timeline of noisy actions (brute force, scanning, IDOR attempts). Afterwards, ask: which of these were detected, and when?
+- [ ] Review log samples: do they include who, what, when, where, outcome and a correlation ID?
+- [ ] Search logs for secrets — passwords, tokens, API keys, full card numbers.
+- [ ] Send input containing newlines and control characters and check whether it corrupts log output.
+- [ ] Check logs are shipped off the host to central, append-only or tamper-evident storage.
+- [ ] Check retention meets legal and investigative needs.
+- [ ] Walk through an alert: who receives it, how fast, and is there a written playbook?
+- [ ] Run a tabletop or purple-team exercise to test detection and response end to end.
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Log security-relevant events with consistent structure** | Machine-readable, correlatable data is what makes detection possible. |
+| **Centralise logs off-host** | A SIEM or log platform protects logs from tampering and enables cross-system correlation. |
+| **Protect log integrity** | Append-only or write-once storage; restricted access to delete or modify. |
+| **Never log secrets; minimise personal data** | Logs are often less protected than the main database. |
+| **Encode/structure log output** | Prevents log injection and parser abuse. |
+| **Write and tune alert rules** | Start with high-value signals (auth abuse, privilege changes, data exports) and reduce noise over time. |
+| **Have an incident response plan** | Owners, escalation paths and playbooks — practised, not just written. (NIST SP 800-61 is a common reference.) |
+| **Monitor cloud audit trails** | CloudTrail, Azure Activity Log or GCP Audit Logs, with alerts on risky changes. |
+| **Use honeytokens** | Fake credentials or records that no legitimate user would ever touch — any use is a high-confidence alert. |
+
+---
+
+## Pro Notes
+
+- **Measure MTTD and MTTR** — mean time to detect and mean time to respond. They're the most honest metrics of whether logging and alerting work.
+- **Detection as code.** Store detection rules in version control, test them against sample attack data, and deploy them through a pipeline — just like application code.
+- **Map detections to MITRE ATT&CK** to see which attacker techniques you can and can't currently detect.
+- **Application-level detection beats network-level guessing** for many web attacks: only the app knows that "user 42 just requested 500 other users' invoices."
+- **Privacy regulations** limit what personal data you may log and for how long — design logging with the privacy team, not around them.
+
+---
+
+## Key Takeaways
+
+- Logging and alerting don't prevent attacks; they shorten the time an attacker goes unnoticed.
+- Log the right events with enough context, centralise them, protect them, and don't log secrets.
+- Logs only help if alerts fire *and* someone responds with a plan.
+- Test detection deliberately — with pentests, purple teaming and tabletop exercises.
+
+---
+
+## Next
+
+**[A10:2025 — Mishandling of Exceptional Conditions](./11-a10-mishandling-of-exceptional-conditions.mdx)**

@@ -1,0 +1,260 @@
+---
+sidebar_position: 12
+title: "A10:2025 — Mishandling of Exceptional Conditions"
+description: "The newest Top 10 category: failing open, leaky error messages, unhandled exceptions, partial transactions and resource leaks — how applications break under unusual conditions and how to make them fail safely."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A10:2025 — Mishandling of Exceptional Conditions
+
+`OWASP` · `Top 10:2025` · `Reading time: ~12 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #10 in 2025 — **new category** |
+| **Mapped CWEs** | 24 |
+| **Example CWEs** | CWE-636 Not Failing Securely ('Failing Open'), CWE-754 Improper Check for Unusual or Exceptional Conditions, CWE-755 Improper Handling of Exceptional Conditions, CWE-209 Error Message Containing Sensitive Information, CWE-248 Uncaught Exception, CWE-252 Unchecked Return Value, CWE-460 Improper Cleanup on Thrown Exception, CWE-476 NULL Pointer Dereference |
+| **Where it came from** | Many of these CWEs used to sit under general "poor code quality." Grouping them makes a clear point: *how software behaves when things go wrong is a security property* |
+
+---
+
+## In Plain English
+
+Most code is written for the **happy path**: the database answers, the file uploads, the payment provider replies, the input is the right type. Exceptional conditions are everything else — timeouts, missing parameters, nulls, full disks, permission errors, unexpected status codes, half-finished operations.
+
+When those cases aren't handled deliberately, an application can:
+
+- **fail open** — skip a security check because the check itself errored,
+- **leak information** — print stack traces, queries or file paths,
+- **corrupt state** — complete half of a transaction but not the other half,
+- **exhaust resources** — leak connections or file handles on each error until it falls over.
+
+```text
+                        ┌── handled deliberately ──► safe failure (deny, roll back, log)
+Something unexpected ───┤
+                        └── not handled ───────────► fail open · leak · corrupt · crash
+```
+
+Attackers deliberately *create* these conditions — sending malformed input, missing fields, huge values, concurrent requests — because the error paths are usually the least tested code in the application.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+When you test, don't just send "bad" values — send **weird** ones. Leave a parameter out entirely. Send it twice. Send an array where a string is expected. Send `null`, an empty string, a negative number, a 10 MB value. Cut a multi-step flow off halfway. Watch what the application does when it's surprised.
+
+</Admonition>
+
+---
+
+## How It Happens
+
+| Failure | Example |
+|---|---|
+| **Failing open** | An authorization service times out, and the code's `catch` block allows the request. |
+| **Verbose errors** | A database error with the full SQL query is returned to the user, helping an attacker refine an injection. |
+| **Unchecked return values** | A function returns `false` or an error code meaning "permission denied," but the caller never checks it. |
+| **Generic catch-all handlers** | `catch (Exception e) {}` swallows a security-relevant failure silently. |
+| **Partial transactions** | A transfer debits one account, then crashes before crediting the other — or worse, credits before debiting and can be interrupted. |
+| **Resource leaks on error** | Each failed upload leaves a file handle or connection open until the server runs out. |
+| **Missing/extra parameter handling** | A missing field is treated as "no restriction"; a duplicated field is processed twice. |
+| **Missing default cases** | A `switch` on user role has no default branch, so an unexpected role falls through to privileged behaviour. |
+| **Inconsistent handling** | One endpoint handles an error safely; a near-identical endpoint doesn't. |
+
+---
+
+## Vulnerable vs. Fixed Code
+
+<Tabs>
+<TabItem value="failopen" label="Failing open" default>
+
+**Vulnerable** — an error in the check grants access:
+
+```js
+async function canAccess(user, resource) {
+  try {
+    return await policyService.check(user.id, resource.id);
+  } catch (err) {
+    console.warn('policy service unavailable, allowing');
+    return true;                        // fails OPEN
+  }
+}
+```
+
+**Fixed** — errors deny by default, and are logged and alerted:
+
+```js
+async function canAccess(user, resource) {
+  try {
+    return (await policyService.check(user.id, resource.id)) === true;
+  } catch (err) {
+    logger.error({ event: 'authz.check_failed', err, userId: user.id });
+    return false;                       // fails CLOSED
+  }
+}
+```
+
+Note the strict `=== true`: an unexpected return value (undefined, an error object, the string `"false"`) is also treated as a denial.
+
+</TabItem>
+<TabItem value="tx" label="Partial transactions">
+
+**Vulnerable** — two separate writes; a failure between them corrupts state:
+
+```python
+def transfer(src, dst, amount):
+    debit(src, amount)
+    credit(dst, amount)        # if this raises, money vanishes (or is duplicated
+    record_transfer(...)       # on retry, depending on order)
+```
+
+**Fixed** — one atomic transaction that rolls back entirely on any error:
+
+```python
+def transfer(src, dst, amount):
+    with db.transaction():                       # all-or-nothing
+        src_acc = Account.lock_for_update(src)   # prevents concurrent double-spend
+        if src_acc.balance < amount:
+            raise InsufficientFunds()
+        src_acc.balance -= amount
+        Account.lock_for_update(dst).balance += amount
+        Transfer.create(src=src, dst=dst, amount=amount)
+```
+
+</TabItem>
+<TabItem value="leak" label="Resource leaks">
+
+**Vulnerable** — the stream isn't closed when processing throws:
+
+```java
+InputStream in = upload.getInputStream();
+processImage(in);       // throws on a malformed file
+in.close();             // never reached → handle leaked on every bad upload
+```
+
+**Fixed** — cleanup is guaranteed:
+
+```java
+try (InputStream in = upload.getInputStream()) {
+    processImage(in);
+}   // closed automatically, even on exceptions
+```
+
+</TabItem>
+<TabItem value="switch" label="Missing default">
+
+**Vulnerable** — an unexpected value falls through:
+
+```js
+function permissionsFor(role) {
+  switch (role) {
+    case 'viewer': return ['read'];
+    case 'editor': return ['read', 'write'];
+  }
+  return ALL_PERMISSIONS;     // unknown/missing role gets everything
+}
+```
+
+**Fixed** — explicit allowlist, unknown means nothing:
+
+```js
+const PERMISSIONS = { viewer: ['read'], editor: ['read', 'write'], admin: ALL_PERMISSIONS };
+
+function permissionsFor(role) {
+  return PERMISSIONS[role] ?? [];   // unknown → no permissions
+}
+```
+
+</TabItem>
+<TabItem value="global" label="Global handler">
+
+A central safety net (Express example) so nothing unexpected leaks:
+
+```js
+app.use((err, req, res, next) => {
+  const errorId = crypto.randomUUID();
+  logger.error({ errorId, err, path: req.path, userId: req.user?.id });
+  if (res.headersSent) return next(err);
+  res.status(err.expose ? err.status : 500).json({
+    error: err.expose ? err.message : 'Something went wrong',
+    errorId,
+  });
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.fatal({ reason }, 'unhandled promise rejection');
+});
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Example Attack Scenarios
+
+- **Denial of service through error paths** — An upload handler catches exceptions but never releases the resources it acquired. An attacker uploads thousands of deliberately malformed files until no connections or file handles remain.
+- **Information disclosure** — A malformed query parameter triggers a raw database error showing table names and the query structure, turning a blind injection attempt into a guided one.
+- **Interrupted transactions** — An attacker aborts a multi-step transfer at exactly the right moment, or fires the same request concurrently, exploiting the gap between "debit" and "credit" to move money twice.
+- **Fail-open authentication** — When an external identity provider or MFA service is slow, the application "temporarily" skips the check. An attacker who can induce the slowdown (or simply waits for one) bypasses MFA.
+
+---
+
+## How to Test for It
+
+- [ ] Remove required parameters one at a time; duplicate parameters; change types (string ↔ number ↔ array ↔ object ↔ null).
+- [ ] Send extreme values: very long strings, huge numbers, negative numbers, zero, Unicode edge cases.
+- [ ] Look at every error response for stack traces, queries, internal paths, hostnames or library versions.
+- [ ] Interrupt multi-step flows (close the connection mid-request, skip the final step) and check for inconsistent state.
+- [ ] Send concurrent identical requests to state-changing endpoints (race conditions).
+- [ ] In a test environment, simulate dependency failures — make the auth service, database or payment provider slow or unavailable — and check whether security checks fail closed.
+- [ ] Watch resource usage (connections, memory, file handles) while repeatedly triggering errors.
+- [ ] In code review, look for empty `catch` blocks, catch-all handlers that continue normally, unchecked return values, and `switch`/`if` chains without a safe default.
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Fail closed** | When a security decision can't be made, the answer is "no." |
+| **Handle errors where they occur** | The code closest to the problem knows best how to recover safely. |
+| **Centralised, consistent error handling** | One approach across the app (and ideally the organisation) means fewer forgotten edge cases. |
+| **Global exception handler as a safety net** | Catches anything that slips through and returns a generic response. |
+| **Atomic transactions with full rollback** | Never leave state half-changed. |
+| **Guaranteed cleanup** | `try-with-resources`, `finally`, `with`, `defer` — release resources on every path. |
+| **Strict input validation** | Reject missing, extra and wrongly-typed parameters early, before business logic runs. |
+| **Generic user-facing errors; detailed logs** | Users get an error ID; engineers get the stack trace. |
+| **Rate limiting and quotas** | Limits how many exceptional conditions an attacker can trigger. |
+| **Monitor error patterns** | A spike in errors from one source is often an attack in progress (see A09). Summarise repeated identical errors instead of flooding logs. |
+| **Test failure, not just success** | Chaos testing, fault injection and negative test cases. |
+
+---
+
+## Pro Notes
+
+- **Fail-safe defaults** is one of the oldest secure design principles (Saltzer and Schroeder, 1975): base access decisions on permission rather than exclusion. A10 is that principle, measured.
+- **Circuit breakers and timeouts** improve resilience, but decide explicitly what happens when a circuit is open for a *security* dependency — degraded mode must never mean "unauthenticated mode."
+- **Idempotency keys** make retries safe for payments and other state-changing operations, preventing double processing when clients retry after a timeout.
+- **Languages differ.** Exceptions (Java, Python, JavaScript), error return values (Go, C) and result types (Rust) each have characteristic mistakes: swallowed exceptions, ignored `err` values, and over-eager `unwrap()` calls respectively.
+- **Overlap is intentional.** This category touches A01 (fail-open authorization), A02 (verbose errors), A06 (designing for failure) and A09 (alerting on error spikes). It exists to make error handling a first-class security topic rather than an afterthought.
+
+---
+
+## Key Takeaways
+
+- A10 is new in 2025: how software behaves when something unexpected happens is a security issue.
+- The big dangers are failing open, leaking details in errors, partial state changes and resource exhaustion.
+- Fail closed, handle errors close to the source, use atomic transactions, and always clean up.
+- Test the unhappy paths deliberately — they're where attackers look first.
+
+**Go deeper:** [Timing Attacks & Denial of Service](../Web-Security/14-timing-and-dos-attacks.mdx) · [Access Control & Business Logic Flaws](../Web-Security/09-access-control-and-business-logic.mdx)
+
+---
+
+## Next
+
+Move from web apps to APIs: **[OWASP API Security Top 10](./12-owasp-api-security-top-10.mdx)**.

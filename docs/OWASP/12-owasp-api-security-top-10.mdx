@@ -1,0 +1,222 @@
+---
+sidebar_position: 13
+title: "OWASP API Security Top 10 (2023)"
+description: "The ten most critical API risks — BOLA, broken authentication, property-level authorization, resource consumption, function-level authorization and more — with testing tips for REST and GraphQL."
+---
+
+import Admonition from '@theme/Admonition';
+
+# OWASP API Security Top 10 (2023)
+
+`OWASP` · `API Security` · `Reading time: ~14 min`
+
+APIs now carry most of the traffic behind web and mobile apps — and they expose business logic and data far more directly than a traditional web page. OWASP maintains a separate **API Security Top 10** because API risks cluster differently. The current edition is **2023**.
+
+<Admonition type="info" title="How it relates to the main Top 10">
+
+Every main Top 10 category still applies to APIs. The API list zooms in on the problems that show up *most often* in APIs — and authorization dominates: three of the top five are authorization failures at different levels.
+
+</Admonition>
+
+---
+
+## The List
+
+| # | Risk | In one line |
+|---|---|---|
+| **API1** | Broken Object Level Authorization (BOLA) | Change an object ID, get someone else's data. |
+| **API2** | Broken Authentication | Weak or flawed token, credential and session handling. |
+| **API3** | Broken Object Property Level Authorization (BOPLA) | Reading or writing fields you shouldn't — excessive data exposure and mass assignment. |
+| **API4** | Unrestricted Resource Consumption | No limits on requests, payload size, page size or costly operations. |
+| **API5** | Broken Function Level Authorization (BFLA) | Calling admin or privileged functions as a normal user. |
+| **API6** | Unrestricted Access to Sensitive Business Flows | Automating a legitimate flow (buying, booking, signing up) at harmful scale. |
+| **API7** | Server-Side Request Forgery (SSRF) | Making the API fetch a URL that reaches internal systems. |
+| **API8** | Security Misconfiguration | Missing hardening, permissive CORS, verbose errors, unnecessary methods. |
+| **API9** | Improper Inventory Management | Forgotten old versions, undocumented and shadow endpoints. |
+| **API10** | Unsafe Consumption of APIs | Trusting data from third-party APIs too much. |
+
+---
+
+## The Three Levels of Authorization
+
+The single most useful idea from this list is that authorization must be checked at **three levels**:
+
+```text
+Function level  (API5 BFLA)   "May this user call DELETE /users/{id} at all?"
+      │
+Object level    (API1 BOLA)   "May this user act on user #812 specifically?"
+      │
+Property level  (API3 BOPLA)  "May this user read 'salary' or write 'role' on that object?"
+```
+
+A request has to pass all three. Most real API breaches come from skipping one of them.
+
+---
+
+## API1 — Broken Object Level Authorization (BOLA)
+
+The API equivalent of IDOR, and the most common serious API flaw.
+
+```http
+GET /api/v2/accounts/10432/statements     ← yours
+GET /api/v2/accounts/10433/statements     ← someone else's, still returned
+```
+
+APIs make BOLA easy to find because IDs appear everywhere: paths, query strings, JSON bodies and headers.
+
+**Prevent:** check ownership or permission for the specific object on every request, ideally in the data-access layer; write tests proving cross-user access is denied; use random IDs as a speed bump, not as protection.
+
+---
+
+## API2 — Broken Authentication
+
+| Weakness | Example |
+|---|---|
+| No rate limiting on login, OTP or reset endpoints | Brute force through the API even when the web UI has a CAPTCHA |
+| Weak token validation | JWTs accepted with `alg: none`, without checking expiry, issuer or audience |
+| Long-lived or non-revocable tokens | Leaked API keys valid forever |
+| Credentials in URLs | API keys in query strings, leaking into logs |
+| Sensitive operations without re-authentication | Changing email or password with only a bearer token |
+
+**Prevent:** use standard, well-maintained auth (OAuth 2.0 / OpenID Connect); pin JWT algorithms and validate all claims; short-lived access tokens with revocable refresh tokens; rate-limit all authentication endpoints.
+
+---
+
+## API3 — Broken Object Property Level Authorization (BOPLA)
+
+This merges two older items: **excessive data exposure** (API returns too many fields) and **mass assignment** (API accepts too many fields).
+
+```json
+// GET /api/users/me — returns more than the UI shows:
+{ "id": 7, "name": "Alice", "email": "alice@example.com",
+  "passwordResetToken": "8f2c…", "isAdmin": false, "internalNotes": "…" }
+
+// PATCH /api/users/me — accepts fields the UI never sends:
+{ "name": "Alice", "isAdmin": true }
+```
+
+**Prevent:** return explicit response schemas (DTOs) — never serialise whole database objects; accept explicit allowlisted input fields per endpoint; validate both requests and responses against a schema.
+
+---
+
+## API4 — Unrestricted Resource Consumption
+
+APIs cost money and compute: CPU, memory, bandwidth, database load, and third-party charges (SMS, email, AI model calls, payment checks).
+
+| Missing limit | Abuse |
+|---|---|
+| Request rate | Brute force, scraping, denial of service |
+| Page size | `?limit=1000000` dumps the whole table |
+| Payload / upload size | Memory exhaustion |
+| Query complexity (GraphQL) | Deeply nested queries that explode in cost |
+| Batch size | One request containing thousands of operations |
+| Paid third-party actions | Triggering thousands of SMS messages at your expense |
+
+**Prevent:** rate limits per user and per IP, maximum page and payload sizes, timeouts, GraphQL depth/complexity limits, spending caps and alerts on paid integrations.
+
+---
+
+## API5 — Broken Function Level Authorization (BFLA)
+
+Normal users reaching privileged functions — often just by guessing the URL or changing the method.
+
+```http
+GET    /api/users/812        ← allowed for everyone
+DELETE /api/users/812        ← should be admin-only… is it?
+POST   /api/admin/export     ← "hidden" because the UI never links to it
+```
+
+**Prevent:** deny by default; enforce role checks centrally for every route and method; keep admin APIs on separate routes, hosts or gateways with stricter controls.
+
+---
+
+## API6 — Unrestricted Access to Sensitive Business Flows
+
+No bug in the traditional sense — the API works exactly as designed, but nothing stops it being **automated at harmful scale**: scalper bots buying all concert tickets, mass fake sign-ups farming referral bonuses, reserving every appointment slot, or bulk-posting spam.
+
+**Prevent:** identify flows that are valuable to automate; add device fingerprinting, behavioural bot detection, CAPTCHAs or proof-of-human checks on those flows; set business limits (per account, per payment method, per device); monitor for unusual velocity.
+
+---
+
+## API7 — Server-Side Request Forgery (SSRF)
+
+APIs commonly accept URLs — webhooks, file imports, link previews, avatar URLs. If the server fetches them without restriction, attackers can reach internal services and cloud metadata endpoints.
+
+**Prevent:** allowlist destinations; resolve and check IPs at connection time; disable or re-validate redirects; block internal ranges at the network layer; use IMDSv2 on AWS. (In the main Top 10:2025, SSRF now sits inside A01.)
+
+---
+
+## API8 — Security Misconfiguration
+
+Permissive CORS, missing TLS, verbose error messages, unnecessary HTTP methods, missing security headers, default credentials on API gateways, and GraphQL introspection or debug consoles left on in production.
+
+**Prevent:** a repeatable hardening baseline, automated configuration checks, and the same environment parity practices as A02:2025.
+
+---
+
+## API9 — Improper Inventory Management
+
+You can't secure what you don't know exists.
+
+```text
+/api/v3/users   ← current, patched, behind the gateway
+/api/v2/users   ← "deprecated", still running, missing the latest auth fix
+/api/beta/users ← left over from a test, no rate limiting at all
+```
+
+Attackers routinely find older or undocumented versions that lack the protections added to the current one.
+
+**Prevent:** maintain an API inventory with owners and versions; generate documentation from code (OpenAPI); retire old versions on a schedule; route everything through a gateway; scan for shadow and zombie APIs.
+
+---
+
+## API10 — Unsafe Consumption of APIs
+
+Developers often trust data from third-party APIs more than user input — but a compromised or malicious partner API is just another attacker.
+
+| Mistake | Risk |
+|---|---|
+| Passing third-party data straight into SQL, HTML or commands | Injection through the partner |
+| Blindly following redirects from an integration | SSRF or credential leakage |
+| No timeouts or size limits on responses | Resource exhaustion |
+| Calling integrations over plain HTTP | Interception and tampering |
+
+**Prevent:** validate and sanitise third-party data like user input; use TLS; set timeouts and limits; allowlist redirect targets; assess the security of providers you depend on.
+
+---
+
+## API Testing Checklist
+
+- [ ] Get the spec (OpenAPI/Swagger, Postman collections, GraphQL introspection) — or build one from proxy traffic and JavaScript bundles.
+- [ ] Test BOLA on every ID with two accounts (see the A01 two-account method).
+- [ ] Try every HTTP method on every path; call admin paths as a normal user (BFLA).
+- [ ] Compare API responses with what the UI displays — extra fields are BOPLA findings.
+- [ ] Add unexpected fields (`role`, `isAdmin`, `ownerId`, `price`) to write requests.
+- [ ] Probe limits: huge `limit`/`pageSize`, large payloads, batched requests, deep GraphQL queries.
+- [ ] Enumerate versions (`/v1`, `/v2`, `/beta`, `/internal`) and test the old ones.
+- [ ] Inspect tokens: expiry, algorithm, claims, and what happens after logout or password change.
+- [ ] Test every URL-accepting field for SSRF.
+- [ ] For GraphQL: introspection enabled? field suggestions leaking schema? batching or aliasing abuse to bypass rate limits?
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+If you only learn one API attack, learn BOLA. It's the most common, the easiest to test (change an ID with a second account), and one of the most impactful. Many large API data breaches have come down to exactly that.
+
+</Admonition>
+
+---
+
+## Key Takeaways
+
+- The API Top 10 (2023) is dominated by authorization: object (API1), property (API3) and function (API5) levels.
+- APIs need explicit limits — on rate, size, cost and business-flow automation.
+- Old, undocumented and third-party APIs are frequent weak points.
+- Treat every ID, every field and every integration response as untrusted.
+
+**Go deeper:** [Misc & Emerging Web Attacks — Web API Pentesting](../Web-Security/15-misc-and-emerging-web-attacks.mdx)
+
+---
+
+## Next
+
+**[OWASP Projects Beyond the Top 10](./13-owasp-projects-asvs-wstg.mdx)**

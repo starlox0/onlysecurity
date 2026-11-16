@@ -1,0 +1,230 @@
+---
+sidebar_position: 9
+title: "A07:2025 — Authentication Failures"
+description: "Credential stuffing, weak passwords, broken session handling, flawed MFA and password reset — how authentication fails and what modern, NIST-aligned authentication looks like."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A07:2025 — Authentication Failures
+
+`OWASP` · `Top 10:2025` · `Reading time: ~13 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #7 in 2025 (also #7 in 2021; #2 in 2017 as "Broken Authentication") |
+| **Name change** | "Identification and Authentication Failures" became simply "Authentication Failures" |
+| **Mapped CWEs** | 36 |
+| **Example CWEs** | CWE-287 Improper Authentication, CWE-307 Improper Restriction of Excessive Authentication Attempts, CWE-384 Session Fixation, CWE-613 Insufficient Session Expiration, CWE-521 Weak Password Requirements, CWE-640 Weak Password Recovery Mechanism, CWE-798 Use of Hard-coded Credentials |
+
+---
+
+## In Plain English
+
+Authentication answers **"are you really who you say you are?"** — and then keeps remembering the answer for the rest of the session. It fails when:
+
+- an attacker can **guess or reuse** credentials,
+- an attacker can **skip** a step of the login or MFA process,
+- an attacker can **steal or fix** a session, or
+- the **recovery** process is easier to fool than the login itself.
+
+```text
+             ┌─ Credentials ──── guessed? reused? leaked?
+Login flow ──┼─ MFA ──────────── skippable? brute-forceable?
+             ├─ Session ──────── predictable? stolen? never expires?
+             └─ Recovery ─────── weaker than login?
+```
+
+An attacker only needs the weakest of these four.
+
+---
+
+## How It Happens
+
+| Failure | What it looks like |
+|---|---|
+| **Credential stuffing** | Attackers replay username/password pairs leaked from other sites. Works because people reuse passwords. |
+| **Brute force / password spraying** | Many guesses against one account, or one common password against many accounts. |
+| **Weak password policy** | Short passwords allowed, no check against known-breached passwords. |
+| **Username enumeration** | Different responses for "no such user" vs "wrong password" let attackers build target lists. |
+| **Session fixation** | The session ID isn't changed after login, so an attacker who planted one can use it. |
+| **Sessions that never die** | No idle or absolute timeout; logout doesn't invalidate the server-side session. |
+| **Session IDs in URLs** | Tokens leak via logs, browser history and `Referer` headers. |
+| **MFA bypass** | Post-login pages reachable before the MFA step, OTPs that can be brute-forced, or MFA not enforced on alternative endpoints (old API, mobile API). |
+| **Weak recovery** | Predictable reset tokens, tokens that don't expire, or reset links built from the attacker-controllable `Host` header. |
+| **Hard-coded or default credentials** | Service accounts and devices with known passwords. |
+| **JWT mistakes** | Accepting unsigned tokens, algorithm confusion, weak signing secrets, no expiry. |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Test the **whole** authentication journey, not just the login form: sign-up, login, MFA, "remember me," logout, password change, password reset, email change, and the mobile/API equivalents of each. Bugs usually hide in the less-visited paths.
+
+</Admonition>
+
+---
+
+## Vulnerable vs. Fixed Code
+
+<Tabs>
+<TabItem value="enum" label="Login responses" default>
+
+**Vulnerable** — tells attackers which usernames exist:
+
+```js
+if (!user) return res.status(404).json({ error: 'User not found' });
+if (!(await verify(user.hash, password))) {
+  return res.status(401).json({ error: 'Wrong password' });
+}
+```
+
+**Fixed** — one generic response and similar timing for both cases:
+
+```js
+const user = await Users.findOne({ email });
+const hash = user?.passwordHash ?? DUMMY_HASH;          // still do the slow hash
+const ok = await argon2.verify(hash, password) && !!user;
+if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
+```
+
+</TabItem>
+<TabItem value="session" label="Session fixation">
+
+**Vulnerable** — keeps the pre-login session ID:
+
+```js
+app.post('/login', async (req, res) => {
+  const user = await authenticate(req.body);
+  req.session.userId = user.id;      // same session ID as before login
+  res.redirect('/dashboard');
+});
+```
+
+**Fixed** — issue a brand-new session on login:
+
+```js
+app.post('/login', async (req, res, next) => {
+  const user = await authenticate(req.body);
+  req.session.regenerate((err) => {
+    if (err) return next(err);
+    req.session.userId = user.id;
+    res.redirect('/dashboard');
+  });
+});
+```
+
+</TabItem>
+<TabItem value="mfa" label="MFA step">
+
+**Vulnerable** — the session is fully authenticated before MFA:
+
+```js
+req.session.userId = user.id;            // already "logged in"
+res.redirect('/mfa');                    // attacker just browses to /dashboard
+```
+
+**Fixed** — a distinct, limited "pending MFA" state:
+
+```js
+req.session.pendingUserId = user.id;     // NOT logged in yet
+req.session.mfaAttempts = 0;
+res.redirect('/mfa');
+
+// in /mfa handler, on correct code (with attempt limits):
+req.session.regenerate(() => {
+  req.session.userId = pendingUserId;    // only now fully authenticated
+});
+```
+
+All protected routes check `userId`, never `pendingUserId`.
+
+</TabItem>
+<TabItem value="jwt" label="JWT verification">
+
+**Vulnerable** — trusts whatever algorithm the token claims:
+
+```js
+const payload = jwt.verify(token, publicKeyOrSecret);   // library-dependent behaviour
+```
+
+**Fixed** — pin the algorithm and validate standard claims:
+
+```js
+const payload = jwt.verify(token, PUBLIC_KEY, {
+  algorithms: ['RS256'],
+  issuer: 'https://auth.example.com',
+  audience: 'api.example.com',
+});   // also rejects expired tokens via the exp claim
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **23andMe (2023)** — Attackers used credential stuffing to access a relatively small number of accounts, then used a profile-sharing feature to reach data on a much larger number of users. A good example of how one authentication weakness combines with a design decision to multiply impact.
+- **Large-scale credential stuffing** — Streaming, gaming, retail and banking services are hit constantly by automated credential-stuffing campaigns built on billions of leaked credentials. It's one of the most common attacks on the internet.
+- **MFA fatigue (2022 and onwards)** — Several well-publicised breaches involved attackers bombarding users with push-notification MFA prompts until one was approved. This pushed the industry toward number matching and phishing-resistant MFA.
+
+---
+
+## How to Test for It
+
+- [ ] Compare responses (status, body, timing) for valid vs invalid usernames on login, registration and password reset.
+- [ ] Check for rate limiting and lockout — per account *and* per IP — and whether `X-Forwarded-For` tricks bypass it.
+- [ ] Test the password policy: minimum length, and whether common or breached passwords are rejected.
+- [ ] Confirm the session ID changes after login and privilege changes.
+- [ ] Check logout invalidates the session server-side (replay the old cookie after logging out).
+- [ ] Check idle and absolute session timeouts.
+- [ ] Try reaching post-login pages directly after the password step but before MFA.
+- [ ] Brute-force the MFA code (in a test environment) to check for attempt limits.
+- [ ] Test password reset: token randomness, expiry, single use, `Host` header poisoning, and whether it logs out other sessions.
+- [ ] Decode JWTs: check `alg`, expiry, and try `alg: none` and a modified signature.
+- [ ] Look for default credentials on admin panels and infrastructure.
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Multi-factor authentication** | The single most effective control against credential stuffing and password guessing. |
+| **Prefer phishing-resistant MFA** | Passkeys/WebAuthn and FIDO2 security keys can't be phished or pushed-bombed like SMS codes or simple push approvals. |
+| **Follow modern password guidance** (e.g. NIST SP 800-63B) | Favour length, check new passwords against breached-password lists, and drop forced periodic rotation and arbitrary complexity rules. |
+| **Rate limiting and bot detection** | Slow down stuffing and spraying; watch for distributed attempts. |
+| **Generic error messages** | Prevent username enumeration everywhere, including registration and reset. |
+| **Server-side, regenerated, expiring sessions** | New ID on login; idle and absolute timeouts; real logout. |
+| **Secure cookie flags** | `HttpOnly`, `Secure`, `SameSite`. |
+| **Use a proven identity platform** | Rolling your own authentication is where most of these bugs come from. |
+| **Protect recovery as strongly as login** | Single-use, short-lived, high-entropy tokens; notify the owner of changes. |
+
+---
+
+## Pro Notes
+
+- **Passkeys** (WebAuthn credentials synced across a user's devices) remove the shared secret entirely: there's no password to stuff, phish or leak from your database. They're the clear long-term direction for consumer authentication.
+- **Session vs token trade-offs.** Server-side sessions are easy to revoke; stateless JWTs are not. If you use JWTs, keep access tokens short-lived and put revocation logic around refresh tokens.
+- **Account takeover is usually a chain.** Many real account takeovers combine A07 with something else — an open redirect in the OAuth flow, an IDOR on the "change email" endpoint, or an XSS that steals a token.
+- **Monitor authentication events** (A09): failed logins, MFA failures, new-device logins and password resets are your best early-warning signals.
+
+---
+
+## Key Takeaways
+
+- Authentication fails through guessable/reused credentials, skippable steps, weak sessions or weak recovery.
+- MFA — ideally phishing-resistant passkeys or security keys — is the strongest single control.
+- Regenerate sessions on login, expire them, and invalidate them on logout.
+- Test every path: login, MFA, reset, email change, and the API and mobile equivalents.
+
+**Go deeper:** [Authentication & Session Attacks](../Web-Security/08-authentication-and-session-attacks.mdx)
+
+---
+
+## Next
+
+**[A08:2025 — Software or Data Integrity Failures](./09-a08-software-or-data-integrity-failures.mdx)**

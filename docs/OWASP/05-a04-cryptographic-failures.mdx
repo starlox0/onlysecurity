@@ -1,0 +1,228 @@
+---
+sidebar_position: 6
+title: "A04:2025 — Cryptographic Failures"
+description: "Unencrypted data, weak hashing, broken algorithms, bad randomness and poor key management — how sensitive data gets exposed and how to protect it properly."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A04:2025 — Cryptographic Failures
+
+`OWASP` · `Top 10:2025` · `Reading time: ~13 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #4 in 2025 (down from #2 in 2021) |
+| **History** | Called "Sensitive Data Exposure" (A3) in 2017 — renamed to focus on the *cause* (bad cryptography) rather than the *symptom* (exposed data) |
+| **Mapped CWEs** | 32 |
+| **Example CWEs** | CWE-319 Cleartext Transmission of Sensitive Information, CWE-327 Use of a Broken or Risky Cryptographic Algorithm, CWE-328 Use of Weak Hash, CWE-916 Use of Password Hash With Insufficient Computational Effort, CWE-321 Use of Hard-coded Cryptographic Key, CWE-330 Use of Insufficiently Random Values |
+
+---
+
+## In Plain English
+
+Some data — passwords, card numbers, health records, session tokens, API keys — must stay secret even if an attacker can see network traffic or steal a database. Cryptography is how we keep it secret. A cryptographic failure is any situation where that protection is **missing, weak, or used wrongly**.
+
+The most important lesson in this whole category is: **don't invent your own crypto, and don't configure it from memory.** Nearly every failure here comes from a well-meaning developer picking the wrong building block.
+
+---
+
+## The Three Places Data Needs Protecting
+
+```text
+1. In transit   — moving across a network         → TLS (HTTPS)
+2. At rest      — stored in a database, file, backup → encryption + access control
+3. Passwords    — a special case                   → slow, salted, one-way hashing
+```
+
+| Data | Correct tool | Common mistake |
+|---|---|---|
+| Web traffic | TLS 1.2+ (ideally 1.3), HSTS | Serving login pages over HTTP; mixed content; outdated TLS versions |
+| Stored sensitive fields | Authenticated encryption such as AES-GCM or ChaCha20-Poly1305 | Plaintext columns; ECB mode; "encryption" with a hard-coded key |
+| Passwords | Argon2id, scrypt, bcrypt (or PBKDF2 with a high iteration count) | MD5/SHA-1/SHA-256 without salt; reversible encryption of passwords |
+| Tokens & secrets | Cryptographically secure random generator | `Math.random()`, timestamps, sequential IDs |
+| Integrity of data | HMAC or digital signatures | Plain hashes that anyone can recompute |
+
+<Admonition type="tip" title="Freshers' takeaway: hashing vs encryption vs encoding">
+
+- **Encoding** (Base64, URL encoding) is *not security at all* — anyone can reverse it. It just changes format.
+- **Encryption** is reversible *with a key*. Use it when you need the original data back (e.g. a stored card token).
+- **Hashing** is one-way. Use it when you only need to *check* a value later (e.g. a password).
+
+Calling Base64 "encryption" is one of the most common beginner red flags in code review.
+
+</Admonition>
+
+---
+
+## How It Happens
+
+| Failure | Why it's a problem |
+|---|---|
+| **No encryption in transit** | Anyone on the network path (public Wi-Fi, compromised router) can read or alter traffic. |
+| **Fast hashes for passwords** | MD5 and SHA-256 are designed to be fast — GPUs can try billions of guesses per second against a stolen database. |
+| **Unsalted hashes** | Identical passwords produce identical hashes, so precomputed tables crack many at once. |
+| **Broken algorithms** | MD5 and SHA-1 for signatures, DES/3DES, RC4 — all have known practical weaknesses. |
+| **Wrong cipher mode** | ECB mode encrypts identical blocks identically, leaking patterns. CBC without integrity checks allows padding-oracle attacks. |
+| **Reused IVs/nonces** | Reusing a nonce with AES-GCM can destroy both confidentiality and integrity. |
+| **Hard-coded or weak keys** | A key in source code is a key in every copy of your repository and every decompiled binary. |
+| **Poor randomness** | Predictable tokens let attackers guess password-reset links or session IDs. |
+| **Missing certificate validation** | Code that disables TLS verification "to make it work" invites man-in-the-middle attacks. |
+| **Unnecessary data storage** | Data you never stored can't be leaked. |
+
+---
+
+## Vulnerable vs. Fixed Code
+
+<Tabs>
+<TabItem value="pw" label="Password storage" default>
+
+**Vulnerable** — fast, unsalted hash:
+
+```python
+import hashlib
+
+def store_password(pw):
+    return hashlib.md5(pw.encode()).hexdigest()
+```
+
+**Fixed** — memory-hard, salted password hashing (salt is handled by the library):
+
+```python
+from argon2 import PasswordHasher
+
+ph = PasswordHasher()   # Argon2id with sensible defaults
+
+def store_password(pw):
+    return ph.hash(pw)
+
+def verify_password(stored_hash, pw):
+    try:
+        return ph.verify(stored_hash, pw)
+    except Exception:
+        return False
+```
+
+</TabItem>
+<TabItem value="rand" label="Random tokens">
+
+**Vulnerable** — predictable reset token:
+
+```js
+const token = Math.random().toString(36).slice(2);   // not cryptographically secure
+```
+
+**Fixed** — cryptographically secure randomness:
+
+```js
+const crypto = require('node:crypto');
+const token = crypto.randomBytes(32).toString('hex');   // 256 bits of entropy
+// Store only a hash of the token server-side, with an expiry, and make it single-use.
+```
+
+</TabItem>
+<TabItem value="enc" label="Field encryption">
+
+**Vulnerable** — ECB mode with a hard-coded key:
+
+```java
+SecretKeySpec key = new SecretKeySpec("MySuperSecretKey".getBytes(), "AES");
+Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+```
+
+**Fixed** — authenticated encryption, random nonce, key from a managed store:
+
+```java
+SecretKey key = keyManagementService.getDataKey("customer-pii");  // KMS / vault
+byte[] nonce = new byte[12];
+new SecureRandom().nextBytes(nonce);
+
+Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(128, nonce));
+byte[] ciphertext = cipher.doFinal(plaintext);
+// store nonce + ciphertext together; never reuse a nonce with the same key
+```
+
+</TabItem>
+<TabItem value="tls" label="TLS verification">
+
+**Vulnerable** — certificate checking disabled:
+
+```python
+requests.get("https://payments.internal/api", verify=False)
+```
+
+**Fixed** — keep verification on; trust a private CA explicitly if needed:
+
+```python
+requests.get("https://payments.internal/api", verify="/etc/ssl/internal-ca.pem")
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **Adobe (2013)** — Millions of user passwords were stored using reversible 3DES encryption in ECB mode rather than a password hash, alongside plaintext password hints. Because identical passwords produced identical ciphertext, and hints were visible, large numbers of passwords could be inferred.
+- **LinkedIn (2012)** — Password hashes were stored as unsalted SHA-1. Once the database leaked, the vast majority were cracked quickly.
+- **Heartbleed (CVE-2014-0160)** — A memory-disclosure bug in the OpenSSL library let attackers read server memory, including private keys and session data. This one is also a supply chain lesson: one library, a huge share of the internet's servers.
+
+---
+
+## How to Test for It
+
+- [ ] Check every page and API is served only over HTTPS, with HSTS, and that HTTP redirects to HTTPS.
+- [ ] Scan TLS configuration (`testssl.sh`, `sslscan`) for old protocol versions and weak cipher suites.
+- [ ] Look for sensitive data in URLs (tokens in query strings end up in logs and `Referer` headers).
+- [ ] Collect many tokens (session IDs, reset tokens) and analyse randomness — Burp Sequencer is built for this.
+- [ ] In code review: search for `md5`, `sha1`, `ECB`, `DES`, `Math.random`, `verify=False`, `rejectUnauthorized: false`, hard-coded keys.
+- [ ] Check how passwords are stored (in a white-box test) and whether password reset leaks old passwords (if it can email your old password, it's stored reversibly).
+- [ ] Check cache headers on pages showing sensitive data (`Cache-Control: no-store`).
+- [ ] Look for secrets committed to repositories with a secrets scanner (gitleaks, trufflehog).
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Classify data first** | Know which fields are sensitive before choosing protection. |
+| **Don't store what you don't need** | The safest data is data you never collected. Tokenise or truncate where possible. |
+| **TLS everywhere, HSTS on** | Including internal service-to-service traffic. |
+| **Use vetted, high-level libraries** | libsodium, Tink, or your platform's recommended APIs — not raw primitives. |
+| **Password hashing: Argon2id, scrypt or bcrypt** | Designed to be slow and memory-hard, making offline cracking expensive. |
+| **Authenticated encryption** | AES-GCM or ChaCha20-Poly1305 protect both secrecy and integrity. |
+| **Manage keys properly** | Keys in a KMS, HSM or secrets vault; rotated; never in source code. |
+| **Use a CSPRNG** for anything security-relevant | `crypto.randomBytes`, `secrets` module, `SecureRandom`. |
+| **Disable caching of sensitive responses** | Prevents data lingering in browsers and proxies. |
+
+---
+
+## Pro Notes
+
+- **Envelope encryption** is the standard pattern for data at rest: data is encrypted with a data key; that key is encrypted with a master key held in a KMS. Rotation then means re-wrapping data keys, not re-encrypting everything.
+- **Pepper** — a secret added to passwords before hashing, stored separately from the database (for example, in an HSM) — adds protection if only the database leaks.
+- **Timing-safe comparisons** matter whenever comparing secrets, MACs or tokens; see [Timing Attacks & Denial of Service](../Web-Security/14-timing-and-dos-attacks.mdx).
+- **Crypto agility** — designing so algorithms can be swapped — is becoming essential as organisations prepare to move to **post-quantum** algorithms (for example, the NIST-standardised ML-KEM and ML-DSA). Attackers may "harvest now, decrypt later," so long-lived secrets are the first priority.
+- **JWT pitfalls** (accepting `alg: none`, algorithm confusion, weak HMAC secrets) are cryptographic failures that show up as authentication bugs — see A07.
+
+---
+
+## Key Takeaways
+
+- Protect sensitive data in transit (TLS), at rest (authenticated encryption) and passwords (slow salted hashing).
+- Encoding isn't encryption; encryption isn't hashing — use each for its own job.
+- Most failures come from choosing the wrong primitive or managing keys badly, not from breaking strong algorithms.
+- Use vetted libraries, a CSPRNG, and a proper key-management service.
+
+---
+
+## Next
+
+**[A05:2025 — Injection](./06-a05-injection.mdx)**

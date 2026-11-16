@@ -1,0 +1,225 @@
+---
+sidebar_position: 4
+title: "A02:2025 — Security Misconfiguration"
+description: "Default credentials, exposed admin consoles, verbose errors, missing security headers, open cloud storage and XXE — why misconfiguration jumped to #2 and how to harden systems."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A02:2025 — Security Misconfiguration
+
+`OWASP` · `Top 10:2025` · `Reading time: ~12 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #2 in 2025 (up from #5 in 2021; #6 in 2017) |
+| **Mapped CWEs** | 16 |
+| **Example CWEs** | CWE-16 Configuration, CWE-611 XML External Entity Reference (XXE), CWE-1004 Sensitive Cookie Without HttpOnly, CWE-614 Sensitive Cookie Without Secure, CWE-942 Permissive Cross-domain Policy, CWE-489 Active Debug Code, CWE-526 Exposure of Sensitive Information Through Environment Variables |
+| **Why it climbed** | Applications are increasingly assembled from configurable services, frameworks and cloud resources — more settings, more teams, more chances to get one wrong |
+
+---
+
+## In Plain English
+
+The code can be perfect and the application still be wide open — because something around it was **set up insecurely**. A default admin password nobody changed. A debug page left on in production. A storage bucket set to public "just for testing." A server that cheerfully prints a full stack trace to anyone who breaks a request.
+
+Misconfiguration is the security equivalent of building a vault and leaving the door propped open.
+
+```text
+Secure code
+   + insecure framework setting
+   + insecure server setting
+   + insecure cloud setting
+   = insecure application
+```
+
+---
+
+## How It Happens
+
+| Category | Typical examples |
+|---|---|
+| **Defaults left in place** | Default accounts (`admin/admin`), sample apps, default API keys, default TLS settings. |
+| **Debug/dev features in production** | Debug mode, stack traces, Spring Boot Actuator endpoints, PHP `phpinfo()`, GraphQL introspection, Swagger UI with live "try it" enabled. |
+| **Unnecessary features enabled** | Open ports, unused services, directory listing, HTTP methods like `TRACE`/`PUT` enabled on a static server. |
+| **Overly permissive cloud settings** | Public storage buckets, security groups open to `0.0.0.0/0`, wildcard IAM policies (`"Action": "*"`). |
+| **Missing hardening headers** | No `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, or frame protections. |
+| **Insecure cookie settings** | Session cookies missing `HttpOnly`, `Secure` or `SameSite`. |
+| **Unsafe parser defaults** | XML parsers resolving external entities (XXE) — moved into this category in 2021. |
+| **Inconsistent environments** | Staging is hardened, production isn't — or a forgotten old server is still running. |
+| **Secrets in the wrong place** | Credentials in environment dumps, `.env` files served by the web server, or `.git` directories exposed publicly. |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Misconfiguration bugs are often the **easiest findings for beginners**. You don't need to understand complex exploitation — just know where to look. Visiting `/.git/HEAD`, `/.env`, `/server-status` or `/actuator/env` on a test target and finding something there is a real, reportable vulnerability.
+
+</Admonition>
+
+---
+
+## Vulnerable vs. Fixed Configuration
+
+<Tabs>
+<TabItem value="express" label="Express errors" default>
+
+**Vulnerable** — stack traces sent to the client:
+
+```js
+app.use((err, req, res, next) => {
+  res.status(500).send(err.stack);   // leaks file paths, library versions, queries
+});
+```
+
+**Fixed** — generic message to the user, detail to the logs:
+
+```js
+app.use((err, req, res, next) => {
+  const errorId = crypto.randomUUID();
+  logger.error({ errorId, err, path: req.path });   // full detail stays server-side
+  res.status(500).json({ error: 'Internal error', errorId });
+});
+```
+
+The `errorId` lets support staff find the real error without exposing it.
+
+</TabItem>
+<TabItem value="headers" label="Security headers">
+
+**Vulnerable** — no hardening headers, framework version advertised:
+
+```http
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: text/html
+```
+
+**Fixed** — sensible baseline (for Express, the `helmet` package sets most of these):
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+Content-Security-Policy: default-src 'self'; object-src 'none'; frame-ancestors 'none'
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+</TabItem>
+<TabItem value="s3" label="Cloud storage">
+
+**Vulnerable** — bucket policy readable by anyone:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": "*",
+  "Action": "s3:GetObject",
+  "Resource": "arn:aws:s3:::customer-exports/*"
+}
+```
+
+**Fixed** — block public access at the account level, grant only the specific role that needs it:
+
+```json
+{
+  "Effect": "Allow",
+  "Principal": { "AWS": "arn:aws:iam::123456789012:role/export-service" },
+  "Action": "s3:GetObject",
+  "Resource": "arn:aws:s3:::customer-exports/*"
+}
+```
+
+</TabItem>
+<TabItem value="xxe" label="XXE (Java)">
+
+**Vulnerable** — default parser settings may resolve external entities:
+
+```java
+DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+DocumentBuilder db = dbf.newDocumentBuilder();
+Document doc = db.parse(userUploadedXml);
+```
+
+**Fixed** — disable DOCTYPE declarations entirely:
+
+```java
+DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+dbf.setXIncludeAware(false);
+dbf.setExpandEntityReferences(false);
+DocumentBuilder db = dbf.newDocumentBuilder();
+Document doc = db.parse(userUploadedXml);
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **Exposed cloud storage and databases** — Over the past decade, researchers have repeatedly found huge datasets in publicly readable storage buckets and internet-exposed databases (Elasticsearch, MongoDB) running without authentication. No exploit was needed — just a search engine for exposed services.
+- **Capital One (2019)** — Beyond the SSRF itself, the impact depended on a misconfigured firewall and an overly permissive IAM role. Misconfiguration turned a single bug into a mass data breach.
+- **Exposed `.git` directories** — A recurring finding in which a deployed site's version-control directory can be downloaded, letting an attacker reconstruct source code, history and sometimes hard-coded secrets.
+
+---
+
+## How to Test for It
+
+- [ ] Fingerprint the stack from headers, error pages, cookies and file extensions.
+- [ ] Try default credentials on every login you find, especially admin consoles, routers, CI dashboards and databases.
+- [ ] Request common sensitive paths: `/.git/HEAD`, `/.env`, `/config.json`, `/backup.zip`, `/server-status`, `/phpinfo.php`, `/actuator`, `/swagger-ui/`, `/graphql` (introspection).
+- [ ] Break requests deliberately (bad types, malformed JSON, very long values) and look for stack traces or debug output.
+- [ ] Check response headers for HSTS, CSP, `X-Content-Type-Options`, frame protection — and for version-leaking headers.
+- [ ] Inspect every cookie for `HttpOnly`, `Secure` and `SameSite`.
+- [ ] Test allowed HTTP methods with an `OPTIONS` request and by trying `PUT`, `DELETE` and `TRACE`.
+- [ ] Look for directory listing on static asset paths.
+- [ ] For cloud targets in scope: check storage bucket permissions, open security groups and public snapshots.
+- [ ] Feed any XML input a harmless external-entity test to check whether entities are resolved.
+
+Tools that help: `nikto` and `nuclei` for known misconfiguration signatures, `testssl.sh` for TLS settings, cloud posture tools (for example Prowler or ScoutSuite) for AWS/Azure/GCP.
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Repeatable hardening** | Build every environment from the same automated configuration (infrastructure as code, golden images), so production can't drift from the reviewed baseline. |
+| **Minimal platform** | Remove sample apps, unused features, frameworks and ports. Anything not installed can't be misconfigured. |
+| **Separate config per environment, same security baseline** | Dev can have debug on; production must not — enforced by the pipeline, not by memory. |
+| **Scan configuration in CI** | Policy-as-code and IaC scanners catch public buckets and open security groups before deployment. |
+| **Security headers by default** | Set them centrally (middleware, reverse proxy, CDN) rather than per page. |
+| **Generic errors to users, detail to logs** | Users get an error ID; engineers get the stack trace. |
+| **Regular external review** | Periodically scan your own external attack surface — attackers do it continuously. |
+| **Segment architecture** | Separate tiers and tenants with network rules and containers so one mistake doesn't expose everything. |
+
+---
+
+## Pro Notes
+
+- **Configuration drift** is the silent killer. A server hardened at launch can be wide open six months later after "temporary" changes. Continuous compliance scanning against a benchmark (such as the CIS Benchmarks) catches drift.
+- **CSP is configuration too.** A Content Security Policy containing `'unsafe-inline'` and `'unsafe-eval'` exists on paper but blocks almost nothing. Prefer nonce- or hash-based policies.
+- **Cloud IAM is the new perimeter.** In cloud environments, an overly broad role is often a bigger risk than an open port. Review effective permissions, not just policy documents.
+- **Shadow assets.** Forgotten staging servers, old marketing microsites, and test subdomains are often the weakest configured — and the hardest to find without proper asset inventory.
+
+---
+
+## Key Takeaways
+
+- Misconfiguration means insecure settings around otherwise correct code — defaults, debug features, permissive cloud policies, missing headers.
+- It rose to #2 in 2025 because modern systems are mostly configuration, spread across many teams.
+- XXE now lives here: it's fixed by configuring XML parsers safely.
+- Automated, repeatable, minimal configuration — scanned in CI — is the core defence.
+
+**Go deeper:** [XML, XXE & Data-Format Attacks](../Web-Security/04-xml-and-data-format-attacks.mdx) · [Caching & Infrastructure Abuse](../Web-Security/13-caching-and-infrastructure-abuse.mdx)
+
+---
+
+## Next
+
+**[A03:2025 — Software Supply Chain Failures](./04-a03-software-supply-chain-failures.mdx)**

@@ -1,0 +1,217 @@
+---
+sidebar_position: 10
+title: "A08:2025 — Software or Data Integrity Failures"
+description: "Insecure deserialization, unsigned updates, untrusted CDN scripts and tamperable client-side data — what happens when code or data is trusted without verifying its integrity."
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# A08:2025 — Software or Data Integrity Failures
+
+`OWASP` · `Top 10:2025` · `Reading time: ~11 min`
+
+## At a Glance
+
+| | |
+|---|---|
+| **Rank** | #8 in 2025 (also #8 in 2021) |
+| **History** | Introduced in 2021, absorbing A8:2017 "Insecure Deserialization" |
+| **Example CWEs** | CWE-502 Deserialization of Untrusted Data, CWE-345 Insufficient Verification of Data Authenticity, CWE-353 Missing Support for Integrity Check, CWE-494 Download of Code Without Integrity Check, CWE-565 Reliance on Cookies without Validation and Integrity Checking, CWE-829 Inclusion of Functionality from Untrusted Control Sphere |
+| **Relationship to A03** | A03 is about the *supply chain* as a whole; A08 is about the specific failure to *verify* that code or data hasn't been altered — inside your own application as well as at its boundaries |
+
+---
+
+## In Plain English
+
+**Integrity** means "this is exactly what it's supposed to be, and nobody has changed it." An integrity failure is trusting something — code, an update, a data blob, a cookie — **without checking** that it hasn't been tampered with.
+
+```text
+Data / code arrives
+      │
+      ▼
+ Did we verify it?  ──No──►  Trusted anyway  ──►  A08
+      │
+     Yes (signature, hash, MAC)
+      │
+      ▼
+ Safe to use
+```
+
+Three common forms:
+
+1. **Insecure deserialization** — turning attacker-supplied bytes back into live objects.
+2. **Unverified code** — auto-updates, plugins or CDN scripts loaded without a signature or hash check.
+3. **Tamperable data** — trusting values the client holds (cookies, hidden fields, local storage) as if the server wrote them.
+
+---
+
+## How It Happens
+
+| Failure | Example |
+|---|---|
+| **Native deserialization of untrusted data** | Java `ObjectInputStream`, Python `pickle`, PHP `unserialize`, .NET `BinaryFormatter` on data from cookies, requests or queues. Can lead to remote code execution. |
+| **Unsigned auto-updates** | An app or device downloads updates over HTTP, or without checking a signature. |
+| **Third-party scripts without SRI** | A page loads a library from a CDN; if the CDN is compromised, so is every page using it. |
+| **Client-held state without integrity checks** | A cookie like `role=user` or a base64 JSON blob the server trusts without a signature. |
+| **Unsafe YAML/XML object loading** | Parsers that can create arbitrary objects from type tags. |
+| **CI/CD pulling unverified artifacts** | Pipelines that download and run scripts (for example `curl … \| bash`) without verification. |
+| **Plugin and extension ecosystems** | Installing plugins from untrusted sources into a CMS or IDE. |
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Look for **opaque blobs** while testing: a long base64 string in a cookie, a hidden form field full of random-looking text, a `ViewState` parameter. Decode them. If you can read or change what's inside, and the server accepts your changed version, you've found an integrity failure — and possibly something much worse if it's a serialized object.
+
+</Admonition>
+
+---
+
+## Vulnerable vs. Fixed Code
+
+<Tabs>
+<TabItem value="pickle" label="Deserialization" default>
+
+**Vulnerable** — unpickling data from a cookie:
+
+```python
+import pickle, base64
+prefs = pickle.loads(base64.b64decode(request.cookies["prefs"]))
+# A crafted pickle can execute arbitrary code during loading.
+```
+
+**Fixed** — plain data format plus validation:
+
+```python
+import json
+from pydantic import BaseModel
+
+class Prefs(BaseModel):
+    theme: str = "dark"
+    language: str = "en"
+
+prefs = Prefs.model_validate(json.loads(request.cookies.get("prefs", "{}")))
+```
+
+</TabItem>
+<TabItem value="cookie" label="Signed client state">
+
+**Vulnerable** — server trusts a readable, editable cookie:
+
+```text
+Cookie: user=eyJpZCI6NDIsInJvbGUiOiJ1c2VyIn0=     (base64 of {"id":42,"role":"user"})
+```
+
+**Fixed** — keep state server-side (store only a random session ID), or sign it:
+
+```js
+// Express: signed cookies via cookie-parser with a strong secret
+app.use(cookieParser(process.env.COOKIE_SECRET));
+res.cookie('prefs', JSON.stringify(prefs), { signed: true, httpOnly: true, secure: true });
+
+// Reading: only trust req.signedCookies — tampered values come back as false
+const prefs = req.signedCookies.prefs;
+```
+
+Never put authorization data (roles, user IDs) in client-held state unless it's signed and verified — and prefer server-side sessions for it anyway.
+
+</TabItem>
+<TabItem value="sri" label="CDN scripts">
+
+**Vulnerable** — no integrity check:
+
+```html
+<script src="https://cdn.example.com/lib/4.2.1/lib.min.js"></script>
+```
+
+**Fixed** — Subresource Integrity: the browser refuses the file if its hash doesn't match:
+
+```html
+<script
+  src="https://cdn.example.com/lib/4.2.1/lib.min.js"
+  integrity="sha384-REPLACE_WITH_THE_REAL_HASH_OF_THE_FILE"
+  crossorigin="anonymous"></script>
+```
+
+Or self-host critical scripts from your own origin.
+
+</TabItem>
+<TabItem value="update" label="Updates">
+
+**Vulnerable:**
+
+```bash
+curl -s http://updates.example.com/agent.sh | sudo bash
+```
+
+**Fixed** — HTTPS, pinned version, checksum or signature verified before running:
+
+```bash
+curl -fsSLO https://updates.example.com/agent-2.3.1.tar.gz
+curl -fsSLO https://updates.example.com/agent-2.3.1.tar.gz.sig
+cosign verify-blob --key vendor.pub --signature agent-2.3.1.tar.gz.sig agent-2.3.1.tar.gz
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## Real-World Incidents
+
+- **Polyfill.io (2024)** — A widely embedded JavaScript CDN domain changed ownership and was then reported to serve malicious, redirecting code to some visitors of the many sites that loaded scripts from it. Sites that self-hosted or used integrity checks weren't affected in the same way.
+- **Codecov (2021)** — A modified uploader script, downloaded and executed in CI pipelines without verification, exfiltrated secrets from customers' build environments.
+- **Java deserialization (2015 onwards)** — Research showing exploitable "gadget chains" in common Java libraries such as Apache Commons Collections led to a long series of remote code execution vulnerabilities in enterprise products that deserialized untrusted input.
+
+---
+
+## How to Test for It
+
+- [ ] Decode every cookie, hidden field and token. Look for serialized formats (Java serialization often starts with bytes `AC ED`, base64 `rO0`; PHP serialized data looks like `a:2:{...}` or `O:4:"User"`; .NET `ViewState`).
+- [ ] Modify decoded values and resend — does the server accept them without complaint?
+- [ ] Check third-party scripts for SRI attributes, and note which external domains the site trusts.
+- [ ] Check how the application, its agents or devices receive updates: HTTPS? signatures? version pinning?
+- [ ] Review CI/CD for scripts downloaded and executed without verification.
+- [ ] In code review, search for `pickle.loads`, `yaml.load` (without a safe loader), `ObjectInputStream`, `unserialize`, `BinaryFormatter`, `Marshal.load`.
+- [ ] Use specialised tools (such as ysoserial for Java) only in an authorised environment to confirm deserialization findings.
+
+---
+
+## How to Prevent It
+
+| Practice | Why |
+|---|---|
+| **Don't deserialize untrusted data with native formats** | Use JSON or similar plain data formats with strict schema validation. |
+| **If you must deserialize, restrict types** | Allowlist the classes that may be created; run in a low-privilege, isolated process. |
+| **Sign anything you hand to the client and expect back** | HMAC or digital signatures make tampering detectable. |
+| **Keep sensitive state server-side** | A random session ID is safer than a signed blob for anything authorization-related. |
+| **Use SRI or self-host third-party scripts** | Prevents a compromised CDN from compromising you. |
+| **Verify signatures on updates and artifacts** | Code signing plus verification at install time. |
+| **Review changes to code and configuration** | Protected branches and mandatory reviews make silent tampering harder. |
+| **Monitor integrity** | Alert when deployed files or critical configuration change unexpectedly. |
+
+---
+
+## Pro Notes
+
+- **Gadget chains** are the reason deserialization is so dangerous: the attacker doesn't need a bug in your code — just classes on your classpath whose ordinary methods can be chained into something harmful during object reconstruction.
+- **Signing isn't encryption.** A signed cookie can still be read by the user. Don't put secrets in it.
+- **Key rotation for signing secrets** matters: if a cookie-signing or JWT secret leaks, every token signed with it can be forged until the key is rotated.
+- **Content Security Policy** complements SRI by restricting which domains scripts may load from at all.
+
+---
+
+## Key Takeaways
+
+- Integrity failures mean trusting code or data without verifying it hasn't been altered.
+- Insecure deserialization is the most severe form — it can lead straight to remote code execution.
+- Sign or keep server-side anything the client holds that the server later trusts.
+- Use SRI, signed updates and verified artifacts for code you don't build yourself.
+
+**Go deeper:** [Deserialization & Supply-Chain Attacks](../Web-Security/11-deserialization-and-supply-chain.mdx)
+
+---
+
+## Next
+
+**[A09:2025 — Security Logging & Alerting Failures](./10-a09-security-logging-and-alerting-failures.mdx)**
