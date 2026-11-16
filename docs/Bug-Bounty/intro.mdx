@@ -1,1 +1,126 @@
+---
+sidebar_position: 1
+title: "Start Here: The Hunter's Path"
+description: "A stage-by-stage roadmap from zero to professional bug bounty hunter — how this section is organised, what each level looks like, and where to start today."
+---
+
+import Admonition from '@theme/Admonition';
+
+# Start Here: The Hunter's Path
+
+`Bug Bounty` · `Start Here` · `Level: Everyone` · `Reading time: ~8 min`
+
+Bug bounty hunting means finding security vulnerabilities in real companies' systems — with their permission — and getting rewarded for reporting them responsibly. It is one of the few fields where a self-taught beginner and a twenty-year veteran compete on exactly the same targets, and where the only thing that counts is a **valid, well-reported bug**.
+
+This section is built as a **path**, not a pile of links. It pulls together the methods used by working hunters, community methodology repositories, public write-ups and research, and reorganises them into one route you can follow from your first day to full-time hunting.
+
+---
+
+## The Five Stages
+
+```text
+Stage 1  FOUNDATIONS        Understand the game, learn the core skills, set up your tools
+   │
+Stage 2  RECON              Map the target: domains, endpoints, JavaScript, leaks
+   │
+Stage 3  HUNTING            A methodology + a Hunt Card for every bug class
+   │
+Stage 4  LEVEL UP           Automation, chaining, source code, CVEs, AI done right
+   │
+Stage 5  REPORT & CAREER    Reports that pay, triage, disputes, income, longevity
+```
+
+Each stage is a folder in the sidebar. Read in order the first time; afterwards, use it as a reference.
+
+---
+
+## Where Are You Now?
+
+| Level | You are… | Focus on | Start with |
+|---|---|---|---|
+| **L0 — Curious** | New to security; maybe new to programming | HTTP, how websites work, Linux basics | [What Bug Bounty Really Is](./01-Foundations/01-what-is-bug-bounty.mdx) |
+| **L1 — Learner** | Know the basics, solving labs, no valid bugs yet | Labs, one bug class at a time, first program | [Skills Roadmap](./01-Foundations/02-skills-roadmap.mdx) |
+| **L2 — First Blood** | 1–5 valid reports, lots of duplicates | Deeper app understanding, less spraying | [Hunting Methodology](./03-Hunting/01-hunting-methodology.mdx) |
+| **L3 — Consistent** | Regular valid findings, some private invites | Specialisation, chaining, report quality | [Chaining & Impact](./04-Level-Up/02-chaining-and-impact.mdx) |
+| **L4 — Professional** | Meaningful income, high/critical findings | Automation, source review, novel research | [Automation Pipelines](./04-Level-Up/01-automation-pipelines.mdx) |
+| **L5 — Researcher** | Finding new techniques others then use | Publishing, tooling, live hacking events | [Source Code & CVE Hunting](./04-Level-Up/03-source-code-and-cve-hunting.mdx) |
+
+<Admonition type="tip" title="The honest timeline">
+
+Most people take **months**, not weeks, to find their first valid bug — and many quit just before they would have. Expect to spend your first period mostly learning and collecting duplicates. That's normal. Consistency beats talent in this field.
+
+</Admonition>
+
+---
+
+## How Pages Are Built
+
+Every page has a header line showing its **stage**, **level** and **reading time**, so you know at a glance whether it's for you yet.
+
+You'll see two recurring callout boxes:
+
+<Admonition type="tip" title="Beginner lane">
+
+The simplest version of the idea — what to actually do on your first attempt.
+
+</Admonition>
+
+<Admonition type="info" title="Pro lane">
+
+The nuance, edge cases and techniques experienced hunters use to find what everyone else missed.
+
+</Admonition>
+
+In Stage 3, every vulnerability class gets a **Hunt Card** with the same five parts:
+
+| Part | Answers |
+|---|---|
+| **Where it hides** | Which features and parameters to look at |
+| **First tests** | The quickest checks to run |
+| **Escalate** | How to turn a weak finding into a high-impact one |
+| **Prove it** | What a convincing proof of concept looks like |
+| **Why it gets rejected** | The common reasons reports in this class are closed as N/A or informative |
+
+---
+
+## How This Fits With the Rest of OnlySecurity
+
+This section focuses on the **hunting process**: finding targets, finding bugs, proving and reporting them. For the underlying theory of each vulnerability, it links out to:
+
+- **[Web Security](/docs/category/web-security)** — how each vulnerability works and how it's fixed.
+- **[OWASP](/docs/category/owasp)** — the Top 10:2025, the API Top 10, ASVS and WSTG.
+
+Practise on the **[CTF](/ctf)** page and check fresh CVEs on **[CVE Radar](/cve-radar)** when a new technology shows up in your recon.
+
+---
+
+## The Three Rules That Never Change
+
+<Admonition type="warning" title="Read this before anything else">
+
+1. **Only test what's in scope.** Testing outside a program's scope — or a company without a program — can be illegal, regardless of your intentions.
+2. **Follow the program's rules.** Rate limits, banned techniques (DoS, social engineering, physical), test-account requirements, and data-handling rules are part of the contract.
+3. **Do no harm.** Use your own test accounts. Don't access, keep or share other people's data beyond the minimum needed to prove the issue. Stop and report as soon as impact is proven.
+
+</Admonition>
+
+---
+
+## Your First Hour
+
+If you're starting today:
+
+1. Read **[What Bug Bounty Really Is](./01-Foundations/01-what-is-bug-bounty.mdx)** (15 minutes).
+2. Create a free account on the **PortSwigger Web Security Academy** and solve the first access-control lab.
+3. Install **Burp Suite Community** or **Caido** and proxy your browser through it (see **[Hunter Setup](./01-Foundations/04-hunter-setup.mdx)**).
+4. Create accounts on one or two bug bounty platforms and *read* a few public programs' policies — don't test anything yet.
+5. Read three disclosed reports on HackerOne Hacktivity for a bug class you just studied.
+
+That's it. You've started.
+
+---
+
+## Next
+
+**[Stage 1 · What Bug Bounty Really Is](./01-Foundations/01-what-is-bug-bounty.mdx)**
 
