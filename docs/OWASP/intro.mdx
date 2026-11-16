@@ -1,1 +1,155 @@
+---
+sidebar_position: 1
+title: "What Is OWASP?"
+description: "Who OWASP is, what its flagship projects are, how the Top 10 is built, and how to study this section whether you're a fresher or a working professional."
+---
+
+import Admonition from '@theme/Admonition';
+
+# What Is OWASP?
+
+`OWASP` · `Introduction` · `Reading time: ~8 min`
+
+**OWASP** — the **Open Worldwide Application Security Project** — is a non-profit foundation that produces free, vendor-neutral material on software security. If you work anywhere near web applications, you will run into OWASP constantly: in job descriptions, in audit reports, in compliance checklists, in bug bounty program rules, and in code review comments.
+
+This section explains OWASP's most important work in depth. It is written so that a fresher can read it top to bottom and come out with a solid mental model, while a professional can jump straight to a single risk and find testing checklists, code-level fixes, and the CWE mappings auditors care about.
+
+<Admonition type="info" title="The name changed">
+
+You will still see the older expansion **Open Web Application Security Project** in books and slides. The foundation changed "Web" to "Worldwide" in 2023 to reflect that its work now covers APIs, mobile, cloud, and AI — not just websites. Same organisation, same acronym.
+
+</Admonition>
+
+---
+
+## Why OWASP Matters
+
+| For… | OWASP gives you… |
+|---|---|
+| **Freshers** | A shared vocabulary. When someone says "that's an A01 issue," you'll know they mean broken access control. |
+| **Developers** | Concrete "do this, not that" guidance through the Cheat Sheet Series and ASVS. |
+| **Pentesters & bug hunters** | A testing methodology (WSTG) and a map of where real-world bugs cluster. |
+| **Security leads & auditors** | A widely recognised baseline to measure applications and vendors against. |
+
+Everything OWASP publishes is free and open-source, built by volunteers from across the industry. That neutrality is a big part of why its documents carry weight — nobody is selling you a product inside them.
+
+---
+
+## The Flagship Projects You Should Know
+
+OWASP runs hundreds of projects, but a handful matter far more than the rest:
+
+| Project | What it is | When you'd use it |
+|---|---|---|
+| **OWASP Top 10** | A ranked awareness list of the most critical web application risk categories. | Learning priorities, training, quick risk conversations. |
+| **API Security Top 10** | The same idea, focused on risks specific to APIs. | Testing or building REST/GraphQL backends. |
+| **ASVS** (Application Security Verification Standard) | A detailed, testable list of security requirements, in three levels of rigour. | Writing requirements, scoping pentests, formal verification. |
+| **WSTG** (Web Security Testing Guide) | A full methodology for testing web apps, test case by test case. | Running a structured penetration test. |
+| **Cheat Sheet Series** | Short, practical guides on one topic each (password storage, CSRF, JWT…). | Fixing a specific problem correctly. |
+| **Juice Shop** | A deliberately vulnerable modern web app for practice. | Hands-on learning without breaking any laws. |
+| **SAMM** | A maturity model for an organisation's whole security programme. | Measuring and improving how a team builds software. |
+
+These are covered in more detail in **[OWASP Projects Beyond the Top 10](./13-owasp-projects-asvs-wstg.mdx)**.
+
+---
+
+## The Top 10 Is an Awareness Document — Not a Standard
+
+This is the single most common misunderstanding about OWASP, and getting it right early will make you sound like a professional.
+
+```text
+OWASP Top 10   -->  "Here are the risk categories that matter most right now."
+                    Broad, ranked, educational. Changes every ~4 years.
+
+OWASP ASVS     -->  "Here is exactly what a secure application must do."
+                    Hundreds of specific, testable requirements.
+```
+
+Saying an application is "OWASP Top 10 compliant" doesn't really mean anything precise — the Top 10 categories are too broad to pass or fail. If a client or employer wants a measurable bar, ASVS is the right document. The Top 10's job is to make sure everyone is paying attention to the right *kinds* of problems.
+
+<Admonition type="tip" title="Freshers' takeaway">
+
+Think of the Top 10 as the table of contents of web security, and ASVS as the full textbook. You learn the table of contents first so you know where everything fits — then you go deep.
+
+</Admonition>
+
+---
+
+## How the Top 10 Is Built
+
+The list isn't somebody's opinion. For the 2025 edition, OWASP:
+
+1. **Collected testing data** from many contributing organisations, covering well over two million applications.
+2. **Analysed which weaknesses (CWEs) appeared** in that data, grouping related CWEs into categories.
+3. **Ranked categories** using how many applications were affected, plus exploitability and impact scores derived from CVE data.
+4. **Ran a community survey** of practitioners, and used it to fill two places in the list with risks that testing data tends to under-count — problems that are real but hard for automated tools to detect.
+
+That last step is important. Some of the most damaging problems (like insecure design, or supply chain compromise) don't show up neatly in scanner output, so a purely data-driven list would miss them.
+
+---
+
+## What Is a CWE?
+
+You'll see "CWE" on every risk page in this section.
+
+**CWE (Common Weakness Enumeration)** is a catalogue of software weakness *types*, maintained by MITRE. Each has an ID:
+
+| CWE | Weakness |
+|---|---|
+| CWE-79 | Cross-site scripting |
+| CWE-89 | SQL injection |
+| CWE-639 | Authorization bypass through user-controlled key (IDOR) |
+| CWE-918 | Server-side request forgery |
+
+A **CVE**, by contrast, is one specific vulnerability in one specific product (for example, CVE-2021-44228 is Log4Shell). A CWE is the *kind* of mistake; a CVE is one real instance of it.
+
+```text
+CWE-89 (SQL injection)              <-- the type of weakness
+   |
+   +-- CVE-2023-34362 (MOVEit)      <-- one real product affected by it
+   +-- CVE-....                     <-- thousands more
+```
+
+Each OWASP Top 10 category is a bucket of related CWEs.
+
+---
+
+## How to Study This Section
+
+<Admonition type="note" title="Suggested path">
+
+1. Read **[OWASP Top 10:2025 at a Glance](./01-owasp-top-10-2025-overview.mdx)** to see the whole list and what changed.
+2. Work through the ten risk pages in order. Each has the same structure, so it gets faster as you go.
+3. If you build or test APIs, continue with **[OWASP API Security Top 10](./12-owasp-api-security-top-10.mdx)**.
+4. Finish with **[OWASP Projects Beyond the Top 10](./13-owasp-projects-asvs-wstg.mdx)** to learn the tools you'll use on real engagements.
+
+</Admonition>
+
+Every risk page follows the same layout:
+
+- **At a glance** — rank, history, mapped CWEs.
+- **In plain English** — the idea, with no jargon.
+- **How it happens** — the technical mechanism.
+- **Vulnerable vs. fixed code** — side-by-side examples.
+- **Real-world incidents** — why this isn't theoretical.
+- **How to test for it** — a practical checklist.
+- **How to prevent it** — what developers should actually do.
+- **Pro notes** — the details that come up in senior interviews and real audits.
+
+For a visual, interactive view of the Top 10 across the 2017, 2021 and 2025 editions, try the wheel on the **[Attack Atlas](/attack-atlas)** page.
+
+---
+
+## Key Takeaways
+
+- OWASP is a non-profit producing free, vendor-neutral application security material.
+- The Top 10 is an **awareness** list of risk categories; ASVS is the **verification standard**.
+- The 2025 Top 10 combines large-scale testing data with a practitioner survey.
+- A CWE is a weakness type; a CVE is a specific vulnerability in a specific product.
+
+---
+
+## Next
+
+See the entire list in one place: **[OWASP Top 10:2025 at a Glance](./01-owasp-top-10-2025-overview.mdx)**.
 
